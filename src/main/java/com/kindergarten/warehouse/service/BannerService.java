@@ -1,17 +1,17 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.dto.response.BannerResponse;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface BannerService {
-    List<Banner> getActiveBanners();
+    List<BannerResponse> getActiveBanners();
 
-    List<Banner> getAllBanners();
+    List<BannerResponse> getAllBanners();
 
-    Banner createBanner(MultipartFile image, String link, Integer order);
+    BannerResponse createBanner(MultipartFile image, String link, Integer order);
 
-    Banner toggleBanner(Long id);
+    BannerResponse toggleBanner(Long id);
 
     void deleteBanner(Long id);
 }

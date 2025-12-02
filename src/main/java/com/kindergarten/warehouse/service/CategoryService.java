@@ -1,14 +1,15 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.entity.Category;
+import com.kindergarten.warehouse.dto.request.CategoryRequest;
+import com.kindergarten.warehouse.dto.response.CategoryResponse;
 import java.util.List;
 
 public interface CategoryService {
-    List<Category> getAllCategories();
+        List<CategoryResponse> getAllCategories();
 
-    Category createCategory(Category category);
+        CategoryResponse createCategory(CategoryRequest categoryRequest);
 
-    Category updateCategory(Long id, Category categoryDetails);
+        CategoryResponse updateCategory(Long id, CategoryRequest categoryRequest);
 
-    void deleteCategory(Long id);
+        void deleteCategory(Long id);
 }

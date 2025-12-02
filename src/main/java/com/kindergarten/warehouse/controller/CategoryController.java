@@ -1,6 +1,5 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.entity.Category;
 import com.kindergarten.warehouse.service.CategoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,20 +19,23 @@ public class CategoryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Category>> getAllCategories() {
+    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.CategoryResponse>> getAllCategories() {
         return ResponseEntity.ok(categoryService.getAllCategories());
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Category> createCategory(@RequestBody Category category) {
-        return new ResponseEntity<>(categoryService.createCategory(category), HttpStatus.CREATED);
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.CategoryResponse> createCategory(
+            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.CategoryRequest categoryRequest) {
+        return new ResponseEntity<>(categoryService.createCategory(categoryRequest), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @RequestBody Category categoryDetails) {
-        return ResponseEntity.ok(categoryService.updateCategory(id, categoryDetails));
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.CategoryResponse> updateCategory(
+            @PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.CategoryRequest categoryRequest) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, categoryRequest));
     }
 
     @DeleteMapping("/{id}")

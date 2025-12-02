@@ -1,4 +1,4 @@
-package com.kindergarten.warehouse.dto;
+package com.kindergarten.warehouse.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

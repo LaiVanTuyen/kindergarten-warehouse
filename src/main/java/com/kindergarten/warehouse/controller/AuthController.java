@@ -1,8 +1,8 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.dto.AuthResponseDto;
-import com.kindergarten.warehouse.dto.LoginDto;
-import com.kindergarten.warehouse.dto.RegisterDto;
+import com.kindergarten.warehouse.dto.response.AuthResponseDto;
+import com.kindergarten.warehouse.dto.request.LoginDto;
+import com.kindergarten.warehouse.dto.request.RegisterDto;
 import com.kindergarten.warehouse.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +22,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDto> login(@RequestBody LoginDto loginDto) {
+    public ResponseEntity<AuthResponseDto> login(@RequestBody @jakarta.validation.Valid LoginDto loginDto) {
         AuthResponseDto response = authService.login(loginDto);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterDto registerDto) {
+    public ResponseEntity<String> register(@RequestBody @jakarta.validation.Valid RegisterDto registerDto) {
         String response = authService.register(registerDto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

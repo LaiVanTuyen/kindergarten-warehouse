@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASS}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/warehouse_db?useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USER:root}
+    password: ${DB_PASS:240301}
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
@@ -29,12 +29,13 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-firebase:
-  config:
-    path: ${FIREBASE_CONFIG_PATH:classpath:firebase-service-account.json}
-  storage:
-    bucket: ${FIREBASE_BUCKET_NAME}
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: ${MINIO_BUCKET:warehouse-bucket}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:your_very_long_and_secure_jwt_secret_key_minimum_256_bits}
   expiration: 86400000

@@ -3,6 +3,8 @@ package com.kindergarten.warehouse.service.impl;
 import com.kindergarten.warehouse.entity.Category;
 import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.repository.CategoryRepository;
+import com.kindergarten.warehouse.dto.request.TopicRequest;
+import com.kindergarten.warehouse.dto.response.TopicResponse;
 import com.kindergarten.warehouse.repository.TopicRepository;
 import com.kindergarten.warehouse.service.TopicService;
 import org.springframework.context.MessageSource;
@@ -26,33 +28,50 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public List<Topic> getAllTopics() {
-        return topicRepository.findAll();
+    public List<TopicResponse> getAllTopics() {
+        return topicRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
-    public Topic createTopic(Topic topic, Long categoryId) {
+    public TopicResponse createTopic(TopicRequest topicRequest, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.category.not_found", null, LocaleContextHolder.getLocale())));
+
+        Topic topic = new Topic();
+        topic.setName(topicRequest.getName());
+        topic.setDescription(topicRequest.getDescription());
         topic.setCategory(category);
-        return topicRepository.save(topic);
+
+        return mapToResponse(topicRepository.save(topic));
     }
 
     @Override
-    public Topic updateTopic(Long id, Topic topicDetails) {
+    public TopicResponse updateTopic(Long id, TopicRequest topicRequest) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.topic.not_found", null, LocaleContextHolder.getLocale())));
 
-        topic.setName(topicDetails.getName());
-        topic.setDescription(topicDetails.getDescription());
+        topic.setName(topicRequest.getName());
+        topic.setDescription(topicRequest.getDescription());
 
-        return topicRepository.save(topic);
+        return mapToResponse(topicRepository.save(topic));
     }
 
     @Override
     public void deleteTopic(Long id) {
         topicRepository.deleteById(id);
+    }
+
+    private TopicResponse mapToResponse(Topic topic) {
+        return TopicResponse.builder()
+                .id(topic.getId())
+                .name(topic.getName())
+                .description(topic.getDescription())
+                .categoryId(topic.getCategory().getId())
+                .categoryName(topic.getCategory().getName())
+                .build();
     }
 }

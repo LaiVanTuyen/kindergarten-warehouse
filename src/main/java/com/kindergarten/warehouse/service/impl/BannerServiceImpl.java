@@ -1,66 +1,75 @@
 package com.kindergarten.warehouse.service.impl;
 
 import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.dto.response.BannerResponse;
 import com.kindergarten.warehouse.repository.BannerRepository;
 import com.kindergarten.warehouse.service.BannerService;
-import com.kindergarten.warehouse.service.FirebaseService;
+import com.kindergarten.warehouse.service.MinioStorageService;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @Service
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
-    private final FirebaseService firebaseService;
+    private final MinioStorageService minioStorageService;
     private final MessageSource messageSource;
 
-    public BannerServiceImpl(BannerRepository bannerRepository, FirebaseService firebaseService,
+    public BannerServiceImpl(BannerRepository bannerRepository, MinioStorageService minioStorageService,
             MessageSource messageSource) {
         this.bannerRepository = bannerRepository;
-        this.firebaseService = firebaseService;
+        this.minioStorageService = minioStorageService;
         this.messageSource = messageSource;
     }
 
     @Override
-    public List<Banner> getActiveBanners() {
-        return bannerRepository.findByIsActiveTrueOrderByOrderAsc();
+    public List<BannerResponse> getActiveBanners() {
+        return bannerRepository.findByIsActiveTrueOrderByOrderAsc().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
-    public List<Banner> getAllBanners() {
-        return bannerRepository.findAll();
+    public List<BannerResponse> getAllBanners() {
+        return bannerRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
-    public Banner createBanner(MultipartFile image, String link, Integer order) {
-        try {
-            String imageUrl = firebaseService.uploadFile(image);
+    public BannerResponse createBanner(MultipartFile image, String link, Integer order) {
+        String imageUrl = minioStorageService.uploadFile(image);
 
-            Banner banner = new Banner();
-            banner.setImageUrl(imageUrl);
-            banner.setLink(link);
-            banner.setOrder(order);
-            banner.setIsActive(true);
+        Banner banner = new Banner();
+        banner.setImageUrl(imageUrl);
+        banner.setLink(link);
+        banner.setOrder(order);
+        banner.setIsActive(true);
 
-            return bannerRepository.save(banner);
-        } catch (IOException e) {
-            throw new RuntimeException(
-                    messageSource.getMessage("error.firebase.init", null, LocaleContextHolder.getLocale()), e);
-        }
+        return mapToResponse(bannerRepository.save(banner));
     }
 
     @Override
-    public Banner toggleBanner(Long id) {
+    public BannerResponse toggleBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.banner.not_found", null, LocaleContextHolder.getLocale())));
         banner.setIsActive(!banner.getIsActive());
-        return bannerRepository.save(banner);
+        return mapToResponse(bannerRepository.save(banner));
+    }
+
+    private BannerResponse mapToResponse(Banner banner) {
+        return BannerResponse.builder()
+                .id(banner.getId())
+                .imageUrl(banner.getImageUrl())
+                .link(banner.getLink())
+                .isActive(banner.getIsActive())
+                .order(banner.getOrder())
+                .build();
     }
 
     @Override
@@ -69,8 +78,8 @@ public class BannerServiceImpl implements BannerService {
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.banner.not_found", null, LocaleContextHolder.getLocale())));
 
-        // Optionally delete image from Firebase
-        firebaseService.deleteFile(banner.getImageUrl());
+        // Delete image from MinIO
+        minioStorageService.deleteFile(banner.getImageUrl());
 
         bannerRepository.deleteById(id);
     }

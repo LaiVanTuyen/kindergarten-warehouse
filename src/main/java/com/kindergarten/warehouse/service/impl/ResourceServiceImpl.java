@@ -5,7 +5,10 @@ import com.kindergarten.warehouse.entity.ResourceType;
 import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.TopicRepository;
-import com.kindergarten.warehouse.service.FirebaseService;
+import com.kindergarten.warehouse.dto.response.ResourceResponse;
+import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.repository.UserRepository;
+import com.kindergarten.warehouse.service.MinioStorageService;
 import com.kindergarten.warehouse.service.ResourceService;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -16,69 +19,102 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.util.UUID;
 
 @Service
 public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final TopicRepository topicRepository;
-    private final FirebaseService firebaseService;
+    private final UserRepository userRepository;
+    private final MinioStorageService minioStorageService;
     private final MessageSource messageSource;
 
     public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
-            FirebaseService firebaseService, MessageSource messageSource) {
+            UserRepository userRepository, MinioStorageService minioStorageService, MessageSource messageSource) {
         this.resourceRepository = resourceRepository;
         this.topicRepository = topicRepository;
-        this.firebaseService = firebaseService;
+        this.userRepository = userRepository;
+        this.minioStorageService = minioStorageService;
         this.messageSource = messageSource;
     }
 
     @Override
-    public Resource uploadResource(MultipartFile file, String title, String description, Long topicId) {
-        try {
-            Topic topic = topicRepository.findById(topicId)
-                    .orElseThrow(() -> new RuntimeException(
-                            messageSource.getMessage("error.topic.not_found", null, LocaleContextHolder.getLocale())));
+    public ResourceResponse uploadResource(MultipartFile file, String title,
+            String description, Long topicId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            String fileUrl = firebaseService.uploadFile(file);
-            String extension = getExtension(file.getOriginalFilename());
-            ResourceType type = determineResourceType(extension);
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.topic.not_found", null, LocaleContextHolder.getLocale())));
 
-            Resource resource = new Resource();
-            resource.setTitle(title);
-            resource.setDescription(description);
-            resource.setTopic(topic);
-            resource.setFileUrl(fileUrl);
-            resource.setFileExtension(extension);
-            resource.setFileType(type);
+        String fileUrl = minioStorageService.uploadFile(file);
+        String extension = getExtension(file.getOriginalFilename());
+        ResourceType type = determineResourceType(extension);
 
-            return resourceRepository.save(resource);
+        Resource resource = new Resource();
+        resource.setTitle(title);
+        resource.setDescription(description);
+        resource.setTopic(topic);
+        resource.setFileUrl(fileUrl);
+        resource.setFileExtension(extension);
+        resource.setFileType(type);
+        resource.setFileSize(file.getSize());
+        resource.setCreatedBy(user);
 
-        } catch (IOException e) {
-            throw new RuntimeException(
-                    messageSource.getMessage("error.firebase.init", null, LocaleContextHolder.getLocale()), e);
-        }
+        return mapToResponse(resourceRepository.save(resource));
     }
 
     @Override
-    public Page<Resource> getResources(Long topicId, int page, int size) {
+    public Page<ResourceResponse> getResources(Long topicId, Long categoryId, int page,
+            int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Resource> resourcePage;
         if (topicId != null) {
-            return resourceRepository.findByTopicId(topicId, pageable);
+            resourcePage = resourceRepository.findByTopicId(topicId, pageable);
+        } else if (categoryId != null) {
+            resourcePage = resourceRepository.findByTopicCategoryId(categoryId, pageable);
         } else {
-            return resourceRepository.findAll(pageable);
+            resourcePage = resourceRepository.findAll(pageable);
         }
+        return resourcePage.map(this::mapToResponse);
+    }
+
+    private ResourceResponse mapToResponse(Resource resource) {
+        return ResourceResponse.builder()
+                .id(resource.getId())
+                .title(resource.getTitle())
+                .description(resource.getDescription())
+                .viewsCount(resource.getViewsCount())
+                .createdAt(resource.getCreatedAt())
+                .fileUrl(resource.getFileUrl())
+                .fileType(resource.getFileType())
+                .fileExtension(resource.getFileExtension())
+                .topicId(resource.getTopic().getId())
+                .topicName(resource.getTopic().getName())
+                .fileSize(resource.getFileSize())
+                .createdBy(resource.getCreatedBy() != null ? resource.getCreatedBy().getFullName() : null)
+                .build();
     }
 
     @Override
-    public void deleteResource(Long id) {
+    public void incrementViewCount(UUID id) {
+        Resource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.resource.not_found", null, LocaleContextHolder.getLocale())));
+        resource.setViewsCount(resource.getViewsCount() + 1);
+        resourceRepository.save(resource);
+    }
+
+    @Override
+    public void deleteResource(UUID id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.resource.not_found", null, LocaleContextHolder.getLocale())));
 
-        // Delete file from Firebase
-        firebaseService.deleteFile(resource.getFileUrl());
+        // Delete file from MinIO
+        minioStorageService.deleteFile(resource.getFileUrl());
 
         resourceRepository.deleteById(id);
     }

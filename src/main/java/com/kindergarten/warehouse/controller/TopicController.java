@@ -1,6 +1,5 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.service.TopicService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,20 +19,23 @@ public class TopicController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Topic>> getAllTopics() {
+    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.TopicResponse>> getAllTopics() {
         return ResponseEntity.ok(topicService.getAllTopics());
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Topic> createTopic(@RequestBody Topic topic, @RequestParam Long categoryId) {
-        return new ResponseEntity<>(topicService.createTopic(topic, categoryId), HttpStatus.CREATED);
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.TopicResponse> createTopic(
+            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.TopicRequest topicRequest,
+            @RequestParam Long categoryId) {
+        return new ResponseEntity<>(topicService.createTopic(topicRequest, categoryId), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Topic> updateTopic(@PathVariable Long id, @RequestBody Topic topicDetails) {
-        return ResponseEntity.ok(topicService.updateTopic(id, topicDetails));
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.TopicResponse> updateTopic(@PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.TopicRequest topicRequest) {
+        return ResponseEntity.ok(topicService.updateTopic(id, topicRequest));
     }
 
     @DeleteMapping("/{id}")

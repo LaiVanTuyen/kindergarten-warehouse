@@ -1,6 +1,5 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,18 +20,19 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @PutMapping("/{id}/block")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<User> toggleBlockUser(@PathVariable Long id) {
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.UserResponse> toggleBlockUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.toggleBlockUser(id));
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<User> updateProfile(Authentication authentication,
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.UserResponse> updateProfile(
+            Authentication authentication,
             @RequestParam(required = false) String fullName,
             @RequestParam(required = false) String password) {
         String username = authentication.getName();

@@ -1,6 +1,8 @@
 package com.kindergarten.warehouse.service.impl;
 
 import com.kindergarten.warehouse.entity.Category;
+import com.kindergarten.warehouse.dto.request.CategoryRequest;
+import com.kindergarten.warehouse.dto.response.CategoryResponse;
 import com.kindergarten.warehouse.repository.CategoryRepository;
 import com.kindergarten.warehouse.service.CategoryService;
 import org.springframework.context.MessageSource;
@@ -21,29 +23,42 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> getAllCategories() {
+        return categoryRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
-    public Category createCategory(Category category) {
-        return categoryRepository.save(category);
+    public CategoryResponse createCategory(CategoryRequest categoryRequest) {
+        Category category = new Category();
+        category.setName(categoryRequest.getName());
+        category.setSlug(categoryRequest.getSlug());
+        return mapToResponse(categoryRepository.save(category));
     }
 
     @Override
-    public Category updateCategory(Long id, Category categoryDetails) {
+    public CategoryResponse updateCategory(Long id, CategoryRequest categoryRequest) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(
                         messageSource.getMessage("error.category.not_found", null, LocaleContextHolder.getLocale())));
 
-        category.setName(categoryDetails.getName());
-        category.setSlug(categoryDetails.getSlug());
+        category.setName(categoryRequest.getName());
+        category.setSlug(categoryRequest.getSlug());
 
-        return categoryRepository.save(category);
+        return mapToResponse(categoryRepository.save(category));
     }
 
     @Override
     public void deleteCategory(Long id) {
         categoryRepository.deleteById(id);
+    }
+
+    private CategoryResponse mapToResponse(Category category) {
+        return CategoryResponse.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .slug(category.getSlug())
+                .build();
     }
 }

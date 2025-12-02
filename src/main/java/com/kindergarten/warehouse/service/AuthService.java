@@ -1,7 +1,8 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.dto.LoginDto;
-import com.kindergarten.warehouse.dto.RegisterDto;
+import com.kindergarten.warehouse.dto.request.LoginDto;
+import com.kindergarten.warehouse.dto.request.RegisterDto;
+import com.kindergarten.warehouse.dto.response.AuthResponseDto;
 import com.kindergarten.warehouse.entity.Role;
 import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.repository.UserRepository;
@@ -36,7 +37,7 @@ public class AuthService {
         this.messageSource = messageSource;
     }
 
-    public com.kindergarten.warehouse.dto.AuthResponseDto login(LoginDto loginDto) {
+    public AuthResponseDto login(LoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword()));
 
@@ -46,7 +47,7 @@ public class AuthService {
 
         User user = userRepository.findByUsername(loginDto.getUsername()).orElseThrow();
 
-        return new com.kindergarten.warehouse.dto.AuthResponseDto(
+        return new AuthResponseDto(
                 token,
                 "Bearer",
                 user.getId(),

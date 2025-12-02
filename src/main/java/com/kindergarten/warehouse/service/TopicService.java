@@ -1,14 +1,15 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.entity.Topic;
+import com.kindergarten.warehouse.dto.request.TopicRequest;
+import com.kindergarten.warehouse.dto.response.TopicResponse;
 import java.util.List;
 
 public interface TopicService {
-    List<Topic> getAllTopics();
+        List<TopicResponse> getAllTopics();
 
-    Topic createTopic(Topic topic, Long categoryId);
+        TopicResponse createTopic(TopicRequest topicRequest, Long categoryId);
 
-    Topic updateTopic(Long id, Topic topicDetails);
+        TopicResponse updateTopic(Long id, TopicRequest topicRequest);
 
-    void deleteTopic(Long id);
+        void deleteTopic(Long id);
 }

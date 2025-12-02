@@ -65,11 +65,11 @@
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
 
-        <!-- Firebase Admin SDK -->
+        <!-- AWS SDK for MinIO (S3 Compatible) -->
         <dependency>
-            <groupId>com.google.firebase</groupId>
-            <artifactId>firebase-admin</artifactId>
-            <version>9.2.0</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.21.1</version>
         </dependency>
 
         <!-- JWT Dependencies -->
@@ -89,6 +89,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.11.5</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Swagger / OpenAPI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
         </dependency>
 	</dependencies>
 

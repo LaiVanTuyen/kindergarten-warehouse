@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.service;
 
+import com.kindergarten.warehouse.dto.response.UserResponse;
 import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,18 +19,21 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
-    public User toggleBlockUser(Long userId) {
+    public UserResponse toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setIsActive(!user.getIsActive());
-        return userRepository.save(user);
+        return mapToResponse(userRepository.save(user));
     }
 
-    public User updateProfile(String username, String fullName, String newPassword) {
+    public UserResponse updateProfile(String username, String fullName,
+            String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -41,6 +45,16 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(newPassword));
         }
 
-        return userRepository.save(user);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    private UserResponse mapToResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .build();
     }
 }

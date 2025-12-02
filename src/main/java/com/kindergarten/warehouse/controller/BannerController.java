@@ -1,6 +1,5 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.entity.Banner;
 import com.kindergarten.warehouse.service.BannerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,19 +21,19 @@ public class BannerController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Banner>> getActiveBanners() {
+    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.BannerResponse>> getActiveBanners() {
         return ResponseEntity.ok(bannerService.getActiveBanners());
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<Banner>> getAllBanners() {
+    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.BannerResponse>> getAllBanners() {
         return ResponseEntity.ok(bannerService.getAllBanners());
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Banner> createBanner(
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.BannerResponse> createBanner(
             @RequestParam("image") MultipartFile image,
             @RequestParam(value = "link", required = false) String link,
             @RequestParam(value = "order", defaultValue = "0") Integer order) {
@@ -44,7 +43,7 @@ public class BannerController {
 
     @PutMapping("/{id}/toggle")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Banner> toggleBanner(@PathVariable Long id) {
+    public ResponseEntity<com.kindergarten.warehouse.dto.response.BannerResponse> toggleBanner(@PathVariable Long id) {
         return ResponseEntity.ok(bannerService.toggleBanner(id));
     }
 
