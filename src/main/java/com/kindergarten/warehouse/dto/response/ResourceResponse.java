@@ -1,6 +1,6 @@
 package com.kindergarten.warehouse.dto.response;
 
-import com.kindergarten.warehouse.entity.ResourceType;
+import com.kindergarten.warehouse.entity.FileType;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,7 +16,7 @@ public class ResourceResponse {
     private Long viewsCount;
     private LocalDateTime createdAt;
     private String fileUrl;
-    private ResourceType fileType;
+    private FileType fileType;
     private String fileExtension;
     private Long topicId;
     private String topicName;

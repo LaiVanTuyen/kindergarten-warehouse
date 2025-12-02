@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 public class TopicRequest {
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.required}")
     private String name;
 
     private String description;

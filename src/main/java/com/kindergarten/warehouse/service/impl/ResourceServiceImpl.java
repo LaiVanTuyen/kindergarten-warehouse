@@ -1,7 +1,7 @@
 package com.kindergarten.warehouse.service.impl;
 
 import com.kindergarten.warehouse.entity.Resource;
-import com.kindergarten.warehouse.entity.ResourceType;
+import com.kindergarten.warehouse.entity.FileType;
 import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.TopicRepository;
@@ -10,8 +10,6 @@ import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.repository.UserRepository;
 import com.kindergarten.warehouse.service.MinioStorageService;
 import com.kindergarten.warehouse.service.ResourceService;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,30 +26,29 @@ public class ResourceServiceImpl implements ResourceService {
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
     private final MinioStorageService minioStorageService;
-    private final MessageSource messageSource;
 
     public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
-            UserRepository userRepository, MinioStorageService minioStorageService, MessageSource messageSource) {
+            UserRepository userRepository, MinioStorageService minioStorageService) {
         this.resourceRepository = resourceRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
         this.minioStorageService = minioStorageService;
-        this.messageSource = messageSource;
     }
 
     @Override
     public ResourceResponse uploadResource(MultipartFile file, String title,
             String description, Long topicId, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
 
         Topic topic = topicRepository.findById(topicId)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.topic.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.TOPIC_NOT_FOUND));
 
         String fileUrl = minioStorageService.uploadFile(file);
         String extension = getExtension(file.getOriginalFilename());
-        ResourceType type = determineResourceType(extension);
+        FileType type = determineFileType(extension);
 
         Resource resource = new Resource();
         resource.setTitle(title);
@@ -101,8 +98,8 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public void incrementViewCount(UUID id) {
         Resource resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.resource.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
         resource.setViewsCount(resource.getViewsCount() + 1);
         resourceRepository.save(resource);
     }
@@ -110,8 +107,8 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public void deleteResource(UUID id) {
         Resource resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.resource.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
         // Delete file from MinIO
         minioStorageService.deleteFile(resource.getFileUrl());
@@ -126,22 +123,22 @@ public class ResourceServiceImpl implements ResourceService {
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
     }
 
-    private ResourceType determineResourceType(String extension) {
+    private FileType determineFileType(String extension) {
         switch (extension) {
             case "mp4":
             case "mov":
             case "avi":
-                return ResourceType.VIDEO;
+                return FileType.VIDEO;
             case "doc":
             case "docx":
-                return ResourceType.DOCUMENT;
+                return FileType.DOCUMENT;
             case "xls":
             case "xlsx":
-                return ResourceType.EXCEL;
+                return FileType.EXCEL;
             case "pdf":
-                return ResourceType.PDF;
+                return FileType.PDF;
             default:
-                return ResourceType.DOCUMENT; // Default fallback
+                return FileType.DOCUMENT; // Default fallback
         }
     }
 }

@@ -5,9 +5,9 @@ import lombok.Data;
 
 @Data
 public class CategoryRequest {
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.required}")
     private String name;
 
-    @NotBlank(message = "Slug is required")
+    @NotBlank(message = "{validation.required}")
     private String slug;
 }

@@ -1,6 +1,6 @@
 package com.kindergarten.warehouse.entity;
 
-public enum ResourceType {
+public enum FileType {
     VIDEO,
     DOCUMENT,
     EXCEL,

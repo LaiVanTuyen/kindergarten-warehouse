@@ -27,7 +27,8 @@ public class UserService {
 
     public UserResponse toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
         user.setIsActive(!user.getIsActive());
         return mapToResponse(userRepository.save(user));
     }
@@ -35,7 +36,8 @@ public class UserService {
     public UserResponse updateProfile(String username, String fullName,
             String newPassword) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
 
         if (fullName != null && !fullName.isEmpty()) {
             user.setFullName(fullName);
@@ -53,6 +55,8 @@ public class UserService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .fullName(user.getFullName())
+                .email(user.getEmail())
+                .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .isActive(user.getIsActive())
                 .build();

@@ -5,8 +5,6 @@ import com.kindergarten.warehouse.dto.request.CategoryRequest;
 import com.kindergarten.warehouse.dto.response.CategoryResponse;
 import com.kindergarten.warehouse.repository.CategoryRepository;
 import com.kindergarten.warehouse.service.CategoryService;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,11 +13,9 @@ import java.util.List;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final MessageSource messageSource;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, MessageSource messageSource) {
+    public CategoryServiceImpl(CategoryRepository categoryRepository) {
         this.categoryRepository = categoryRepository;
-        this.messageSource = messageSource;
     }
 
     @Override
@@ -40,8 +36,8 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryResponse updateCategory(Long id, CategoryRequest categoryRequest) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.category.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.CATEGORY_NOT_FOUND));
 
         category.setName(categoryRequest.getName());
         category.setSlug(categoryRequest.getSlug());
@@ -51,6 +47,10 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void deleteCategory(Long id) {
+        if (!categoryRepository.existsById(id)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.CATEGORY_NOT_FOUND);
+        }
         categoryRepository.deleteById(id);
     }
 
