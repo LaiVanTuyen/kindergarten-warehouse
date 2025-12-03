@@ -28,7 +28,7 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public List<BannerResponse> getActiveBanners() {
-        return bannerRepository.findByIsActiveTrueOrderByOrderAsc().stream()
+        return bannerRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
                 .map(this::mapToResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
@@ -47,7 +47,7 @@ public class BannerServiceImpl implements BannerService {
         Banner banner = new Banner();
         banner.setImageUrl(imageUrl);
         banner.setLink(link);
-        banner.setOrder(order);
+        banner.setDisplayOrder(order);
         banner.setIsActive(true);
 
         return mapToResponse(bannerRepository.save(banner));
@@ -68,7 +68,7 @@ public class BannerServiceImpl implements BannerService {
                 .imageUrl(banner.getImageUrl())
                 .link(banner.getLink())
                 .isActive(banner.getIsActive())
-                .order(banner.getOrder())
+                .order(banner.getDisplayOrder())
                 .build();
     }
 

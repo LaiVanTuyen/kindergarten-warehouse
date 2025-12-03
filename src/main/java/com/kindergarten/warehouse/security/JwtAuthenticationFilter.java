@@ -20,10 +20,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -34,6 +37,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = getTokenFromRequest(request);
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(token))) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
             String username = jwtTokenProvider.getUsername(token);
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

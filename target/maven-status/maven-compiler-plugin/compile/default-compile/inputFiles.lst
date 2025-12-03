@@ -22,6 +22,7 @@ D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\entity\B
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\config\MinioConfig.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\controller\AuthController.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\security\JwtAuthenticationFilter.java
+D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\config\RedisConfig.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\dto\request\CategoryRequest.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\dto\request\TopicRequest.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\entity\Resource.java
@@ -42,6 +43,7 @@ D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\service\
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\dto\response\CategoryResponse.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\entity\ResourceType.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\service\AuthService.java
+D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\aspect\RateLimitingAspect.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\config\OpenApiConfig.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\controller\BannerController.java
 D:\Java\kindergarten-warehouse\src\main\java\com\kindergarten\warehouse\dto\response\AuthResponseDto.java

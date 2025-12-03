@@ -1,6 +1,5 @@
 package com.kindergarten.warehouse.dto.request;
 
-import com.kindergarten.warehouse.entity.Role;
 import lombok.Data;
 
 @Data
@@ -10,11 +9,9 @@ public class RegisterDto {
     private String username;
 
     @jakarta.validation.constraints.NotBlank(message = "Password is required")
-    @jakarta.validation.constraints.Size(min = 6, message = "Password must be at least 6 characters")
+    @jakarta.validation.constraints.Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
 
     @jakarta.validation.constraints.NotBlank(message = "Full name is required")
     private String fullName;
-
-    private Role role; // Optional, default to USER if null
 }

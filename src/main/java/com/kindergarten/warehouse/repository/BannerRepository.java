@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface BannerRepository extends JpaRepository<Banner, Long> {
-    List<Banner> findByIsActiveTrueOrderByOrderAsc();
+    List<Banner> findByIsActiveTrueOrderByDisplayOrderAsc();
 }

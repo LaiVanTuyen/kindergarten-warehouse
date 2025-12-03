@@ -32,4 +32,14 @@ public class AuthController {
         String response = authService.register(registerDto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @org.springframework.web.bind.annotation.RequestHeader("Authorization") String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        authService.logout(token);
+        return ResponseEntity.ok().build();
+    }
 }

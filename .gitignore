@@ -37,3 +37,5 @@ build/
 ### Secrets ###
 .env
 firebase-service-account.json
+
+.env.local

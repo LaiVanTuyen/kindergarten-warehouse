@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 @Service
 public class AuthService {
 
@@ -24,17 +26,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MessageSource messageSource;
     private final JwtTokenProvider jwtTokenProvider;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     public AuthService(AuthenticationManager authenticationManager,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
-            MessageSource messageSource) {
+            MessageSource messageSource,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.messageSource = messageSource;
+        this.redisTemplate = redisTemplate;
     }
 
     public AuthResponseDto login(LoginDto loginDto) {
@@ -66,11 +71,21 @@ public class AuthService {
         user.setUsername(registerDto.getUsername());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         user.setFullName(registerDto.getFullName());
-        user.setRole(registerDto.getRole() != null ? registerDto.getRole() : Role.USER);
+        user.setRole(Role.USER);
         user.setIsActive(true);
 
         userRepository.save(user);
 
         return messageSource.getMessage("auth.user.registered", null, LocaleContextHolder.getLocale());
+    }
+
+    public void logout(String token) {
+        if (token == null)
+            return;
+        Date expirationDate = jwtTokenProvider.getExpirationDate(token);
+        long ttl = expirationDate.getTime() - new Date().getTime();
+        if (ttl > 0) {
+            redisTemplate.opsForValue().set(token, "blacklisted", ttl, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
     }
 }
