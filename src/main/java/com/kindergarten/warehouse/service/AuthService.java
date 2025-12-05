@@ -30,16 +30,17 @@ public class AuthService {
     private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     public AuthService(AuthenticationManager authenticationManager,
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider,
-            MessageSource messageSource,
-            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
+                       UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtTokenProvider jwtTokenProvider,
+                       MessageSource messageSource,
+                       org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate1) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.messageSource = messageSource;
+        this.redisTemplate = redisTemplate1;
     }
 
     public AuthResponseDto login(LoginDto loginDto) {
