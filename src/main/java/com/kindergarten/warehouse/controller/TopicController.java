@@ -8,40 +8,54 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.dto.response.TopicResponse;
+import com.kindergarten.warehouse.dto.request.TopicRequest;
+
+import com.kindergarten.warehouse.service.MessageService;
+
 @RestController
 @RequestMapping("/api/v1/topics")
 public class TopicController {
 
     private final TopicService topicService;
+    private final MessageService messageService;
 
-    public TopicController(TopicService topicService) {
+    public TopicController(TopicService topicService, MessageService messageService) {
         this.topicService = topicService;
+        this.messageService = messageService;
     }
 
     @GetMapping
-    public ResponseEntity<List<com.kindergarten.warehouse.dto.response.TopicResponse>> getAllTopics() {
-        return ResponseEntity.ok(topicService.getAllTopics());
+    public ResponseEntity<ApiResponse<List<TopicResponse>>> getAllTopics() {
+        return ResponseEntity
+                .ok(ApiResponse.success(topicService.getAllTopics(), messageService.getMessage("topic.list.success")));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<com.kindergarten.warehouse.dto.response.TopicResponse> createTopic(
-            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.TopicRequest topicRequest,
+    public ResponseEntity<ApiResponse<TopicResponse>> createTopic(
+            @RequestBody @jakarta.validation.Valid TopicRequest topicRequest,
             @RequestParam Long categoryId) {
-        return new ResponseEntity<>(topicService.createTopic(topicRequest, categoryId), HttpStatus.CREATED);
+        return new ResponseEntity<>(
+                ApiResponse.success(topicService.createTopic(topicRequest, categoryId),
+                        messageService.getMessage("topic.create.success")),
+                HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<com.kindergarten.warehouse.dto.response.TopicResponse> updateTopic(@PathVariable Long id,
-            @RequestBody @jakarta.validation.Valid com.kindergarten.warehouse.dto.request.TopicRequest topicRequest) {
-        return ResponseEntity.ok(topicService.updateTopic(id, topicRequest));
+    public ResponseEntity<ApiResponse<TopicResponse>> updateTopic(@PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid TopicRequest topicRequest) {
+        return ResponseEntity
+                .ok(ApiResponse.success(topicService.updateTopic(id, topicRequest),
+                        messageService.getMessage("topic.update.success")));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Void> deleteTopic(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteTopic(@PathVariable Long id) {
         topicService.deleteTopic(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("topic.delete.success")));
     }
 }

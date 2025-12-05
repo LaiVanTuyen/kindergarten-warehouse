@@ -14,19 +14,25 @@ import java.security.Principal;
 import java.util.UUID;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+
+import com.kindergarten.warehouse.service.MessageService;
+
 @RestController
 @RequestMapping("/api/v1/resources")
 public class ResourceController {
 
     private final ResourceService resourceService;
+    private final MessageService messageService;
 
-    public ResourceController(ResourceService resourceService) {
+    public ResourceController(ResourceService resourceService, MessageService messageService) {
         this.resourceService = resourceService;
+        this.messageService = messageService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    public ResponseEntity<ResourceResponse> uploadResource(
+    public ResponseEntity<ApiResponse<ResourceResponse>> uploadResource(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
@@ -34,30 +40,36 @@ public class ResourceController {
             Principal principal) {
 
         return new ResponseEntity<>(
-                resourceService.uploadResource(file, title, description, topicId, principal.getName()),
+                ApiResponse.success(
+                        resourceService.uploadResource(file, title, description, topicId, principal.getName()),
+                        messageService.getMessage("resource.upload.success")),
                 HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<Page<ResourceResponse>> getResources(
+    public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getResources(
             @RequestParam(value = "topicId", required = false) Long topicId,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
-        return new ResponseEntity<>(resourceService.getResources(topicId, categoryId, page, size), HttpStatus.OK);
+        return new ResponseEntity<>(
+                ApiResponse.success(resourceService.getResources(topicId, categoryId, page, size),
+                        messageService.getMessage("resource.list.success")),
+                HttpStatus.OK);
     }
 
     @PutMapping("/{id}/view")
-    public ResponseEntity<Void> incrementViewCount(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable UUID id) {
         resourceService.incrementViewCount(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity
+                .ok(ApiResponse.success(null, messageService.getMessage("resource.view.increment.success")));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    public ResponseEntity<Void> deleteResource(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable UUID id) {
         resourceService.deleteResource(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("resource.delete.success")));
     }
 }

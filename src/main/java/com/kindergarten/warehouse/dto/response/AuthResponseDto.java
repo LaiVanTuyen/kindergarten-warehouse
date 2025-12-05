@@ -6,10 +6,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class AuthResponseDto {
+    private UserResponse user;
     private String accessToken;
-    private String tokenType = "Bearer";
-    private Long id;
-    private String username;
-    private String fullName;
-    private String role;
+    private String refreshToken;
 }

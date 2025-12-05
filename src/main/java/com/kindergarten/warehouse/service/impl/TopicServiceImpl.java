@@ -7,8 +7,6 @@ import com.kindergarten.warehouse.dto.request.TopicRequest;
 import com.kindergarten.warehouse.dto.response.TopicResponse;
 import com.kindergarten.warehouse.repository.TopicRepository;
 import com.kindergarten.warehouse.service.TopicService;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,13 +16,10 @@ public class TopicServiceImpl implements TopicService {
 
     private final TopicRepository topicRepository;
     private final CategoryRepository categoryRepository;
-    private final MessageSource messageSource;
 
-    public TopicServiceImpl(TopicRepository topicRepository, CategoryRepository categoryRepository,
-            MessageSource messageSource) {
+    public TopicServiceImpl(TopicRepository topicRepository, CategoryRepository categoryRepository) {
         this.topicRepository = topicRepository;
         this.categoryRepository = categoryRepository;
-        this.messageSource = messageSource;
     }
 
     @Override
@@ -37,8 +32,8 @@ public class TopicServiceImpl implements TopicService {
     @Override
     public TopicResponse createTopic(TopicRequest topicRequest, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.category.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.CATEGORY_NOT_FOUND));
 
         Topic topic = new Topic();
         topic.setName(topicRequest.getName());
@@ -51,8 +46,8 @@ public class TopicServiceImpl implements TopicService {
     @Override
     public TopicResponse updateTopic(Long id, TopicRequest topicRequest) {
         Topic topic = topicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.topic.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.TOPIC_NOT_FOUND));
 
         topic.setName(topicRequest.getName());
         topic.setDescription(topicRequest.getDescription());
@@ -62,6 +57,10 @@ public class TopicServiceImpl implements TopicService {
 
     @Override
     public void deleteTopic(Long id) {
+        if (!topicRepository.existsById(id)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.TOPIC_NOT_FOUND);
+        }
         topicRepository.deleteById(id);
     }
 

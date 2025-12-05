@@ -1,59 +1,63 @@
-/*
- * Flyway Migration Script: V1__Init_Schema.sql
- * Database: MySQL 8.0+
- * Generated based on JPA Entities
- */
-
--- 1. Table: users
-CREATE TABLE users (
+-- 1. Users
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
-    role VARCHAR(50),
-    is_active BIT(1) DEFAULT 1,
-    CONSTRAINT uq_users_username UNIQUE (username)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    full_name VARCHAR(100),
+    avatar_url VARCHAR(500),
+    role VARCHAR(20) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
--- 2. Table: categories
-CREATE TABLE categories (
+-- 2. Categories
+CREATE TABLE IF NOT EXISTS categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    CONSTRAINT uq_categories_slug UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(150) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
--- 3. Table: banners
-CREATE TABLE banners (
+-- 3. Topics
+CREATE TABLE IF NOT EXISTS topics (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    image_url VARCHAR(255) NOT NULL,
-    link VARCHAR(255),
-    is_active BIT(1) DEFAULT 1,
-    display_order INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 4. Table: topics (Depends on categories)
-CREATE TABLE topics (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description VARCHAR(255),
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
     category_id BIGINT NOT NULL,
-    CONSTRAINT fk_topics_category FOREIGN KEY (category_id) REFERENCES categories (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_topic_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
 
--- 5. Table: resources (Depends on users and topics)
-CREATE TABLE resources (
+-- 4. Banners
+CREATE TABLE IF NOT EXISTS banners (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    image_url VARCHAR(500) NOT NULL,
+    link VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 5. Resources
+CREATE TABLE IF NOT EXISTS resources (
     id CHAR(36) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    description VARCHAR(255),
+    description TEXT,
     views_count BIGINT DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    file_url VARCHAR(255) NOT NULL,
-    file_type VARCHAR(50),
-    file_extension VARCHAR(50),
+    file_url VARCHAR(500) NOT NULL,
+    file_type VARCHAR(20),
+    file_extension VARCHAR(10),
     file_size BIGINT,
-    created_by_id BIGINT,
     topic_id BIGINT NOT NULL,
-    CONSTRAINT fk_resources_user FOREIGN KEY (created_by_id) REFERENCES users (id),
-    CONSTRAINT fk_resources_topic FOREIGN KEY (topic_id) REFERENCES topics (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    created_by_id BIGINT, -- Nullable
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_resource_topic FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE,
+    CONSTRAINT fk_resource_user FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE SET NULL
+);
