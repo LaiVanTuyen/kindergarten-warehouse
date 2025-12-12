@@ -25,11 +25,35 @@ public class UserController {
         this.messageService = messageService;
     }
 
+    @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
+            @jakarta.validation.Valid @RequestBody com.kindergarten.warehouse.dto.request.UserCreationRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(userService.createUser(request), messageService.getMessage("user.create.success")));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers(
+            @RequestParam(required = false) String status) {
         return ResponseEntity
-                .ok(ApiResponse.success(userService.getAllUsers(), messageService.getMessage("user.list.success")));
+                .ok(ApiResponse.success(userService.getUsers(status), messageService.getMessage("user.list.success")));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Long>>> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.ok(ApiResponse.success(java.util.Collections.singletonMap("id", id),
+                messageService.getMessage("user.delete.success")));
+    }
+
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> restoreUser(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                ApiResponse.success(userService.restoreUser(id), messageService.getMessage("user.restore.success")));
     }
 
     @PutMapping("/{id}/block")

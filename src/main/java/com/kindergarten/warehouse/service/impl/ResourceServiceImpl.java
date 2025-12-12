@@ -17,8 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.UUID;
-
 @Service
 public class ResourceServiceImpl implements ResourceService {
 
@@ -56,7 +54,7 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setTopic(topic);
         resource.setFileUrl(fileUrl);
         resource.setFileExtension(extension);
-        resource.setFileType(type);
+        resource.setFileType(type.name());
         resource.setFileSize(file.getSize());
         resource.setCreatedBy(user);
 
@@ -69,11 +67,11 @@ public class ResourceServiceImpl implements ResourceService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Resource> resourcePage;
         if (topicId != null) {
-            resourcePage = resourceRepository.findByTopicId(topicId, pageable);
+            resourcePage = resourceRepository.findByTopicIdAndIsDeletedFalse(topicId, pageable);
         } else if (categoryId != null) {
-            resourcePage = resourceRepository.findByTopicCategoryId(categoryId, pageable);
+            resourcePage = resourceRepository.findByTopicCategoryIdAndIsDeletedFalse(categoryId, pageable);
         } else {
-            resourcePage = resourceRepository.findAll(pageable);
+            resourcePage = resourceRepository.findByIsDeletedFalse(pageable);
         }
         return resourcePage.map(this::mapToResponse);
     }
@@ -86,6 +84,7 @@ public class ResourceServiceImpl implements ResourceService {
                 .viewsCount(resource.getViewsCount())
                 .createdAt(resource.getCreatedAt())
                 .fileUrl(resource.getFileUrl())
+                .thumbnailUrl(resource.getThumbnailUrl())
                 .fileType(resource.getFileType())
                 .fileExtension(resource.getFileExtension())
                 .topicId(resource.getTopic().getId())
@@ -96,7 +95,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void incrementViewCount(UUID id) {
+    public void incrementViewCount(String id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
@@ -105,15 +104,14 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void deleteResource(UUID id) {
+    public void deleteResource(String id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
-        // Delete file from MinIO
-        minioStorageService.deleteFile(resource.getFileUrl());
-
-        resourceRepository.deleteById(id);
+        // Soft Delete
+        resource.setIsDeleted(true);
+        resourceRepository.save(resource);
     }
 
     private String getExtension(String fileName) {

@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.EqualsAndHashCode;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-import java.util.UUID;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,8 +18,8 @@ import java.util.UUID;
 public class Resource extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @JdbcTypeCode(SqlTypes.CHAR)
-    private UUID id;
+    @Column(columnDefinition = "CHAR(36)")
+    private String id;
 
     @Column(nullable = false, length = 255)
     private String title;
@@ -38,9 +34,12 @@ public class Resource extends BaseEntity {
     @Column(name = "file_url", nullable = false, length = 500)
     private String fileUrl;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "file_type", length = 20, columnDefinition = "VARCHAR(20)")
-    private FileType fileType;
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl; // [NEW] from requirements
+
+    @Column(name = "file_type", length = 20)
+    private String fileType; // Requirements said "map file_type", treating as String for flexible mapping or
+                             // could be Enum
 
     @Column(name = "file_extension", length = 10)
     private String fileExtension;
@@ -61,4 +60,8 @@ public class Resource extends BaseEntity {
     @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Builder.Default
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false; // [NEW] Soft Delete
 }

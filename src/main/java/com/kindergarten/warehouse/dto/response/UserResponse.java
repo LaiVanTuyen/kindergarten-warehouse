@@ -1,8 +1,9 @@
 package com.kindergarten.warehouse.dto.response;
 
-import com.kindergarten.warehouse.entity.Role;
 import lombok.Builder;
 import lombok.Data;
+
+import java.util.Set;
 
 @Data
 @Builder
@@ -12,6 +13,7 @@ public class UserResponse {
     private String fullName;
     private String email;
     private String avatarUrl;
-    private Role role;
-    private Boolean isActive;
+    private Set<String> roles;
+    private String status;
+    private Boolean isDeleted;
 }

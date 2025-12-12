@@ -10,7 +10,16 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByUsernameAndIsDeletedFalse(String username);
+
     Boolean existsByUsername(String username);
 
     Boolean existsByEmail(String email);
+
+    org.springframework.data.domain.Page<User> findByIsDeletedFalse(org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<User> findByIsDeletedTrue(org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<User> findByIsDeletedFalseAndStatus(
+            com.kindergarten.warehouse.entity.UserStatus status, org.springframework.data.domain.Pageable pageable);
 }

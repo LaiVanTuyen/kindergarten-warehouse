@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.rollbar.notifier.Rollbar;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,9 +16,11 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private final com.kindergarten.warehouse.service.MessageService messageService;
+    private final Rollbar rollbar;
 
-    public GlobalExceptionHandler(com.kindergarten.warehouse.service.MessageService messageService) {
+    public GlobalExceptionHandler(com.kindergarten.warehouse.service.MessageService messageService, Rollbar rollbar) {
         this.messageService = messageService;
+        this.rollbar = rollbar;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -74,6 +77,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
+        rollbar.error(ex);
         ErrorCode errorCode = ErrorCode.UNCATEGORIZED_EXCEPTION;
         return new ResponseEntity<>(
                 ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),

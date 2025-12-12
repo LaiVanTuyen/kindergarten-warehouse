@@ -43,3 +43,9 @@ minio:
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
+
+rollbar:
+  access-token: ${ROLLBAR_ACCESS_TOKEN}
+  enabled: true
+  environment: ${ROLLBAR_ENV:development}
+  framework: spring-boot

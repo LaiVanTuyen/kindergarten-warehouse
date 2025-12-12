@@ -30,11 +30,12 @@ public class AuthService {
     private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     public AuthService(AuthenticationManager authenticationManager,
-                       UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtTokenProvider jwtTokenProvider,
-                       MessageSource messageSource,
-                       org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate1) {
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider,
+            MessageSource messageSource,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate1) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -61,8 +62,9 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole())
-                .isActive(user.getIsActive())
+                .roles(user.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()))
+                .status(user.getStatus().name())
+                .isDeleted(user.getIsDeleted())
                 .build();
 
         return new AuthResponseDto(userResponse, token, null);
@@ -83,8 +85,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         user.setEmail(registerDto.getEmail());
         user.setFullName(registerDto.getFullName());
-        user.setRole(Role.USER);
-        user.setIsActive(true);
+        user.setRoles(java.util.Collections.singleton(Role.USER));
+        user.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
 
         User savedUser = userRepository.save(user);
 
@@ -98,8 +100,9 @@ public class AuthService {
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
                 .avatarUrl(savedUser.getAvatarUrl())
-                .role(savedUser.getRole())
-                .isActive(savedUser.getIsActive())
+                .roles(savedUser.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()))
+                .status(savedUser.getStatus().name())
+                .isDeleted(savedUser.getIsDeleted())
                 .build();
 
         return new AuthResponseDto(userResponse, token, null);

@@ -11,7 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 
-import java.util.UUID;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 
 import com.kindergarten.warehouse.dto.response.ApiResponse;
@@ -60,7 +59,7 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}/view")
-    public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable String id) {
         resourceService.incrementViewCount(id);
         return ResponseEntity
                 .ok(ApiResponse.success(null, messageService.getMessage("resource.view.increment.success")));
@@ -68,7 +67,7 @@ public class ResourceController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable String id) {
         resourceService.deleteResource(id);
         return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("resource.delete.success")));
     }

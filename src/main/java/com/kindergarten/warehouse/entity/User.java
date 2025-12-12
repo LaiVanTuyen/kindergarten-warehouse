@@ -39,12 +39,19 @@ public class User extends BaseEntity {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role", columnDefinition = "VARCHAR(20)")
+    @Builder.Default
+    private java.util.Set<Role> roles = new java.util.HashSet<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
-    @NotNull
-    private Role role;
-
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean isDeleted = false;
 }
