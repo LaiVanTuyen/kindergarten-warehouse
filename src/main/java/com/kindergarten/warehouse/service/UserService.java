@@ -2,6 +2,7 @@ package com.kindergarten.warehouse.service;
 
 import com.kindergarten.warehouse.dto.response.UserResponse;
 import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.aspect.LogAction;
 import com.kindergarten.warehouse.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class UserService {
         return getUsers(null);
     }
 
+    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created user")
     public UserResponse createUser(com.kindergarten.warehouse.dto.request.UserCreationRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new com.kindergarten.warehouse.exception.AppException(
@@ -74,6 +76,7 @@ public class UserService {
     }
 
     @org.springframework.transaction.annotation.Transactional
+    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted user")
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(
@@ -93,6 +96,7 @@ public class UserService {
     }
 
     @org.springframework.transaction.annotation.Transactional
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Restored user")
     public UserResponse restoreUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(
@@ -125,6 +129,7 @@ public class UserService {
         return mapToResponse(userRepository.save(user));
     }
 
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Toggled block status for user")
     public UserResponse toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(

@@ -2,6 +2,7 @@ package com.kindergarten.warehouse.service.impl;
 
 import com.kindergarten.warehouse.entity.Resource;
 import com.kindergarten.warehouse.entity.FileType;
+import com.kindergarten.warehouse.aspect.LogAction;
 import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.TopicRepository;
@@ -34,6 +35,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
+    @LogAction(action = "CREATE", description = "Uploaded resource")
     public ResourceResponse uploadResource(MultipartFile file, String title,
             String description, Long topicId, String username) {
         User user = userRepository.findByUsername(username)
@@ -104,6 +106,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
+    @LogAction(action = "DELETE", description = "Deleted resource")
     public void deleteResource(String id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
