@@ -21,4 +21,5 @@ public class ResourceResponse {
     private String topicName;
     private Long fileSize;
     private String createdBy;
+    private java.util.List<AgeGroupResponse> ageGroups;
 }

@@ -423,6 +423,28 @@
 			]
 		},
 		{
+			"name": "Age Groups",
+			"item": [
+				{
+					"name": "Get All Age Groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/age-groups",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"age-groups"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Banners",
 			"item": [
 				{
@@ -566,6 +588,12 @@
 									"key": "topicId",
 									"value": "1",
 									"type": "text"
+								},
+								{
+									"key": "ageGroupIds",
+									"value": "1,2",
+									"type": "text",
+									"description": "Comma separated IDs"
 								}
 							]
 						},
@@ -612,6 +640,18 @@
 									"key": "categoryId",
 									"value": "1",
 									"disabled": true
+								},
+								{
+									"key": "ageGroupId",
+									"value": "1",
+									"disabled": true,
+									"description": "Filter by Age Group"
+								},
+								{
+									"key": "keyword",
+									"value": "sample",
+									"disabled": true,
+									"description": "Search by keyword in title"
 								}
 							]
 						}

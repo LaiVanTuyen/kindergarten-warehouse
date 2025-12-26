@@ -64,4 +64,9 @@ public class Resource extends BaseEntity {
     @Builder.Default
     @Column(name = "is_deleted")
     private Boolean isDeleted = false; // [NEW] Soft Delete
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "resource_age_groups", joinColumns = @JoinColumn(name = "resource_id"), inverseJoinColumns = @JoinColumn(name = "age_group_id"))
+    @ToString.Exclude
+    private java.util.Set<AgeGroup> ageGroups;
 }

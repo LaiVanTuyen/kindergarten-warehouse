@@ -24,20 +24,23 @@ public class ResourceServiceImpl implements ResourceService {
     private final ResourceRepository resourceRepository;
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
+    private final com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository;
     private final MinioStorageService minioStorageService;
 
     public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
-            UserRepository userRepository, MinioStorageService minioStorageService) {
+            UserRepository userRepository, com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository,
+            MinioStorageService minioStorageService) {
         this.resourceRepository = resourceRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
+        this.ageGroupRepository = ageGroupRepository;
         this.minioStorageService = minioStorageService;
     }
 
     @Override
     @LogAction(action = "CREATE", description = "Uploaded resource")
     public ResourceResponse uploadResource(MultipartFile file, String title,
-            String description, Long topicId, String username) {
+            String description, Long topicId, java.util.List<Long> ageGroupIds, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
@@ -45,6 +48,11 @@ public class ResourceServiceImpl implements ResourceService {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.TOPIC_NOT_FOUND));
+
+        java.util.Set<com.kindergarten.warehouse.entity.AgeGroup> ageGroups = new java.util.HashSet<>();
+        if (ageGroupIds != null && !ageGroupIds.isEmpty()) {
+            ageGroups.addAll(ageGroupRepository.findAllById(ageGroupIds));
+        }
 
         String fileUrl = minioStorageService.uploadFile(file);
         String extension = getExtension(file.getOriginalFilename());
@@ -59,22 +67,40 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setFileType(type.name());
         resource.setFileSize(file.getSize());
         resource.setCreatedBy(user);
+        resource.setAgeGroups(ageGroups);
 
         return mapToResponse(resourceRepository.save(resource));
     }
 
     @Override
-    public Page<ResourceResponse> getResources(Long topicId, Long categoryId, int page,
-            int size) {
+    public Page<ResourceResponse> getResources(
+            com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Resource> resourcePage;
-        if (topicId != null) {
-            resourcePage = resourceRepository.findByTopicIdAndIsDeletedFalse(topicId, pageable);
-        } else if (categoryId != null) {
-            resourcePage = resourceRepository.findByTopicCategoryIdAndIsDeletedFalse(categoryId, pageable);
-        } else {
-            resourcePage = resourceRepository.findByIsDeletedFalse(pageable);
-        }
+
+        org.springframework.data.jpa.domain.Specification<Resource> spec = (root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.equal(root.get("isDeleted"), false));
+
+            if (filterRequest.getTopicId() != null) {
+                predicates.add(cb.equal(root.get("topic").get("id"), filterRequest.getTopicId()));
+            } else if (filterRequest.getCategoryId() != null) {
+                // Assuming Topic has category field
+                predicates.add(cb.equal(root.get("topic").get("category").get("id"), filterRequest.getCategoryId()));
+            }
+
+            if (filterRequest.getAgeGroupId() != null) {
+                predicates.add(cb.equal(root.join("ageGroups").get("id"), filterRequest.getAgeGroupId()));
+            }
+
+            if (filterRequest.getKeyword() != null && !filterRequest.getKeyword().isEmpty()) {
+                String likePattern = "%" + filterRequest.getKeyword().toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
         return resourcePage.map(this::mapToResponse);
     }
 
@@ -93,6 +119,15 @@ public class ResourceServiceImpl implements ResourceService {
                 .topicName(resource.getTopic().getName())
                 .fileSize(resource.getFileSize())
                 .createdBy(resource.getCreatedBy() != null ? resource.getCreatedBy().getFullName() : null)
+                .ageGroups(resource.getAgeGroups().stream()
+                        .map(ag -> com.kindergarten.warehouse.dto.response.AgeGroupResponse.builder()
+                                .id(ag.getId())
+                                .name(ag.getName())
+                                .minAge(ag.getMinAge())
+                                .maxAge(ag.getMaxAge())
+                                .description(ag.getDescription())
+                                .build())
+                        .collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 

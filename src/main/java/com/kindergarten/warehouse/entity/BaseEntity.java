@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@lombok.experimental.SuperBuilder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {

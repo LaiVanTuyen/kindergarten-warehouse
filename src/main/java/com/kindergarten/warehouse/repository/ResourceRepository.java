@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ResourceRepository extends JpaRepository<Resource, String> {
+public interface ResourceRepository extends JpaRepository<Resource, String>,
+        org.springframework.data.jpa.repository.JpaSpecificationExecutor<Resource> {
     Page<Resource> findByTopicIdAndIsDeletedFalse(Long topicId, Pageable pageable);
 
     Page<Resource> findByTopicCategoryIdAndIsDeletedFalse(Long categoryId, Pageable pageable);

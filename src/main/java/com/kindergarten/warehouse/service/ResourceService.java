@@ -6,9 +6,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface ResourceService {
     ResourceResponse uploadResource(MultipartFile file, String title, String description,
-            Long topicId, String username);
+            Long topicId, java.util.List<Long> ageGroupIds, String username);
 
-    Page<ResourceResponse> getResources(Long topicId, Long categoryId, int page, int size);
+    Page<ResourceResponse> getResources(com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest,
+            int page, int size);
 
     void incrementViewCount(String id);
 

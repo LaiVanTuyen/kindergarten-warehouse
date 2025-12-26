@@ -36,24 +36,34 @@ public class ResourceController {
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam("topicId") Long topicId,
+            @RequestParam(value = "ageGroupIds", required = false) java.util.List<Long> ageGroupIds,
             Principal principal) {
 
         return new ResponseEntity<>(
                 ApiResponse.success(
-                        resourceService.uploadResource(file, title, description, topicId, principal.getName()),
+                        resourceService.uploadResource(file, title, description, topicId, ageGroupIds,
+                                principal.getName()),
                         messageService.getMessage("resource.upload.success")),
                 HttpStatus.CREATED);
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getResources(
+            @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "topicId", required = false) Long topicId,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "ageGroupId", required = false) Long ageGroupId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
+        com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest = new com.kindergarten.warehouse.dto.request.ResourceFilterRequest();
+        filterRequest.setKeyword(keyword);
+        filterRequest.setTopicId(topicId);
+        filterRequest.setCategoryId(categoryId);
+        filterRequest.setAgeGroupId(ageGroupId);
+
         return new ResponseEntity<>(
-                ApiResponse.success(resourceService.getResources(topicId, categoryId, page, size),
+                ApiResponse.success(resourceService.getResources(filterRequest, page, size),
                         messageService.getMessage("resource.list.success")),
                 HttpStatus.OK);
     }
