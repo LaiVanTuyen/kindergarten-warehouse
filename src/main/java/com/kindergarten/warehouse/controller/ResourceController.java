@@ -21,64 +21,81 @@ import com.kindergarten.warehouse.service.MessageService;
 @RequestMapping("/api/v1/resources")
 public class ResourceController {
 
-    private final ResourceService resourceService;
-    private final MessageService messageService;
+        private final ResourceService resourceService;
+        private final MessageService messageService;
 
-    public ResourceController(ResourceService resourceService, MessageService messageService) {
-        this.resourceService = resourceService;
-        this.messageService = messageService;
-    }
+        public ResourceController(ResourceService resourceService, MessageService messageService) {
+                this.resourceService = resourceService;
+                this.messageService = messageService;
+        }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<ResourceResponse>> uploadResource(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("title") String title,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("topicId") Long topicId,
-            @RequestParam(value = "ageGroupIds", required = false) java.util.List<Long> ageGroupIds,
-            Principal principal) {
+        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
+        public ResponseEntity<ApiResponse<ResourceResponse>> uploadResource(
+                        @RequestParam("file") MultipartFile file,
+                        @RequestParam("title") String title,
+                        @RequestParam(value = "description", required = false) String description,
+                        @RequestParam("topicId") Long topicId,
+                        @RequestParam(value = "ageGroupIds", required = false) java.util.List<Long> ageGroupIds,
+                        Principal principal) {
 
-        return new ResponseEntity<>(
-                ApiResponse.success(
-                        resourceService.uploadResource(file, title, description, topicId, ageGroupIds,
-                                principal.getName()),
-                        messageService.getMessage("resource.upload.success")),
-                HttpStatus.CREATED);
-    }
+                return new ResponseEntity<>(
+                                ApiResponse.success(
+                                                resourceService.uploadResource(file, title, description, topicId,
+                                                                ageGroupIds,
+                                                                principal.getName()),
+                                                messageService.getMessage("resource.upload.success")),
+                                HttpStatus.CREATED);
+        }
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getResources(
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "topicId", required = false) Long topicId,
-            @RequestParam(value = "categoryId", required = false) Long categoryId,
-            @RequestParam(value = "ageGroupId", required = false) Long ageGroupId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
+        @GetMapping
+        public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getResources(
+                        @RequestParam(value = "keyword", required = false) String keyword,
+                        @RequestParam(value = "topicId", required = false) Long topicId,
+                        @RequestParam(value = "categoryId", required = false) Long categoryId,
+                        @RequestParam(value = "topic", required = false) String topicSlug,
+                        @RequestParam(value = "category", required = false) String categorySlug,
+                        @RequestParam(value = "ages", required = false) java.util.List<String> ages,
+                        @RequestParam(value = "ageGroupId", required = false) Long ageGroupId,
+                        @RequestParam(value = "page", defaultValue = "0") int page,
+                        @RequestParam(value = "size", defaultValue = "10") int size) {
 
-        com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest = new com.kindergarten.warehouse.dto.request.ResourceFilterRequest();
-        filterRequest.setKeyword(keyword);
-        filterRequest.setTopicId(topicId);
-        filterRequest.setCategoryId(categoryId);
-        filterRequest.setAgeGroupId(ageGroupId);
+                com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest = new com.kindergarten.warehouse.dto.request.ResourceFilterRequest();
+                filterRequest.setKeyword(keyword);
+                filterRequest.setTopicId(topicId);
+                filterRequest.setCategoryId(categoryId);
+                filterRequest.setAgeGroupId(ageGroupId);
+                filterRequest.setTopicSlug(topicSlug);
+                filterRequest.setCategorySlug(categorySlug);
+                filterRequest.setAgeSlugs(ages);
 
-        return new ResponseEntity<>(
-                ApiResponse.success(resourceService.getResources(filterRequest, page, size),
-                        messageService.getMessage("resource.list.success")),
-                HttpStatus.OK);
-    }
+                return new ResponseEntity<>(
+                                ApiResponse.success(resourceService.getResources(filterRequest, page, size),
+                                                messageService.getMessage("resource.list.success")),
+                                HttpStatus.OK);
+        }
 
-    @PutMapping("/{id}/view")
-    public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable String id) {
-        resourceService.incrementViewCount(id);
-        return ResponseEntity
-                .ok(ApiResponse.success(null, messageService.getMessage("resource.view.increment.success")));
-    }
+        @GetMapping("/{slug}")
+        public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(@PathVariable String slug) {
+                return new ResponseEntity<>(
+                                ApiResponse.success(resourceService.getResourceBySlug(slug),
+                                                messageService.getMessage("resource.detail.success")),
+                                HttpStatus.OK);
+        }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable String id) {
-        resourceService.deleteResource(id);
-        return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("resource.delete.success")));
-    }
+        @PutMapping("/{id}/view")
+        public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable String id) {
+                resourceService.incrementViewCount(id);
+                return ResponseEntity
+                                .ok(ApiResponse.success(null,
+                                                messageService.getMessage("resource.view.increment.success")));
+        }
+
+        @DeleteMapping("/{id}")
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
+        public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable String id) {
+                resourceService.deleteResource(id);
+                return ResponseEntity
+                                .ok(ApiResponse.success(null, messageService.getMessage("resource.delete.success")));
+        }
 }

@@ -2,9 +2,6 @@ package com.kindergarten.warehouse.exception;
 
 import org.springframework.http.HttpStatus;
 
-import lombok.Getter;
-
-@Getter
 public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "error.internal", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(1001, "validation.failed", HttpStatus.BAD_REQUEST),
@@ -22,8 +19,21 @@ public enum ErrorCode {
     ;
 
     private int code;
+
+    public String getMessage() {
+        return message;
+    } // Manual getter
+
+    public int getCode() {
+        return code;
+    }
+
     private String message;
     private HttpStatus httpStatusCode;
+
+    public HttpStatus getHttpStatusCode() {
+        return httpStatusCode;
+    }
 
     ErrorCode(int code, String message, HttpStatus httpStatusCode) {
         this.code = code;

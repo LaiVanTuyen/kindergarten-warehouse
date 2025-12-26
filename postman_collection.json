@@ -350,7 +350,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Math\",\n    \"description\": \"Mathematics resources\"\n}",
+							"raw": "{\n    \"name\": \"Math\",\n    \"description\": \"Mathematics resources\",\n    \"slug\": \"math\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -382,7 +382,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Advanced Math\",\n    \"description\": \"Advanced Mathematics\"\n}",
+							"raw": "{\n    \"name\": \"Advanced Math\",\n    \"description\": \"Advanced Mathematics\",\n    \"slug\": \"advanced-math\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -645,14 +645,50 @@
 									"key": "ageGroupId",
 									"value": "1",
 									"disabled": true,
-									"description": "Filter by Age Group"
+									"description": "Filter by Age Group ID"
 								},
 								{
 									"key": "keyword",
 									"value": "sample",
 									"disabled": true,
 									"description": "Search by keyword in title"
+								},
+								{
+									"key": "topic",
+									"value": "hoat-dong-the-chat",
+									"disabled": true,
+									"description": "Filter by Topic Slug"
+								},
+								{
+									"key": "category",
+									"value": "video-bai-giang",
+									"disabled": true,
+									"description": "Filter by Category Slug"
+								},
+								{
+									"key": "ages",
+									"value": "3-4-tuoi,4-5-tuoi",
+									"disabled": true,
+									"description": "Filter by comma-separated Age Group Slugs"
 								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Resource by Slug",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources/sample-resource-slug",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources",
+								"sample-resource-slug"
 							]
 						}
 					},

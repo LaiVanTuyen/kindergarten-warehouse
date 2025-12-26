@@ -60,6 +60,9 @@ public class ResourceServiceImpl implements ResourceService {
 
         Resource resource = new Resource();
         resource.setTitle(title);
+        // Generate slug from title + random/timestamp or just accept user input later.
+        // For now, using title-timestamp for uniqueness.
+        resource.setSlug(com.kindergarten.warehouse.util.SlugUtil.toSlug(title + "-" + System.currentTimeMillis()));
         resource.setDescription(description);
         resource.setTopic(topic);
         resource.setFileUrl(fileUrl);
@@ -81,6 +84,13 @@ public class ResourceServiceImpl implements ResourceService {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
             predicates.add(cb.equal(root.get("isDeleted"), false));
 
+            if (filterRequest.getTopicSlug() != null && !filterRequest.getTopicSlug().isEmpty()) {
+                predicates.add(cb.equal(root.get("topic").get("slug"), filterRequest.getTopicSlug()));
+            } else if (filterRequest.getCategorySlug() != null && !filterRequest.getCategorySlug().isEmpty()) {
+                predicates
+                        .add(cb.equal(root.get("topic").get("category").get("slug"), filterRequest.getCategorySlug()));
+            }
+
             if (filterRequest.getTopicId() != null) {
                 predicates.add(cb.equal(root.get("topic").get("id"), filterRequest.getTopicId()));
             } else if (filterRequest.getCategoryId() != null) {
@@ -90,6 +100,11 @@ public class ResourceServiceImpl implements ResourceService {
 
             if (filterRequest.getAgeGroupId() != null) {
                 predicates.add(cb.equal(root.join("ageGroups").get("id"), filterRequest.getAgeGroupId()));
+            }
+
+            if (filterRequest.getAgeSlugs() != null && !filterRequest.getAgeSlugs().isEmpty()) {
+                // Join with ageGroups and check if slug is in the list
+                predicates.add(root.join("ageGroups").get("slug").in(filterRequest.getAgeSlugs()));
             }
 
             if (filterRequest.getKeyword() != null && !filterRequest.getKeyword().isEmpty()) {
@@ -108,6 +123,7 @@ public class ResourceServiceImpl implements ResourceService {
         return ResourceResponse.builder()
                 .id(resource.getId())
                 .title(resource.getTitle())
+                .slug(resource.getSlug())
                 .description(resource.getDescription())
                 .viewsCount(resource.getViewsCount())
                 .createdAt(resource.getCreatedAt())
@@ -123,6 +139,7 @@ public class ResourceServiceImpl implements ResourceService {
                         .map(ag -> com.kindergarten.warehouse.dto.response.AgeGroupResponse.builder()
                                 .id(ag.getId())
                                 .name(ag.getName())
+                                .slug(ag.getSlug())
                                 .minAge(ag.getMinAge())
                                 .maxAge(ag.getMaxAge())
                                 .description(ag.getDescription())
@@ -157,6 +174,22 @@ public class ResourceServiceImpl implements ResourceService {
             return "";
         }
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    @Override
+    public ResourceResponse getResourceBySlug(String slug) {
+        Resource resource = resourceRepository.findBySlug(slug)
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
+
+        // Logic check: only active/non-deleted? Repository findBySlug should probably
+        // handle this or check here.
+        if (resource.getIsDeleted()) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        return mapToResponse(resource);
     }
 
     private FileType determineFileType(String extension) {

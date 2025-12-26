@@ -14,4 +14,6 @@ public interface ResourceRepository extends JpaRepository<Resource, String>,
     Page<Resource> findByTopicCategoryIdAndIsDeletedFalse(Long categoryId, Pageable pageable);
 
     Page<Resource> findByIsDeletedFalse(Pageable pageable);
+
+    java.util.Optional<Resource> findBySlug(String slug);
 }
