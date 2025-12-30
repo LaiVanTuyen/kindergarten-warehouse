@@ -17,6 +17,7 @@ import java.util.UUID;
 public class MinioStorageService {
 
     private final S3Client s3Client;
+    private final software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner;
 
     @Value("${minio.bucket-name}")
     private String bucketName;
@@ -24,8 +25,10 @@ public class MinioStorageService {
     @Value("${minio.public-endpoint}")
     private String publicEndpoint;
 
-    public MinioStorageService(S3Client s3Client) {
+    public MinioStorageService(S3Client s3Client,
+            software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner) {
         this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
     }
 
     @PostConstruct
@@ -78,6 +81,29 @@ public class MinioStorageService {
             s3Client.deleteObject(b -> b.bucket(bucketName).key(fileName));
         } catch (S3Exception e) {
             throw new RuntimeException("Failed to delete file from MinIO", e);
+        }
+    }
+
+    public String getPresignedUrl(String objectKey) {
+        try {
+            software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .build();
+
+            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest presignRequest = software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+                    .builder()
+                    .signatureDuration(java.time.Duration.ofMinutes(10))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest presignedRequest = s3Presigner
+                    .presignGetObject(presignRequest);
+
+            return presignedRequest.url().toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate presigned URL", e);
         }
     }
 }

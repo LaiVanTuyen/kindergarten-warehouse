@@ -47,8 +47,25 @@ public class Resource extends BaseEntity {
     @Column(name = "file_extension", length = 10)
     private String fileExtension;
 
+    @Column(name = "highlights", columnDefinition = "json")
+    @Convert(converter = com.kindergarten.warehouse.util.JsonStringListConverter.class)
+    private java.util.List<String> highlights;
+
     @Column(name = "file_size")
     private Long fileSize;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false, columnDefinition = "VARCHAR(20)")
+    private ResourceStatus status = ResourceStatus.PENDING;
+
+    @Builder.Default
+    @Column(name = "download_count")
+    private Long downloadCount = 0L;
+
+    @Builder.Default
+    @Column(name = "average_rating", columnDefinition = "DECIMAL(3, 2) DEFAULT 0.00")
+    private Double averageRating = 0.0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id", nullable = true)

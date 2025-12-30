@@ -46,13 +46,13 @@ public class AuthService {
 
     public AuthResponseDto login(LoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String token = jwtTokenProvider.generateToken(authentication);
 
-        User user = userRepository.findByUsername(loginDto.getUsername())
+        User user = userRepository.findByEmail(loginDto.getEmail())
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
 

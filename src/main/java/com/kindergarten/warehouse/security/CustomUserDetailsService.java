@@ -26,11 +26,19 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         @Override
-        public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-                User user = userRepository.findByUsernameAndIsDeletedFalse(username)
-                                .orElseThrow(() -> new UsernameNotFoundException(messageSource
-                                                .getMessage("error.user.not_found.username", new Object[] { username },
-                                                                LocaleContextHolder.getLocale())));
+        public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+                // Try finding by email first
+                User user = userRepository.findByEmail(usernameOrEmail)
+                                .orElse(null);
+
+                // If not found by email, try finding by username
+                if (user == null) {
+                        user = userRepository.findByUsernameAndIsDeletedFalse(usernameOrEmail)
+                                        .orElseThrow(() -> new UsernameNotFoundException(messageSource
+                                                        .getMessage("error.user.not_found.username",
+                                                                        new Object[] { usernameOrEmail },
+                                                                        LocaleContextHolder.getLocale())));
+                }
 
                 Set<GrantedAuthority> authorities = user.getRoles().stream()
                                 .map(role -> new SimpleGrantedAuthority(role.name()))

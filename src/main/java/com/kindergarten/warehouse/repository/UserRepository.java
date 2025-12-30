@@ -22,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     org.springframework.data.domain.Page<User> findByIsDeletedFalseAndStatus(
             com.kindergarten.warehouse.entity.UserStatus status, org.springframework.data.domain.Pageable pageable);
+
+    Optional<User> findByEmail(String email);
 }

@@ -11,9 +11,11 @@ public interface ResourceService {
         Page<ResourceResponse> getResources(com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest,
                         int page, int size);
 
-        void incrementViewCount(String id);
+        void incrementViewCount(String id, String ipAddress);
 
         void deleteResource(String id);
 
         ResourceResponse getResourceBySlug(String slug);
+
+        void incrementDownloadCount(String id);
 }

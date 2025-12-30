@@ -66,4 +66,14 @@ public class ResourceFilterRequest {
     public void setAgeSlugs(java.util.List<String> ageSlugs) {
         this.ageSlugs = ageSlugs;
     }
+
+    private String status;
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }

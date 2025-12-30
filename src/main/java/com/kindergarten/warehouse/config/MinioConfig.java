@@ -14,25 +14,38 @@ import java.net.URI;
 @Configuration
 public class MinioConfig {
 
-    @Value("${minio.endpoint}")
-    private String minioEndpoint;
+        @Value("${minio.endpoint}")
+        private String minioEndpoint;
 
-    @Value("${minio.access-key}")
-    private String accessKey;
+        @Value("${minio.access-key}")
+        private String accessKey;
 
-    @Value("${minio.secret-key}")
-    private String secretKey;
+        @Value("${minio.secret-key}")
+        private String secretKey;
 
-    @Bean
-    public S3Client s3Client() {
-        return S3Client.builder()
-                .endpointOverride(URI.create(minioEndpoint))
-                .region(Region.US_EAST_1) // MinIO ignores region, but AWS SDK requires it
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true) // Required for MinIO
-                        .build())
-                .build();
-    }
+        @Bean
+        public S3Client s3Client() {
+                return S3Client.builder()
+                                .endpointOverride(URI.create(minioEndpoint))
+                                .region(Region.US_EAST_1) // MinIO ignores region, but AWS SDK requires it
+                                .credentialsProvider(StaticCredentialsProvider.create(
+                                                AwsBasicCredentials.create(accessKey, secretKey)))
+                                .serviceConfiguration(S3Configuration.builder()
+                                                .pathStyleAccessEnabled(true) // Required for MinIO
+                                                .build())
+                                .build();
+        }
+
+        @Bean
+        public software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner() {
+                return software.amazon.awssdk.services.s3.presigner.S3Presigner.builder()
+                                .endpointOverride(URI.create(minioEndpoint))
+                                .region(Region.US_EAST_1)
+                                .credentialsProvider(StaticCredentialsProvider.create(
+                                                AwsBasicCredentials.create(accessKey, secretKey)))
+                                .serviceConfiguration(S3Configuration.builder()
+                                                .pathStyleAccessEnabled(true)
+                                                .build())
+                                .build();
+        }
 }

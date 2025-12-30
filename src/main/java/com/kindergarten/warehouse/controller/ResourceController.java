@@ -57,6 +57,7 @@ public class ResourceController {
                         @RequestParam(value = "category", required = false) String categorySlug,
                         @RequestParam(value = "ages", required = false) java.util.List<String> ages,
                         @RequestParam(value = "ageGroupId", required = false) Long ageGroupId,
+                        @RequestParam(value = "status", required = false) String status,
                         @RequestParam(value = "page", defaultValue = "0") int page,
                         @RequestParam(value = "size", defaultValue = "10") int size) {
 
@@ -67,7 +68,10 @@ public class ResourceController {
                 filterRequest.setAgeGroupId(ageGroupId);
                 filterRequest.setTopicSlug(topicSlug);
                 filterRequest.setCategorySlug(categorySlug);
+                filterRequest.setTopicSlug(topicSlug);
+                filterRequest.setCategorySlug(categorySlug);
                 filterRequest.setAgeSlugs(ages);
+                filterRequest.setStatus(status);
 
                 return new ResponseEntity<>(
                                 ApiResponse.success(resourceService.getResources(filterRequest, page, size),
@@ -84,11 +88,28 @@ public class ResourceController {
         }
 
         @PutMapping("/{id}/view")
-        public ResponseEntity<ApiResponse<Void>> incrementViewCount(@PathVariable String id) {
-                resourceService.incrementViewCount(id);
+        public ResponseEntity<ApiResponse<Void>> incrementViewCount(
+                        @PathVariable String id,
+                        jakarta.servlet.http.HttpServletRequest request) {
+                String ipAddress = request.getHeader("X-Forwarded-For");
+                if (ipAddress == null || ipAddress.isEmpty()) {
+                        ipAddress = request.getRemoteAddr();
+                }
+                // Handle comma separated X-Forwarded-For
+                if (ipAddress != null && ipAddress.contains(",")) {
+                        ipAddress = ipAddress.split(",")[0].trim();
+                }
+
+                resourceService.incrementViewCount(id, ipAddress);
                 return ResponseEntity
                                 .ok(ApiResponse.success(null,
                                                 messageService.getMessage("resource.view.increment.success")));
+        }
+
+        @PutMapping("/{id}/download")
+        public ResponseEntity<ApiResponse<Void>> incrementDownloadCount(@PathVariable String id) {
+                resourceService.incrementDownloadCount(id);
+                return ResponseEntity.ok(ApiResponse.success(null, "Download count incremented"));
         }
 
         @DeleteMapping("/{id}")

@@ -21,20 +21,29 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ResourceServiceImpl implements ResourceService {
 
+    // Map to store IP_ResourceID -> LastViewTimestamp
+    private final java.util.Map<String, Long> viewTracker = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final ResourceRepository resourceRepository;
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
     private final com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository;
     private final MinioStorageService minioStorageService;
+    private final com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository;
+    private final com.kindergarten.warehouse.repository.CommentRepository commentRepository;
 
     public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
             UserRepository userRepository, com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository,
-            MinioStorageService minioStorageService) {
+            MinioStorageService minioStorageService,
+            com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository,
+            com.kindergarten.warehouse.repository.CommentRepository commentRepository) {
         this.resourceRepository = resourceRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
         this.ageGroupRepository = ageGroupRepository;
         this.minioStorageService = minioStorageService;
+        this.favoriteRepository = favoriteRepository;
+        this.commentRepository = commentRepository;
     }
 
     @Override
@@ -112,6 +121,12 @@ public class ResourceServiceImpl implements ResourceService {
                 predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
             }
 
+            if (filterRequest.getStatus() != null && !filterRequest.getStatus().isEmpty()) {
+                predicates.add(
+                        cb.equal(root.get("status"),
+                                com.kindergarten.warehouse.entity.ResourceStatus.valueOf(filterRequest.getStatus())));
+            }
+
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
@@ -120,6 +135,23 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private ResourceResponse mapToResponse(Resource resource) {
+        // Average rating is now fetched from cache column in Resource entity
+        // Double averageRating =
+        // commentRepository.getAverageRatingByResourceId(resource.getId());
+
+        // Check isFavorited
+        boolean isFavorited = false;
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !authentication.getPrincipal().equals("anonymousUser")) {
+            String username = authentication.getName();
+            User currentUser = userRepository.findByUsername(username).orElse(null);
+            if (currentUser != null) {
+                isFavorited = favoriteRepository.existsByUserIdAndResourceId(currentUser.getId(), resource.getId());
+            }
+        }
+
         return ResourceResponse.builder()
                 .id(resource.getId())
                 .title(resource.getTitle())
@@ -127,7 +159,7 @@ public class ResourceServiceImpl implements ResourceService {
                 .description(resource.getDescription())
                 .viewsCount(resource.getViewsCount())
                 .createdAt(resource.getCreatedAt())
-                .fileUrl(resource.getFileUrl())
+                .fileUrl(minioStorageService.getPresignedUrl(extractKeyFromUrl(resource.getFileUrl())))
                 .thumbnailUrl(resource.getThumbnailUrl())
                 .fileType(resource.getFileType())
                 .fileExtension(resource.getFileExtension())
@@ -145,15 +177,46 @@ public class ResourceServiceImpl implements ResourceService {
                                 .description(ag.getDescription())
                                 .build())
                         .collect(java.util.stream.Collectors.toList()))
+                .highlights(resource.getHighlights())
+                .isFavorited(isFavorited)
+                .averageRating(resource.getAverageRating() != null ? resource.getAverageRating() : 0.0)
+                .status(resource.getStatus().name())
+                .downloadCount(resource.getDownloadCount())
                 .build();
     }
 
     @Override
-    public void incrementViewCount(String id) {
+    public void incrementViewCount(String id, String ipAddress) {
+        String key = ipAddress + "_" + id;
+        long currentTime = System.currentTimeMillis();
+        long oneHourInMillis = 3600000;
+
+        if (viewTracker.containsKey(key)) {
+            long lastViewTime = viewTracker.get(key);
+            if (currentTime - lastViewTime < oneHourInMillis) {
+                // Debounce: view already counted recently
+                return;
+            }
+        }
+
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
         resource.setViewsCount(resource.getViewsCount() + 1);
+        resourceRepository.save(resource);
+
+        viewTracker.put(key, currentTime);
+
+        // Optional: Cleanup old entries logic could be added here or via scheduled task
+        // but for simplicity/MVP we keep it simple.
+    }
+
+    @Override
+    public void incrementDownloadCount(String id) {
+        Resource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
+        resource.setDownloadCount(resource.getDownloadCount() + 1);
         resourceRepository.save(resource);
     }
 
@@ -209,5 +272,12 @@ public class ResourceServiceImpl implements ResourceService {
             default:
                 return FileType.DOCUMENT; // Default fallback
         }
+    }
+
+    private String extractKeyFromUrl(String fileUrl) {
+        if (fileUrl == null || !fileUrl.contains("/")) {
+            return fileUrl;
+        }
+        return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
     }
 }

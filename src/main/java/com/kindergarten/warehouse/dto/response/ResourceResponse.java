@@ -21,6 +21,11 @@ public class ResourceResponse {
     private Long fileSize;
     private String createdBy;
     private java.util.List<AgeGroupResponse> ageGroups;
+    private java.util.List<String> highlights;
+    private Boolean isFavorited;
+    private Double averageRating;
+    private String status;
+    private Long downloadCount;
 
     public ResourceResponse() {
     }
@@ -28,7 +33,9 @@ public class ResourceResponse {
     public ResourceResponse(String id, String title, String slug, String description, Long viewsCount,
             LocalDateTime createdAt, String fileUrl, String thumbnailUrl, String fileType, String fileExtension,
             Long topicId, String topicName, Long fileSize, String createdBy,
-            java.util.List<AgeGroupResponse> ageGroups) {
+            java.util.List<AgeGroupResponse> ageGroups,
+            java.util.List<String> highlights, Boolean isFavorited, Double averageRating,
+            String status, Long downloadCount) {
         this.id = id;
         this.title = title;
         this.slug = slug;
@@ -44,12 +51,18 @@ public class ResourceResponse {
         this.fileSize = fileSize;
         this.createdBy = createdBy;
         this.ageGroups = ageGroups;
+        this.highlights = highlights;
+        this.isFavorited = isFavorited;
+        this.averageRating = averageRating;
+        this.status = status;
+        this.downloadCount = downloadCount;
     }
 
     public static ResourceResponseBuilder builder() {
         return new ResourceResponseBuilder();
     }
 
+    // Getters and Setters
     public String getId() {
         return id;
     }
@@ -170,6 +183,46 @@ public class ResourceResponse {
         this.ageGroups = ageGroups;
     }
 
+    public java.util.List<String> getHighlights() {
+        return highlights;
+    }
+
+    public void setHighlights(java.util.List<String> highlights) {
+        this.highlights = highlights;
+    }
+
+    public Boolean getIsFavorited() {
+        return isFavorited;
+    }
+
+    public void setIsFavorited(Boolean isFavorited) {
+        this.isFavorited = isFavorited;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Long getDownloadCount() {
+        return downloadCount;
+    }
+
+    public void setDownloadCount(Long downloadCount) {
+        this.downloadCount = downloadCount;
+    }
+
     public static class ResourceResponseBuilder {
         private String id;
         private String title;
@@ -186,6 +239,11 @@ public class ResourceResponse {
         private Long fileSize;
         private String createdBy;
         private java.util.List<AgeGroupResponse> ageGroups;
+        private java.util.List<String> highlights;
+        private Boolean isFavorited;
+        private Double averageRating;
+        private String status;
+        private Long downloadCount;
 
         ResourceResponseBuilder() {
         }
@@ -265,9 +323,35 @@ public class ResourceResponse {
             return this;
         }
 
+        public ResourceResponseBuilder highlights(java.util.List<String> highlights) {
+            this.highlights = highlights;
+            return this;
+        }
+
+        public ResourceResponseBuilder isFavorited(Boolean isFavorited) {
+            this.isFavorited = isFavorited;
+            return this;
+        }
+
+        public ResourceResponseBuilder averageRating(Double averageRating) {
+            this.averageRating = averageRating;
+            return this;
+        }
+
+        public ResourceResponseBuilder status(String status) {
+            this.status = status;
+            return this;
+        }
+
+        public ResourceResponseBuilder downloadCount(Long downloadCount) {
+            this.downloadCount = downloadCount;
+            return this;
+        }
+
         public ResourceResponse build() {
             return new ResourceResponse(id, title, slug, description, viewsCount, createdAt, fileUrl, thumbnailUrl,
-                    fileType, fileExtension, topicId, topicName, fileSize, createdBy, ageGroups);
+                    fileType, fileExtension, topicId, topicName, fileSize, createdBy, ageGroups, highlights,
+                    isFavorited, averageRating, status, downloadCount);
         }
     }
 }

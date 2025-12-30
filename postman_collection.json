@@ -55,7 +55,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"password123\"\n}",
+							"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -670,6 +670,12 @@
 									"value": "3-4-tuoi,4-5-tuoi",
 									"disabled": true,
 									"description": "Filter by comma-separated Age Group Slugs"
+								},
+								{
+									"key": "status",
+									"value": "APPROVED",
+									"disabled": true,
+									"description": "Filter by Status (PENDING, APPROVED, REJECTED)"
 								}
 							]
 						}
@@ -726,6 +732,66 @@
 							"path": [
 								"resources",
 								"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Increment Download Count",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources",
+								"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+								"download"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "Get All Logs (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/audit-logs",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"audit-logs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Logs by User (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/audit-logs/user/admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"audit-logs",
+								"user",
+								"admin"
 							]
 						}
 					},
