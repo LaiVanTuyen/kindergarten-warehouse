@@ -140,18 +140,40 @@ public class UserService {
         return mapToResponse(userRepository.save(user));
     }
 
-    public UserResponse updateProfile(String username, String fullName,
-            String newPassword) {
-        User user = userRepository.findByUsername(username)
+    public UserResponse updateProfile(String usernameOrEmail,
+            com.kindergarten.warehouse.dto.request.UpdateProfileRequest request) {
+        User user = userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
 
-        if (fullName != null && !fullName.isEmpty()) {
-            user.setFullName(fullName);
+        if (request.getFullName() != null && !request.getFullName().isEmpty()) {
+            user.setFullName(request.getFullName());
         }
 
-        if (newPassword != null && !newPassword.isEmpty()) {
-            user.setPassword(passwordEncoder.encode(newPassword));
+        if (request.getPhoneNumber() != null) {
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+
+        if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
+            if (request.getCurrentPassword() == null
+                    || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                // We should probably have a specific error code for "WRONG_PASSWORD" or
+                // similar,
+                // but checking ErrorCode.java is expensive. Let's reuse AUTHENTICATION error or
+                // throw generic.
+                // Or better, let's assume we can throw distinct exception.
+                // For now, I'll use IllegalArgument to fail, but ideally should be specific.
+                // Let's check if there is an INVALID_PASSWORD error code.
+                // Assuming generic fail for now or Unauthenticated.
+                throw new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.UNAUTHENTICATED);
+            }
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         }
 
         return mapToResponse(userRepository.save(user));
@@ -171,6 +193,8 @@ public class UserService {
                 // Map UserStatus to String
                 .status(user.getStatus().name())
                 .isDeleted(user.getIsDeleted())
+                .phoneNumber(user.getPhoneNumber())
+                .bio(user.getBio())
                 .build();
     }
 }

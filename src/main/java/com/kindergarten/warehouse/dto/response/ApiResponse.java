@@ -8,18 +8,18 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 public class ApiResponse<T> {
-    private int status;
+    private int code;
     private String message;
-    private T data;
+    private T result;
     private LocalDateTime timestamp;
 
     public ApiResponse() {
     }
 
-    public ApiResponse(int status, String message, T data, LocalDateTime timestamp) {
-        this.status = status;
+    public ApiResponse(int code, String message, T result, LocalDateTime timestamp) {
+        this.code = code;
         this.message = message;
-        this.data = data;
+        this.result = result;
         this.timestamp = timestamp;
     }
 
@@ -28,13 +28,13 @@ public class ApiResponse<T> {
     }
 
     public static class ApiResponseBuilder<T> {
-        private int status;
+        private int code;
         private String message;
-        private T data;
+        private T result;
         private LocalDateTime timestamp;
 
-        public ApiResponseBuilder<T> status(int status) {
-            this.status = status;
+        public ApiResponseBuilder<T> code(int code) {
+            this.code = code;
             return this;
         }
 
@@ -43,8 +43,8 @@ public class ApiResponse<T> {
             return this;
         }
 
-        public ApiResponseBuilder<T> data(T data) {
-            this.data = data;
+        public ApiResponseBuilder<T> result(T result) {
+            this.result = result;
             return this;
         }
 
@@ -54,16 +54,16 @@ public class ApiResponse<T> {
         }
 
         public ApiResponse<T> build() {
-            return new ApiResponse<T>(status, message, data, timestamp);
+            return new ApiResponse<T>(code, message, result, timestamp);
         }
     }
 
-    public int getStatus() {
-        return status;
+    public int getCode() {
+        return code;
     }
 
-    public void setStatus(int status) {
-        this.status = status;
+    public void setCode(int code) {
+        this.code = code;
     }
 
     public String getMessage() {
@@ -74,12 +74,12 @@ public class ApiResponse<T> {
         this.message = message;
     }
 
-    public T getData() {
-        return data;
+    public T getResult() {
+        return result;
     }
 
-    public void setData(T data) {
-        this.data = data;
+    public void setResult(T result) {
+        this.result = result;
     }
 
     public LocalDateTime getTimestamp() {
@@ -90,24 +90,24 @@ public class ApiResponse<T> {
         this.timestamp = timestamp;
     }
 
-    public static <T> ApiResponse<T> success(T data, String message) {
+    public static <T> ApiResponse<T> success(T result, String message) {
         return ApiResponse.<T>builder()
-                .status(200)
+                .code(1000)
                 .message(message)
-                .data(data)
+                .result(result)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static <T> ApiResponse<T> success(T data) {
-        return success(data, "Operation successful");
+    public static <T> ApiResponse<T> success(T result) {
+        return success(result, "Operation successful");
     }
 
-    public static <T> ApiResponse<T> error(int status, String message) {
+    public static <T> ApiResponse<T> error(int code, String message) {
         return ApiResponse.<T>builder()
-                .status(status)
+                .code(code)
                 .message(message)
-                .data(null)
+                .result(null)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

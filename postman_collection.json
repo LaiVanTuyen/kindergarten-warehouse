@@ -38,18 +38,6 @@
 				},
 				{
 					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"pm.environment.set(\"token\", jsonData.data.accessToken);"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -172,20 +160,23 @@
 					"request": {
 						"method": "PUT",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Super Admin Updated\",\n    \"phoneNumber\": \"0123456789\",\n    \"bio\": \"Updated Bio\",\n    \"currentPassword\": \"password123\",\n    \"newPassword\": \"newPassword123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "{{base_url}}/users/profile?fullName=New Name",
+							"raw": "{{base_url}}/users/profile",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"users",
 								"profile"
-							],
-							"query": [
-								{
-									"key": "fullName",
-									"value": "New Name"
-								}
 							]
 						}
 					},

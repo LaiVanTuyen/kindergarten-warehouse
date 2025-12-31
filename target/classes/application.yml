@@ -49,3 +49,10 @@ rollbar:
   enabled: true
   environment: ${ROLLBAR_ENV:development}
   framework: spring-boot
+
+app:
+  cors:
+    allowed-origins: http://localhost:4200,http://localhost:4201
+  cookie:
+    secure: false
+    same-site: Lax

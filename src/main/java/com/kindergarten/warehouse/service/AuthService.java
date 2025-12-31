@@ -65,6 +65,7 @@ public class AuthService {
                 .roles(user.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()))
                 .status(user.getStatus().name())
                 .isDeleted(user.getIsDeleted())
+                .createdAt(user.getCreatedAt())
                 .build();
 
         return new AuthResponseDto(userResponse, token, null);

@@ -55,6 +55,12 @@ public class User extends BaseEntity {
     @Builder.Default
     private Boolean isDeleted = false;
 
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
     public Long getId() {
         return id;
     }
@@ -93,6 +99,22 @@ public class User extends BaseEntity {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
     }
 
     public String getAvatarUrl() {

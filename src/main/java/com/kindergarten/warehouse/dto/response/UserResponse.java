@@ -1,11 +1,15 @@
 package com.kindergarten.warehouse.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
+@Setter
+@Getter
 public class UserResponse {
+
     private Long id;
     private String username;
     private String fullName;
@@ -14,12 +18,12 @@ public class UserResponse {
     private Set<String> roles;
     private String status;
     private Boolean isDeleted;
-
-    public UserResponse() {
-    }
+    private LocalDateTime createdAt;
+    private String phoneNumber;
+    private String bio;
 
     public UserResponse(Long id, String username, String fullName, String email, String avatarUrl, Set<String> roles,
-            String status, Boolean isDeleted) {
+            String status, Boolean isDeleted, LocalDateTime createdAt, String phoneNumber, String bio) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
@@ -28,74 +32,13 @@ public class UserResponse {
         this.roles = roles;
         this.status = status;
         this.isDeleted = isDeleted;
+        this.createdAt = createdAt;
+        this.phoneNumber = phoneNumber;
+        this.bio = bio;
     }
 
     public static UserResponseBuilder builder() {
         return new UserResponseBuilder();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-
-    public Set<String> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<String> roles) {
-        this.roles = roles;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Boolean getIsDeleted() {
-        return isDeleted;
-    }
-
-    public void setIsDeleted(Boolean isDeleted) {
-        this.isDeleted = isDeleted;
     }
 
     public static class UserResponseBuilder {
@@ -107,6 +50,9 @@ public class UserResponse {
         private Set<String> roles;
         private String status;
         private Boolean isDeleted;
+        private LocalDateTime createdAt;
+        private String phoneNumber;
+        private String bio;
 
         UserResponseBuilder() {
         }
@@ -151,8 +97,24 @@ public class UserResponse {
             return this;
         }
 
+        public UserResponseBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public UserResponseBuilder phoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+            return this;
+        }
+
+        public UserResponseBuilder bio(String bio) {
+            this.bio = bio;
+            return this;
+        }
+
         public UserResponse build() {
-            return new UserResponse(id, username, fullName, email, avatarUrl, roles, status, isDeleted);
+            return new UserResponse(id, username, fullName, email, avatarUrl, roles, status, isDeleted, createdAt,
+                    phoneNumber, bio);
         }
     }
 }

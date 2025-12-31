@@ -66,10 +66,9 @@ public class UserController {
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
             Authentication authentication,
-            @RequestParam(required = false) String fullName,
-            @RequestParam(required = false) String password) {
-        String username = authentication.getName();
-        return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(username, fullName, password),
+            @RequestBody com.kindergarten.warehouse.dto.request.UpdateProfileRequest request) {
+        String usernameOrEmail = authentication.getName();
+        return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(usernameOrEmail, request),
                 messageService.getMessage("user.profile.update.success")));
     }
 }
