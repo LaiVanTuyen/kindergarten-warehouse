@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -13,11 +14,11 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UpdateProfileRequest {
-    @Size(min = 3, message = "FULL_NAME_INVALID")
-    String fullName;
+public class ChangePasswordRequest {
+    @NotBlank(message = "CURRENT_PASSWORD_REQUIRED")
+    String currentPassword;
 
-    String phoneNumber;
-
-    String bio;
+    @NotBlank(message = "NEW_PASSWORD_REQUIRED")
+    @Size(min = 8, message = "PASSWORD_INVALID")
+    String newPassword;
 }

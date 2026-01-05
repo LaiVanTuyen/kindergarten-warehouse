@@ -35,65 +35,73 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        System.out.println("DEBUG: Filter processing URI: " + request.getRequestURI());
+        System.err.println(">>> DEBUG: FILTER START: " + request.getRequestURI());
 
         String token = getTokenFromRequest(request);
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            try {
-                if (Boolean.TRUE.equals(redisTemplate.hasKey(token))) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
+        if (StringUtils.hasText(token)) {
+            System.err.println(">>> DEBUG: Token found: " + token.substring(0, Math.min(token.length(), 10)) + "...");
+            if (jwtTokenProvider.validateToken(token)) {
+                System.err.println(">>> DEBUG: Token is VALID");
+                try {
+                    if (Boolean.TRUE.equals(redisTemplate.hasKey("kindergarten:blacklist:" + token))) {
+                        System.err.println(">>> DEBUG: Token is BLACKLISTED");
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                } catch (Exception e) {
+                    System.err.println(">>> DEBUG: Redis check failed: " + e.getMessage());
                 }
-            } catch (Exception e) {
-                // Redis might be down, ignore blacklist check for now or log error
-                System.out.println("DEBUG: Redis check failed: " + e.getMessage());
-            }
 
-            String username = jwtTokenProvider.getUsername(token);
-            System.out.println("DEBUG: Token valid for user: " + username);
+                String username = jwtTokenProvider.getUsername(token);
+                System.err.println(">>> DEBUG: Username from token: " + username);
 
-            try {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                try {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    System.err.println(">>> DEBUG: UserDetails loaded: " + userDetails.getUsername() + ", Authorities: "
+                            + userDetails.getAuthorities());
 
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities());
+                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities());
 
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                System.out.println("DEBUG: SecurityContext set for user: " + username);
-            } catch (Exception e) {
-                System.out.println("DEBUG: UserDetails load failed: " + e.getMessage());
-                // User not found or other error, ignore and let the request proceed anonymously
-                // The SecurityFilterChain will handle 401/403 if the endpoint requires auth
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    System.err.println(">>> DEBUG: SecurityContext SET SUCCESS");
+                } catch (Exception e) {
+                    System.err.println(">>> DEBUG: UserDetails load failed: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else {
+                System.err.println(">>> DEBUG: Token validation FAILED");
             }
         } else {
-            System.out.println("DEBUG: Token invalid or not found. Token: " + (token != null ? "present" : "null"));
+            System.err.println(">>> DEBUG: No Token found in request");
         }
 
         filterChain.doFilter(request, response);
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {
-        // 1. Try to get from Cookie first
         if (request.getCookies() != null) {
-            System.out.println("DEBUG: Cookies found: " + request.getCookies().length);
             for (Cookie cookie : request.getCookies()) {
-                System.out.println("DEBUG: Cookie Name: " + cookie.getName());
                 if ("accessToken".equals(cookie.getName())) {
+                    System.err.println(">>> DEBUG: Found accessToken cookie");
                     return cookie.getValue();
                 }
             }
+            System.err.println(">>> DEBUG: Cookies present but accessToken NOT found. Cookies: "
+                    + java.util.Arrays.stream(request.getCookies()).map(Cookie::getName)
+                            .collect(java.util.stream.Collectors.joining(", ")));
         } else {
-            System.out.println("DEBUG: No cookies found in request.");
+            System.err.println(">>> DEBUG: No Cookies in request");
         }
 
-        // 2. Fallback to Header (Useful for Postman without cookie support or legacy)
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            System.err.println(">>> DEBUG: Found Authorization Header");
             return bearerToken.substring(7);
         }
         return null;

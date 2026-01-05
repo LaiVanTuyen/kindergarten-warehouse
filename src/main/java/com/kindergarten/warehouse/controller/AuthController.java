@@ -22,68 +22,80 @@ import com.kindergarten.warehouse.service.MessageService;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private final AuthService authService;
-    private final MessageService messageService;
+        private final AuthService authService;
+        private final MessageService messageService;
 
-    @Value("${app.cookie.secure}")
-    private boolean isCookieSecure;
+        @Value("${app.cookie.secure}")
+        private boolean isCookieSecure;
 
-    @Value("${app.cookie.same-site}")
-    private String cookieSameSite;
+        @Value("${app.cookie.same-site}")
+        private String cookieSameSite;
 
-    public AuthController(AuthService authService, MessageService messageService) {
-        this.authService = authService;
-        this.messageService = messageService;
-    }
+        public AuthController(AuthService authService, MessageService messageService) {
+                this.authService = authService;
+                this.messageService = messageService;
+        }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponseDto>> login(
-            @RequestBody @jakarta.validation.Valid LoginDto loginDto) {
-        AuthResponseDto response = authService.login(loginDto);
-        String accessToken = response.getAccessToken(); // Assume DTO still has it, but we won't return it in body
+        @PostMapping("/login")
+        public ResponseEntity<ApiResponse<AuthResponseDto>> login(
+                        @RequestBody @jakarta.validation.Valid LoginDto loginDto) {
+                System.err.println(">>> DEBUG: AuthController.login STARTED");
+                try {
+                        AuthResponseDto response = authService.login(loginDto);
+                        System.err.println(">>> DEBUG: AuthService.login SUCCESS");
+                        String accessToken = response.getAccessToken(); // Assume DTO still has it, but we won't return
+                                                                        // it in body
 
-        // Clear token from response body to force usage of cookie
-        response.setAccessToken(null);
+                        // Clear token from response body to force usage of cookie
+                        response.setAccessToken(null);
 
-        ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(true)
-                .secure(isCookieSecure)
-                .path("/")
-                .maxAge(24 * 60 * 60) // 1 day
-                .sameSite(cookieSameSite)
-                .build();
+                        ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
+                                        .httpOnly(true)
+                                        .secure(isCookieSecure)
+                                        .path("/")
+                                        .maxAge(24 * 60 * 60) // 1 day
+                                        .sameSite(cookieSameSite)
+                                        .build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(ApiResponse.success(response, messageService.getMessage("auth.login.success")));
-    }
+                        return ResponseEntity.ok()
+                                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                                        .body(ApiResponse.success(response,
+                                                        messageService.getMessage("auth.login.success")));
+                } catch (Exception e) {
+                        System.err.println(">>> DEBUG: AuthController.login EXCEPTION: " + e.getClass().getName()
+                                        + " - " + e.getMessage());
+                        e.printStackTrace();
+                        throw e;
+                }
+        }
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponseDto>> register(
-            @RequestBody @jakarta.validation.Valid RegisterDto registerDto) {
-        AuthResponseDto response = authService.register(registerDto);
-        // Initially register might not auto-login or set cookie, or we can choose to.
-        // For now, let's keep it as is, or we should set cookie here too if it logs
-        // them in.
-        // Assuming register just creates user. If it returns token, we should probably
-        // treat it like login.
-        // Let's assume for now register DOES return a token (based on response type).
-        // Ideally we should do same cookie logic here if we want auto-login.
+        @PostMapping("/register")
+        public ResponseEntity<ApiResponse<AuthResponseDto>> register(
+                        @RequestBody @jakarta.validation.Valid RegisterDto registerDto) {
+                AuthResponseDto response = authService.register(registerDto);
+                // Initially register might not auto-login or set cookie, or we can choose to.
+                // For now, let's keep it as is, or we should set cookie here too if it logs
+                // them in.
+                // Assuming register just creates user. If it returns token, we should probably
+                // treat it like login.
+                // Let's assume for now register DOES return a token (based on response type).
+                // Ideally we should do same cookie logic here if we want auto-login.
 
-        String accessToken = response.getAccessToken();
-        response.setAccessToken(null);
+                String accessToken = response.getAccessToken();
+                response.setAccessToken(null);
 
-        ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(true)
-                .secure(isCookieSecure)
-                .path("/")
-                .maxAge(24 * 60 * 60)
-                .sameSite(cookieSameSite)
-                .build();
+                ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
+                                .httpOnly(true)
+                                .secure(isCookieSecure)
+                                .path("/")
+                                .maxAge(24 * 60 * 60)
+                                .sameSite(cookieSameSite)
+                                .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(ApiResponse.success(response, messageService.getMessage("auth.register.success")));
-    }
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                                .body(ApiResponse.success(response,
+                                                messageService.getMessage("auth.register.success")));
+        }
 
 }

@@ -28,7 +28,7 @@ public class RateLimitingAspect {
         String ipAddress = request.getRemoteAddr();
         String resourceId = request.getRequestURI().split("/")[4]; // Assuming /api/v1/resources/{id}/view
 
-        String key = "rate_limit:" + ipAddress + ":" + resourceId;
+        String key = "kindergarten:rate_limit:" + ipAddress + ":" + resourceId;
 
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             throw new RuntimeException("Rate limit exceeded. Try again later.");

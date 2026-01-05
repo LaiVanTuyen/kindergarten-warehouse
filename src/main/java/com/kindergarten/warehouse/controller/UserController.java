@@ -71,4 +71,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(usernameOrEmail, request),
                 messageService.getMessage("user.profile.update.success")));
     }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Authentication authentication,
+            @jakarta.validation.Valid @RequestBody com.kindergarten.warehouse.dto.request.ChangePasswordRequest request) {
+        String usernameOrEmail = authentication.getName();
+        userService.changePassword(usernameOrEmail, request);
+        return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("user.password.change.success")));
+    }
 }

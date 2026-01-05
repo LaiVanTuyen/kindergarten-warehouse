@@ -14,10 +14,21 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.cache.CacheManager cacheManager;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            org.springframework.cache.CacheManager cacheManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.cacheManager = cacheManager;
+    }
+
+    private void clearUserCache(User user) {
+        org.springframework.cache.Cache cache = cacheManager.getCache("users");
+        if (cache != null) {
+            cache.evict(user.getUsername());
+            cache.evict(user.getEmail());
+        }
     }
 
     public List<UserResponse> getUsers(String status) {
@@ -93,6 +104,7 @@ public class UserService {
         // user.setStatus(com.kindergarten.warehouse.entity.UserStatus.BLOCKED); // Do
         // not change status explicitly
         userRepository.save(user);
+        clearUserCache(user);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -126,7 +138,9 @@ public class UserService {
         // user.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE); // Do
         // not change status
 
-        return mapToResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
+        return mapToResponse(savedUser);
     }
 
     @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Toggled block status for user")
@@ -137,9 +151,12 @@ public class UserService {
         user.setStatus(user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE
                 ? com.kindergarten.warehouse.entity.UserStatus.BLOCKED
                 : com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
-        return mapToResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
+        return mapToResponse(savedUser);
     }
 
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated profile info")
     public UserResponse updateProfile(String usernameOrEmail,
             com.kindergarten.warehouse.dto.request.UpdateProfileRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -159,24 +176,27 @@ public class UserService {
             user.setBio(request.getBio());
         }
 
-        if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
-            if (request.getCurrentPassword() == null
-                    || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                // We should probably have a specific error code for "WRONG_PASSWORD" or
-                // similar,
-                // but checking ErrorCode.java is expensive. Let's reuse AUTHENTICATION error or
-                // throw generic.
-                // Or better, let's assume we can throw distinct exception.
-                // For now, I'll use IllegalArgument to fail, but ideally should be specific.
-                // Let's check if there is an INVALID_PASSWORD error code.
-                // Assuming generic fail for now or Unauthenticated.
-                throw new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.UNAUTHENTICATED);
-            }
-            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
+        return mapToResponse(savedUser);
+    }
+
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Changed password")
+    public void changePassword(String usernameOrEmail,
+            com.kindergarten.warehouse.dto.request.ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.UNAUTHENTICATED);
         }
 
-        return mapToResponse(userRepository.save(user));
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
     }
 
     private UserResponse mapToResponse(User user) {

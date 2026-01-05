@@ -5,6 +5,25 @@
 		"description": "Postman collection for the Kindergarten Digital Resource Warehouse API.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"var xsrfCookie = pm.cookies.get('XSRF-TOKEN');",
+					"console.log('DEBUG: XSRF Cookie found: ', xsrfCookie ? 'YES' : 'NO', xsrfCookie);",
+					"if (xsrfCookie) {",
+					"    pm.request.headers.add({",
+					"        key: 'X-XSRF-TOKEN',",
+					"        value: xsrfCookie",
+					"    });",
+					"    console.log('DEBUG: Added X-XSRF-TOKEN header');",
+					"}"
+				]
+			}
+		}
+	],
 	"item": [
 		{
 			"name": "Auth",
@@ -158,11 +177,14 @@
 				{
 					"name": "Update Profile",
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "PUT",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"fullName\": \"Super Admin Updated\",\n    \"phoneNumber\": \"0123456789\",\n    \"bio\": \"Updated Bio\",\n    \"currentPassword\": \"password123\",\n    \"newPassword\": \"newPassword123\"\n}",
+							"raw": "{\n    \"fullName\": \"Super Admin Updated\",\n    \"phoneNumber\": \"0123456789\",\n    \"bio\": \"Updated Bio\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -177,6 +199,36 @@
 							"path": [
 								"users",
 								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentPassword\": \"password123\",\n    \"newPassword\": \"newPassword123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"change-password"
 							]
 						}
 					},

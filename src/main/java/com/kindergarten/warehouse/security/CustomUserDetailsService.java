@@ -26,6 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         @Override
+        @org.springframework.cache.annotation.Cacheable(value = "users", key = "#usernameOrEmail")
         public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
                 // Try finding by email first
                 User user = userRepository.findByEmail(usernameOrEmail)
@@ -40,17 +41,18 @@ public class CustomUserDetailsService implements UserDetailsService {
                                                                         LocaleContextHolder.getLocale())));
                 }
 
-                Set<GrantedAuthority> authorities = user.getRoles().stream()
-                                .map(role -> new SimpleGrantedAuthority(role.name()))
+                Set<String> roles = user.getRoles().stream()
+                                .map(Enum::name)
                                 .collect(java.util.stream.Collectors.toSet());
 
-                return new org.springframework.security.core.userdetails.User(
-                                user.getUsername(),
-                                user.getPassword(),
-                                user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE, // Enabled
-                                true, // Account Non Expired
-                                true, // Credentials Non Expired
-                                true, // Account Non Locked
-                                authorities);
+                return CustomUserDetails.builder()
+                                .id(user.getId())
+                                .username(user.getUsername())
+                                .password(user.getPassword())
+                                .email(user.getEmail())
+                                .fullName(user.getFullName())
+                                .enabled(user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                .roles(roles)
+                                .build();
         }
 }

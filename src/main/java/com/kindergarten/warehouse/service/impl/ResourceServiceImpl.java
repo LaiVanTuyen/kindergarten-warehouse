@@ -31,12 +31,16 @@ public class ResourceServiceImpl implements ResourceService {
     private final MinioStorageService minioStorageService;
     private final com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository;
     private final com.kindergarten.warehouse.repository.CommentRepository commentRepository;
+    private final org.springframework.cache.CacheManager cacheManager;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
             UserRepository userRepository, com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository,
             MinioStorageService minioStorageService,
             com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository,
-            com.kindergarten.warehouse.repository.CommentRepository commentRepository) {
+            com.kindergarten.warehouse.repository.CommentRepository commentRepository,
+            org.springframework.cache.CacheManager cacheManager,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
         this.resourceRepository = resourceRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
@@ -44,6 +48,8 @@ public class ResourceServiceImpl implements ResourceService {
         this.minioStorageService = minioStorageService;
         this.favoriteRepository = favoriteRepository;
         this.commentRepository = commentRepository;
+        this.cacheManager = cacheManager;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -199,11 +205,14 @@ public class ResourceServiceImpl implements ResourceService {
             }
         }
 
-        Resource resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
-        resource.setViewsCount(resource.getViewsCount() + 1);
-        resourceRepository.save(resource);
+        if (!resourceRepository.existsById(id)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        // Write-Behind Caching: Increment in Redis and mark as dirty
+        redisTemplate.opsForValue().increment("kindergarten:views:" + id);
+        redisTemplate.opsForSet().add("kindergarten:dirty_views", id);
 
         viewTracker.put(key, currentTime);
 
@@ -213,11 +222,14 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     public void incrementDownloadCount(String id) {
-        Resource resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
-        resource.setDownloadCount(resource.getDownloadCount() + 1);
-        resourceRepository.save(resource);
+        if (!resourceRepository.existsById(id)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        // Write-Behind Caching
+        redisTemplate.opsForValue().increment("kindergarten:downloads:" + id);
+        redisTemplate.opsForSet().add("kindergarten:dirty_downloads", id);
     }
 
     @Override
@@ -230,6 +242,12 @@ public class ResourceServiceImpl implements ResourceService {
         // Soft Delete
         resource.setIsDeleted(true);
         resourceRepository.save(resource);
+
+        // Evict cache
+        org.springframework.cache.Cache cache = cacheManager.getCache("resources");
+        if (cache != null) {
+            cache.evict(resource.getSlug());
+        }
     }
 
     private String getExtension(String fileName) {
@@ -240,6 +258,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "resources", key = "#slug")
     public ResourceResponse getResourceBySlug(String slug) {
         Resource resource = resourceRepository.findBySlug(slug)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
 @EnableJpaAuditing
+@org.springframework.scheduling.annotation.EnableScheduling
 public class WarehouseApplication {
 
     public static void main(String[] args) {

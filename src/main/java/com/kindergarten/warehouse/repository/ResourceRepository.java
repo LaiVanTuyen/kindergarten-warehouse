@@ -16,4 +16,16 @@ public interface ResourceRepository extends JpaRepository<Resource, String>,
     Page<Resource> findByIsDeletedFalse(Pageable pageable);
 
     java.util.Optional<Resource> findBySlug(String slug);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Query("UPDATE Resource r SET r.viewsCount = r.viewsCount + :count WHERE r.id = :id")
+    void incrementViews(@org.springframework.data.repository.query.Param("id") String id,
+            @org.springframework.data.repository.query.Param("count") long count);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Query("UPDATE Resource r SET r.downloadCount = r.downloadCount + :count WHERE r.id = :id")
+    void incrementDownloads(@org.springframework.data.repository.query.Param("id") String id,
+            @org.springframework.data.repository.query.Param("count") long count);
 }

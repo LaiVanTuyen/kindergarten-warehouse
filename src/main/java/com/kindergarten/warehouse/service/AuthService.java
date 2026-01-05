@@ -115,7 +115,8 @@ public class AuthService {
         Date expirationDate = jwtTokenProvider.getExpirationDate(token);
         long ttl = expirationDate.getTime() - new Date().getTime();
         if (ttl > 0) {
-            redisTemplate.opsForValue().set(token, "blacklisted", ttl, java.util.concurrent.TimeUnit.MILLISECONDS);
+            redisTemplate.opsForValue().set("kindergarten:blacklist:" + token, "blacklisted", ttl,
+                    java.util.concurrent.TimeUnit.MILLISECONDS);
         }
     }
 }
