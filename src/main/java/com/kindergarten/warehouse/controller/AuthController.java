@@ -39,34 +39,25 @@ public class AuthController {
         @PostMapping("/login")
         public ResponseEntity<ApiResponse<AuthResponseDto>> login(
                         @RequestBody @jakarta.validation.Valid LoginDto loginDto) {
-                System.err.println(">>> DEBUG: AuthController.login STARTED");
-                try {
-                        AuthResponseDto response = authService.login(loginDto);
-                        System.err.println(">>> DEBUG: AuthService.login SUCCESS");
-                        String accessToken = response.getAccessToken(); // Assume DTO still has it, but we won't return
-                                                                        // it in body
+                AuthResponseDto response = authService.login(loginDto);
+                String accessToken = response.getAccessToken(); // Assume DTO still has it, but we won't return
+                                                                // it in body
 
-                        // Clear token from response body to force usage of cookie
-                        response.setAccessToken(null);
+                // Clear token from response body to force usage of cookie
+                response.setAccessToken(null);
 
-                        ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
-                                        .httpOnly(true)
-                                        .secure(isCookieSecure)
-                                        .path("/")
-                                        .maxAge(24 * 60 * 60) // 1 day
-                                        .sameSite(cookieSameSite)
-                                        .build();
+                ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
+                                .httpOnly(true)
+                                .secure(isCookieSecure)
+                                .path("/")
+                                .maxAge(24 * 60 * 60) // 1 day
+                                .sameSite(cookieSameSite)
+                                .build();
 
-                        return ResponseEntity.ok()
-                                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                                        .body(ApiResponse.success(response,
-                                                        messageService.getMessage("auth.login.success")));
-                } catch (Exception e) {
-                        System.err.println(">>> DEBUG: AuthController.login EXCEPTION: " + e.getClass().getName()
-                                        + " - " + e.getMessage());
-                        e.printStackTrace();
-                        throw e;
-                }
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                                .body(ApiResponse.success(response,
+                                                messageService.getMessage("auth.login.success")));
         }
 
         @PostMapping("/register")

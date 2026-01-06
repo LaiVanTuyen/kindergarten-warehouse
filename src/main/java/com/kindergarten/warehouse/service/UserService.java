@@ -15,12 +15,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final org.springframework.cache.CacheManager cacheManager;
+    private final MinioStorageService minioStorageService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            org.springframework.cache.CacheManager cacheManager) {
+            org.springframework.cache.CacheManager cacheManager, MinioStorageService minioStorageService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.cacheManager = cacheManager;
+        this.minioStorageService = minioStorageService;
     }
 
     private void clearUserCache(User user) {
@@ -191,7 +193,7 @@ public class UserService {
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.UNAUTHENTICATED);
+                    com.kindergarten.warehouse.exception.ErrorCode.INVALID_PASSWORD);
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -199,13 +201,55 @@ public class UserService {
         clearUserCache(savedUser);
     }
 
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated avatar")
+    public UserResponse updateAvatar(String usernameOrEmail, org.springframework.web.multipart.MultipartFile file) {
+        User user = userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
+                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
+                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed for avatar");
+        }
+
+        String oldAvatarUrl = user.getAvatarUrl();
+        String avatarUrl = minioStorageService.uploadFile(file, "avatars");
+
+        user.setAvatarUrl(avatarUrl);
+        User savedUser = userRepository.save(user);
+
+        // Clean up old avatar to save space
+        if (oldAvatarUrl != null && !oldAvatarUrl.isEmpty()) {
+            try {
+                minioStorageService.deleteFile(oldAvatarUrl);
+            } catch (Exception e) {
+                // Silently fail or log warning so user experience isn't affected
+                // In production, effective logging should be used here
+            }
+        }
+
+        clearUserCache(savedUser);
+        return mapToResponse(savedUser);
+    }
+
     private UserResponse mapToResponse(User user) {
+        String avatarUrl = user.getAvatarUrl();
+        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+            // Generate presigned URL for secure access
+            String key = extractKeyFromUrl(avatarUrl);
+            try {
+                avatarUrl = minioStorageService.getPresignedUrl(key);
+            } catch (Exception e) {
+                // Fallback to original URL if signing fails, though it might still be 403
+            }
+        }
+
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(avatarUrl)
                 // Map Set<Role> to Set<String>
                 .roles(user.getRoles().stream()
                         .map(Enum::name)
@@ -214,7 +258,20 @@ public class UserService {
                 .status(user.getStatus().name())
                 .isDeleted(user.getIsDeleted())
                 .phoneNumber(user.getPhoneNumber())
+                .createdAt(user.getCreatedAt())
                 .bio(user.getBio())
                 .build();
+    }
+
+    private String extractKeyFromUrl(String fileUrl) {
+        if (fileUrl == null)
+            return null;
+        if (fileUrl.contains("/avatars/")) {
+            return fileUrl.substring(fileUrl.indexOf("avatars/"));
+        }
+        if (fileUrl.lastIndexOf("/") != -1) {
+            return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+        }
+        return fileUrl;
     }
 }

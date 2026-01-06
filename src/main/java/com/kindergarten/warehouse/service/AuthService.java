@@ -66,6 +66,8 @@ public class AuthService {
                 .status(user.getStatus().name())
                 .isDeleted(user.getIsDeleted())
                 .createdAt(user.getCreatedAt())
+                .bio(user.getBio())
+                .phoneNumber(user.getPhoneNumber())
                 .build();
 
         return new AuthResponseDto(userResponse, token, null);

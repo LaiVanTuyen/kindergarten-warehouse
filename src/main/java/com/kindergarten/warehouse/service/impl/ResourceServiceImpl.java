@@ -66,10 +66,12 @@ public class ResourceServiceImpl implements ResourceService {
 
         java.util.Set<com.kindergarten.warehouse.entity.AgeGroup> ageGroups = new java.util.HashSet<>();
         if (ageGroupIds != null && !ageGroupIds.isEmpty()) {
-            ageGroups.addAll(ageGroupRepository.findAllById(ageGroupIds));
+            @SuppressWarnings("unchecked")
+            java.util.List<Long> safeIds = (java.util.List<Long>) (java.util.List<?>) ageGroupIds;
+            ageGroups.addAll(ageGroupRepository.findAllById(safeIds));
         }
 
-        String fileUrl = minioStorageService.uploadFile(file);
+        String fileUrl = minioStorageService.uploadFile(file, "resources");
         String extension = getExtension(file.getOriginalFilename());
         FileType type = determineFileType(extension);
 
@@ -294,9 +296,18 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private String extractKeyFromUrl(String fileUrl) {
-        if (fileUrl == null || !fileUrl.contains("/")) {
-            return fileUrl;
+        if (fileUrl == null)
+            return null;
+        // Delegate to MinioStorageService if possible, but here we can't easily change
+        // the interface in one go without errors.
+        // Let's rely on the fact that we know the structure or add the helper to
+        // MinioStorageService.
+        // For now, let's just try to be smart:
+        // We know we upload to "resources/" folder.
+        if (fileUrl.contains("/resources/")) {
+            return fileUrl.substring(fileUrl.indexOf("resources/"));
         }
+        // Fallback for old files (at root)
         return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
     }
 }

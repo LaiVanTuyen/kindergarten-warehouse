@@ -37,7 +37,7 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public BannerResponse createBanner(MultipartFile image, String link, Integer order) {
-        String imageUrl = minioStorageService.uploadFile(image);
+        String imageUrl = minioStorageService.uploadFile(image, "banners");
 
         Banner banner = new Banner();
         banner.setImageUrl(imageUrl);

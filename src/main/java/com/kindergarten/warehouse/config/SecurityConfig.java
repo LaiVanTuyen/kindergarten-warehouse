@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,9 +52,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/logout"))
+                .csrf(csrf -> {
+                    CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+                    csrfTokenRepository.setCookiePath("/");
+
+                    // Use standard RequestHandler to support raw Angular tokens (disabling XOR
+                    // BREACH protection default)
+                    org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler requestHandler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
+                    requestHandler.setCsrfRequestAttributeName(null);
+
+                    csrf.csrfTokenRepository(csrfTokenRepository)
+                            .csrfTokenRequestHandler(requestHandler)
+                            .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register",
+                                    "/api/v1/auth/logout", "/error");
+                })
                 .authorizeHttpRequests(auth -> auth
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -64,6 +77,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/banners/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/resources/*/view").permitAll()
+                        // Authenticated User Endpoints (Profile)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/users/profile").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/users/change-password").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/avatar").authenticated()
+
                         // Admin Endpoints
                         .requestMatchers("/api/v1/users/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/categories/**").hasAuthority("ADMIN")
@@ -89,19 +107,26 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            System.out.println("DEBUG: Authentication failed: " + authException.getMessage());
-                            authException.printStackTrace();
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
                             response.getWriter().write("{\"code\":1011,\"message\":\"Unauthorized\",\"result\":null}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            System.out.println("DEBUG: Access Denied: " + accessDeniedException.getMessage());
-                            accessDeniedException.printStackTrace();
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
                             response.getWriter().write("{\"code\":1012,\"message\":\"Forbidden\",\"result\":null}");
                         }));
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // Filter to ensure CSRF Token is generated and sent (Lazy by default in Spring
+        // Security 6)
+        http.addFilterAfter((request, response, chain) -> {
+            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            if (csrfToken != null) {
+                // Explicitly access the token to force generation/persistence
+                csrfToken.getToken();
+            }
+            chain.doFilter(request, response);
+        }, CsrfFilter.class);
 
         return http.build();
     }

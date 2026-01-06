@@ -16,6 +16,7 @@ public enum ErrorCode {
     FIREBASE_INIT_ERROR(1010, "error.firebase.init", HttpStatus.INTERNAL_SERVER_ERROR),
     UNAUTHENTICATED(1011, "auth.login_failed", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(1012, "error.forbidden", HttpStatus.FORBIDDEN),
+    INVALID_PASSWORD(1013, "auth.password.invalid", HttpStatus.BAD_REQUEST),
     ;
 
     private int code;

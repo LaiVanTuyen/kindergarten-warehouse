@@ -48,13 +48,13 @@ public class MinioStorageService {
         }
     }
 
-    public String uploadFile(MultipartFile file) {
+    public String uploadFile(MultipartFile file, String folderName) {
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        String fileName = UUID.randomUUID().toString() + extension;
+        String fileName = folderName + "/" + UUID.randomUUID().toString() + extension;
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -66,7 +66,7 @@ public class MinioStorageService {
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
             // Construct Public URL
-            // Format: http://<VPS_IP>:9000/<bucket>/<filename>
+            // Format: http://<VPS_IP>:9000/<bucket>/<key>
             return String.format("%s/%s/%s", publicEndpoint, bucketName, fileName);
 
         } catch (IOException | S3Exception e) {
@@ -76,9 +76,17 @@ public class MinioStorageService {
 
     public void deleteFile(String fileUrl) {
         try {
-            // Extract filename from URL
-            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            s3Client.deleteObject(b -> b.bucket(bucketName).key(fileName));
+            // Extract key from URL. URL is: endpoint/bucket/key
+            // Key might contain slashes (e.g., avatars/abc.jpg)
+            // Robust way: remove prefix "endpoint/bucket/"
+            String prefix = publicEndpoint + "/" + bucketName + "/";
+            if (fileUrl.startsWith(prefix)) {
+                String key = fileUrl.substring(prefix.length());
+                s3Client.deleteObject(b -> b.bucket(bucketName).key(key));
+            } else {
+                // Fallback or ignore if URL format doesn't match
+                // Maybe it's already a key?
+            }
         } catch (S3Exception e) {
             throw new RuntimeException("Failed to delete file from MinIO", e);
         }

@@ -80,4 +80,13 @@ public class UserController {
         userService.changePassword(usernameOrEmail, request);
         return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("user.password.change.success")));
     }
+
+    @PostMapping(value = "/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<UserResponse>> uploadAvatar(
+            Authentication authentication,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        String usernameOrEmail = authentication.getName();
+        return ResponseEntity.ok(ApiResponse.success(userService.updateAvatar(usernameOrEmail, file),
+                messageService.getMessage("user.profile.update.success")));
+    }
 }
