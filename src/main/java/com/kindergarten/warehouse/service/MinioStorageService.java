@@ -8,6 +8,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutBucketPolicyRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
@@ -45,6 +46,46 @@ public class MinioStorageService {
             } else {
                 throw new RuntimeException("Failed to connect to MinIO bucket: " + bucketName, e);
             }
+        }
+
+        // Ensure bucket policy is set for public access to avatars
+        setPublicAccessPolicy();
+    }
+
+    private void setPublicAccessPolicy() {
+        try {
+            // JSON policy to allow public read access to "avatars/*"
+            String policy = String.format("{\n" +
+                    "    \"Version\": \"2012-10-17\",\n" +
+                    "    \"Statement\": [\n" +
+                    "        {\n" +
+                    "            \"Effect\": \"Allow\",\n" +
+                    "            \"Principal\": {\n" +
+                    "                \"AWS\": [\n" +
+                    "                    \"*\"\n" +
+                    "                ]\n" +
+                    "            },\n" +
+                    "            \"Action\": [\n" +
+                    "                \"s3:GetObject\"\n" +
+                    "            ],\n" +
+                    "            \"Resource\": [\n" +
+                    "                \"arn:aws:s3:::%s/avatars/*\"\n" +
+                    "            ]\n" +
+                    "        }\n" +
+                    "    ]\n" +
+                    "}", bucketName);
+
+            PutBucketPolicyRequest policyRequest = PutBucketPolicyRequest.builder()
+                    .bucket(bucketName)
+                    .policy(policy)
+                    .build();
+
+            s3Client.putBucketPolicy(policyRequest);
+
+        } catch (S3Exception e) {
+            // Log warning but don't fail startup if policy update fails (might already
+            // exist or permission issue)
+            System.err.println("Warning: Failed to set MinIO bucket policy: " + e.getMessage());
         }
     }
 

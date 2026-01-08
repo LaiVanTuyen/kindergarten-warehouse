@@ -54,20 +54,9 @@ public class UserService {
                 .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
     }
 
-    public List<UserResponse> getAllUsers() {
-        return getUsers(null);
-    }
-
-    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created user")
+    @LogAction(action = "CREATE", description = "Created user")
     public UserResponse createUser(com.kindergarten.warehouse.dto.request.UserCreationRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.USER_EXISTED);
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.EMAIL_EXISTED);
-        }
+        checkUsernameAndEmailAvailability(request.getUsername(), request.getEmail());
 
         User user = new User();
         user.setUsername(request.getUsername());
@@ -89,7 +78,7 @@ public class UserService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted user")
+    @LogAction(action = "DELETE", description = "Deleted user")
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(
@@ -110,7 +99,7 @@ public class UserService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Restored user")
+    @LogAction(action = "UPDATE", description = "Restored user")
     public UserResponse restoreUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(
@@ -124,15 +113,7 @@ public class UserService {
         String originalEmail = user.getEmail().replaceAll("_deleted_\\d+$", "");
         String originalUsername = user.getUsername().replaceAll("_deleted_\\d+$", "");
 
-        if (userRepository.existsByEmail(originalEmail)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.EMAIL_EXISTED);
-        }
-
-        if (userRepository.existsByUsername(originalUsername)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.USER_EXISTED);
-        }
+        checkUsernameAndEmailAvailability(originalUsername, originalEmail);
 
         user.setEmail(originalEmail);
         user.setUsername(originalUsername);
@@ -145,7 +126,7 @@ public class UserService {
         return mapToResponse(savedUser);
     }
 
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Toggled block status for user")
+    @LogAction(action = "UPDATE", description = "Toggled block status for user")
     public UserResponse toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
@@ -158,7 +139,7 @@ public class UserService {
         return mapToResponse(savedUser);
     }
 
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated profile info")
+    @LogAction(action = "UPDATE", description = "Updated profile info")
     public UserResponse updateProfile(String usernameOrEmail,
             com.kindergarten.warehouse.dto.request.UpdateProfileRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -183,7 +164,7 @@ public class UserService {
         return mapToResponse(savedUser);
     }
 
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Changed password")
+    @LogAction(action = "UPDATE", description = "Changed password")
     public void changePassword(String usernameOrEmail,
             com.kindergarten.warehouse.dto.request.ChangePasswordRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -201,13 +182,14 @@ public class UserService {
         clearUserCache(savedUser);
     }
 
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated avatar")
+    @LogAction(action = "UPDATE", description = "Updated avatar")
     public UserResponse updateAvatar(String usernameOrEmail, org.springframework.web.multipart.MultipartFile file) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
                 .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
                         com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
 
+        String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("Only image files are allowed for avatar");
         }
@@ -233,23 +215,12 @@ public class UserService {
     }
 
     private UserResponse mapToResponse(User user) {
-        String avatarUrl = user.getAvatarUrl();
-        if (avatarUrl != null && !avatarUrl.isEmpty()) {
-            // Generate presigned URL for secure access
-            String key = extractKeyFromUrl(avatarUrl);
-            try {
-                avatarUrl = minioStorageService.getPresignedUrl(key);
-            } catch (Exception e) {
-                // Fallback to original URL if signing fails, though it might still be 403
-            }
-        }
-
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .avatarUrl(avatarUrl)
+                .avatarUrl(user.getAvatarUrl())
                 // Map Set<Role> to Set<String>
                 .roles(user.getRoles().stream()
                         .map(Enum::name)
@@ -263,15 +234,14 @@ public class UserService {
                 .build();
     }
 
-    private String extractKeyFromUrl(String fileUrl) {
-        if (fileUrl == null)
-            return null;
-        if (fileUrl.contains("/avatars/")) {
-            return fileUrl.substring(fileUrl.indexOf("avatars/"));
+    private void checkUsernameAndEmailAvailability(String username, String email) {
+        if (userRepository.existsByUsername(username)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.USER_EXISTED);
         }
-        if (fileUrl.lastIndexOf("/") != -1) {
-            return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+        if (userRepository.existsByEmail(email)) {
+            throw new com.kindergarten.warehouse.exception.AppException(
+                    com.kindergarten.warehouse.exception.ErrorCode.EMAIL_EXISTED);
         }
-        return fileUrl;
     }
 }

@@ -1,11 +1,10 @@
 package com.kindergarten.warehouse.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import java.time.LocalDateTime;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,7 +17,22 @@ public class Banner extends BaseEntity {
     private Long id;
 
     @Column(nullable = false, length = 500)
+    private String title;
+
+    @Column(nullable = false, length = 500)
+    private String subtitle;
+
+    @Column(length = 50)
+    private String platform;
+
+    @Column(nullable = false, length = 500)
     private String imageUrl;
+
+    @Column(name = "bg_from", nullable = false, length = 50)
+    private String bgFrom;
+
+    @Column(name = "bg_to", nullable = false, length = 50)
+    private String bgTo;
 
     @Column(length = 500)
     private String link;
@@ -31,6 +45,16 @@ public class Banner extends BaseEntity {
     @Builder.Default
     private Integer displayOrder = 0;
 
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
+
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
+
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     public Long getId() {
         return id;
     }
@@ -39,12 +63,52 @@ public class Banner extends BaseEntity {
         this.id = id;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getSubtitle() {
+        return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle = subtitle;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
+    }
+
     public String getImageUrl() {
         return imageUrl;
     }
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getBgFrom() {
+        return bgFrom;
+    }
+
+    public void setBgFrom(String bgFrom) {
+        this.bgFrom = bgFrom;
+    }
+
+    public String getBgTo() {
+        return bgTo;
+    }
+
+    public void setBgTo(String bgTo) {
+        this.bgTo = bgTo;
     }
 
     public String getLink() {
@@ -69,5 +133,29 @@ public class Banner extends BaseEntity {
 
     public void setDisplayOrder(Integer displayOrder) {
         this.displayOrder = displayOrder;
+    }
+
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 }
