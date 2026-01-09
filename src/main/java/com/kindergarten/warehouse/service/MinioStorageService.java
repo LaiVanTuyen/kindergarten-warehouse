@@ -69,11 +69,12 @@ public class MinioStorageService {
                     "                \"s3:GetObject\"\n" +
                     "            ],\n" +
                     "            \"Resource\": [\n" +
-                    "                \"arn:aws:s3:::%s/avatars/*\"\n" +
+                    "                \"arn:aws:s3:::%s/avatars/*\",\n" +
+                    "                \"arn:aws:s3:::%s/banners/*\"\n" +
                     "            ]\n" +
                     "        }\n" +
                     "    ]\n" +
-                    "}", bucketName);
+                    "}", bucketName, bucketName);
 
             PutBucketPolicyRequest policyRequest = PutBucketPolicyRequest.builder()
                     .bucket(bucketName)

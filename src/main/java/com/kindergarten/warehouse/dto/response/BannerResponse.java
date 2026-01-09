@@ -16,14 +16,20 @@ public class BannerResponse {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Boolean isActive;
-    private Integer order;
+
+    private Integer displayOrder;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String createdBy;
+    private String updatedBy;
 
     public BannerResponse() {
     }
 
     public BannerResponse(Long id, String title, String subtitle, String imageUrl, String bgFrom, String bgTo,
             String platform,
-            String link, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive, Integer order) {
+            String link, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive, Integer displayOrder,
+            LocalDateTime createdAt, LocalDateTime updatedAt, String createdBy, String updatedBy) {
         this.id = id;
         this.title = title;
         this.subtitle = subtitle;
@@ -35,7 +41,11 @@ public class BannerResponse {
         this.startDate = startDate;
         this.endDate = endDate;
         this.isActive = isActive;
-        this.order = order;
+        this.displayOrder = displayOrder;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.createdBy = createdBy;
+        this.updatedBy = updatedBy;
     }
 
     public static BannerResponseBuilder builder() {
@@ -130,12 +140,44 @@ public class BannerResponse {
         this.isActive = isActive;
     }
 
-    public Integer getOrder() {
-        return order;
+    public Integer getDisplayOrder() {
+        return displayOrder;
     }
 
-    public void setOrder(Integer order) {
-        this.order = order;
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 
     public static class BannerResponseBuilder {
@@ -150,7 +192,11 @@ public class BannerResponse {
         private LocalDateTime startDate;
         private LocalDateTime endDate;
         private Boolean isActive;
-        private Integer order;
+        private Integer displayOrder;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
 
         BannerResponseBuilder() {
         }
@@ -210,14 +256,34 @@ public class BannerResponse {
             return this;
         }
 
-        public BannerResponseBuilder order(Integer order) {
-            this.order = order;
+        public BannerResponseBuilder displayOrder(Integer displayOrder) {
+            this.displayOrder = displayOrder;
+            return this;
+        }
+
+        public BannerResponseBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public BannerResponseBuilder updatedAt(LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public BannerResponseBuilder updatedBy(String updatedBy) {
+            this.updatedBy = updatedBy;
+            return this;
+        }
+
+        public BannerResponseBuilder createdBy(String createdBy) {
+            this.createdBy = createdBy;
             return this;
         }
 
         public BannerResponse build() {
             return new BannerResponse(id, title, subtitle, imageUrl, bgFrom, bgTo, platform, link, startDate, endDate,
-                    isActive, order);
+                    isActive, displayOrder, createdAt, updatedAt, createdBy, updatedBy);
         }
     }
 }

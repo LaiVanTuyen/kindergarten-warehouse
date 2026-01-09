@@ -1,0 +1,17 @@
+ALTER TABLE banners ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE banners ADD COLUMN updated_by VARCHAR(255);
+
+ALTER TABLE categories ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE categories ADD COLUMN updated_by VARCHAR(255);
+
+ALTER TABLE resources ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE resources ADD COLUMN updated_by VARCHAR(255);
+
+ALTER TABLE topics ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE topics ADD COLUMN updated_by VARCHAR(255);
+
+ALTER TABLE users ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE users ADD COLUMN updated_by VARCHAR(255);
+
+ALTER TABLE age_groups ADD COLUMN created_by VARCHAR(255);
+ALTER TABLE age_groups ADD COLUMN updated_by VARCHAR(255);

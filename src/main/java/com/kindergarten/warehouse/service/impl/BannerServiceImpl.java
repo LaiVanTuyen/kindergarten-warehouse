@@ -148,7 +148,11 @@ public class BannerServiceImpl implements BannerService {
                 .startDate(banner.getStartDate())
                 .endDate(banner.getEndDate())
                 .isActive(banner.getIsActive())
-                .order(banner.getDisplayOrder())
+                .displayOrder(banner.getDisplayOrder())
+                .createdAt(banner.getCreatedAt())
+                .updatedAt(banner.getUpdatedAt())
+                .createdBy(banner.getAuditCreatedBy())
+                .updatedBy(banner.getAuditUpdatedBy())
                 .build();
     }
 
