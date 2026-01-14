@@ -29,6 +29,12 @@ public class Category extends BaseEntity {
     @NotBlank
     private String slug;
 
+    @Column(length = 500)
+    private String icon;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Topic> topics;
@@ -55,6 +61,22 @@ public class Category extends BaseEntity {
 
     public void setSlug(String slug) {
         this.slug = slug;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public List<Topic> getTopics() {

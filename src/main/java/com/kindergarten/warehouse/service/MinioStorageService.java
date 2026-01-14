@@ -91,7 +91,15 @@ public class MinioStorageService {
     }
 
     public String uploadFile(MultipartFile file, String folderName) {
-        String originalFilename = file.getOriginalFilename();
+        try {
+            return uploadFile(file.getInputStream(), folderName, file.getOriginalFilename(), file.getContentType());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to get input stream from file", e);
+        }
+    }
+
+    public String uploadFile(java.io.InputStream inputStream, String folderName, String originalFilename,
+            String contentType) {
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
@@ -102,10 +110,15 @@ public class MinioStorageService {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileName)
-                    .contentType(file.getContentType())
+                    .contentType(contentType)
                     .build();
 
-            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            // S3Client needs length. We might need to read all bytes if length is unknown,
+            // but for classpath resources we can usually read bytes first.
+            // Converting to byte array to get size. This is safe for small banner images.
+            byte[] bytes = inputStream.readAllBytes();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
 
             // Construct Public URL
             // Format: http://<VPS_IP>:9000/<bucket>/<key>

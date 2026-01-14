@@ -11,13 +11,13 @@ INSERT INTO user_roles (user_id, role) VALUES
 (1, 'ADMIN'), (1, 'TEACHER'), -- Admin kiêm giáo viên
 (2, 'TEACHER');
 
--- Categories
-INSERT INTO categories (id, name, slug) VALUES 
-(1, 'Giáo án điện tử', 'giao-an-dien-tu'),
-(2, 'Video bài giảng', 'video-bai-giang');
-
--- Topics
-INSERT INTO topics (id, name, slug, category_id) VALUES 
-(1, 'Chủ đề Gia đình', 'chu-de-gia-dinh', 1),
-(2, 'Chủ đề Thế giới thực vật', 'chu-de-thuc-vat', 1),
-(3, 'Hoạt động thể chất', 'hoat-dong-the-chat', 2);
+-- -- Categories
+-- INSERT INTO categories (id, name, slug) VALUES
+-- (1, 'Giáo án điện tử', 'giao-an-dien-tu'),
+-- (2, 'Video bài giảng', 'video-bai-giang');
+--
+-- -- Topics
+-- INSERT INTO topics (id, name, slug, category_id) VALUES
+-- (1, 'Chủ đề Gia đình', 'chu-de-gia-dinh', 1),
+-- (2, 'Chủ đề Thế giới thực vật', 'chu-de-thuc-vat', 1),
+-- (3, 'Hoạt động thể chất', 'hoat-dong-the-chat', 2);
