@@ -27,9 +27,11 @@ public class TopicController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TopicResponse>>> getAllTopics() {
+    public ResponseEntity<ApiResponse<List<TopicResponse>>> getAllTopics(
+            @RequestParam(required = false) Long categoryId) {
         return ResponseEntity
-                .ok(ApiResponse.success(topicService.getAllTopics(), messageService.getMessage("topic.list.success")));
+                .ok(ApiResponse.success(topicService.getAllTopics(categoryId),
+                        messageService.getMessage("topic.list.success")));
     }
 
     @PostMapping

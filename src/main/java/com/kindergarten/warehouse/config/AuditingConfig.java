@@ -14,14 +14,14 @@ import java.util.Optional;
 public class AuditingConfig {
 
     @Bean
-    public AuditorAware<String> auditorProvider() {
+    public AuditorAware<Long> auditorProvider() {
         return new SpringSecurityAuditorAware();
     }
 
-    public static class SpringSecurityAuditorAware implements AuditorAware<String> {
+    public static class SpringSecurityAuditorAware implements AuditorAware<Long> {
 
         @Override
-        public Optional<String> getCurrentAuditor() {
+        public Optional<Long> getCurrentAuditor() {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
             if (authentication == null ||
@@ -30,7 +30,12 @@ public class AuditingConfig {
                 return Optional.empty();
             }
 
-            return Optional.ofNullable(authentication.getName());
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof com.kindergarten.warehouse.security.CustomUserDetails) {
+                return Optional.ofNullable(((com.kindergarten.warehouse.security.CustomUserDetails) principal).getId());
+            }
+
+            return Optional.empty();
         }
     }
 }

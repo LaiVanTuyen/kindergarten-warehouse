@@ -151,8 +151,8 @@ public class BannerServiceImpl implements BannerService {
                 .displayOrder(banner.getDisplayOrder())
                 .createdAt(banner.getCreatedAt())
                 .updatedAt(banner.getUpdatedAt())
-                .createdBy(banner.getAuditCreatedBy())
-                .updatedBy(banner.getAuditUpdatedBy())
+                .createdBy(banner.getCreator() != null ? banner.getCreator().getFullName() : null)
+                .updatedBy(banner.getUpdater() != null ? banner.getUpdater().getFullName() : null)
                 .build();
     }
 

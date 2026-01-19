@@ -13,12 +13,14 @@ CREATE TABLE users (
     avatar_url VARCHAR(500),
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', 
     is_deleted BOOLEAN DEFAULT FALSE,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_users_email (email),
-    INDEX idx_users_is_deleted (is_deleted)
+    INDEX idx_users_is_deleted (is_deleted),
+    CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_users_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE user_roles (
@@ -38,10 +40,12 @@ CREATE TABLE categories (
     slug VARCHAR(150) NOT NULL UNIQUE, -- Dùng cho URL thân thiện
     icon VARCHAR(500), -- [NEW] Icon URL from MinIO
     description TEXT,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_categories_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_categories_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================
@@ -54,11 +58,13 @@ CREATE TABLE topics (
     slug VARCHAR(150) UNIQUE, -- [NEW] Thêm slug cho URL đẹp
     description TEXT,
     category_id BIGINT NOT NULL,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_topic_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+    CONSTRAINT fk_topic_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    CONSTRAINT fk_topics_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_topics_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================
@@ -71,10 +77,12 @@ CREATE TABLE banners (
     link VARCHAR(500),
     is_active BOOLEAN DEFAULT TRUE,
     display_order INT DEFAULT 0,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_banners_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_banners_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================
@@ -96,19 +104,19 @@ CREATE TABLE resources (
     -- Stats & Relations
     views_count BIGINT DEFAULT 0,
     topic_id BIGINT NOT NULL,
-    created_by_id BIGINT,
     
     -- Status & Audit
     is_active BOOLEAN DEFAULT TRUE,  -- Ẩn/Hiện trên web
     is_deleted BOOLEAN DEFAULT FALSE, -- [NEW] Soft Delete cho tài nguyên
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Constraints & Indexes
     CONSTRAINT fk_resource_topic FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE,
-    CONSTRAINT fk_resource_user FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_resources_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_resources_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_resource_topic (topic_id),
     INDEX idx_resource_active (is_active)
 );

@@ -9,16 +9,19 @@ public class TopicResponse {
     private String description;
     private Long categoryId;
     private String categoryName;
+    private Long resourceCount;
 
     public TopicResponse() {
     }
 
-    public TopicResponse(Long id, String name, String description, Long categoryId, String categoryName) {
+    public TopicResponse(Long id, String name, String description, Long categoryId, String categoryName,
+            Long resourceCount) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.categoryId = categoryId;
         this.categoryName = categoryName;
+        this.resourceCount = resourceCount;
     }
 
     public static TopicResponseBuilder builder() {
@@ -71,6 +74,7 @@ public class TopicResponse {
         private String description;
         private Long categoryId;
         private String categoryName;
+        private Long resourceCount;
 
         TopicResponseBuilder() {
         }
@@ -100,14 +104,19 @@ public class TopicResponse {
             return this;
         }
 
+        public TopicResponseBuilder resourceCount(Long resourceCount) {
+            this.resourceCount = resourceCount;
+            return this;
+        }
+
         public TopicResponse build() {
-            return new TopicResponse(id, name, description, categoryId, categoryName);
+            return new TopicResponse(id, name, description, categoryId, categoryName, resourceCount);
         }
 
         public String toString() {
             return "TopicResponse.TopicResponseBuilder(id=" + this.id + ", name=" + this.name + ", description="
                     + this.description + ", categoryId=" + this.categoryId + ", categoryName=" + this.categoryName
-                    + ")";
+                    + ", resourceCount=" + this.resourceCount + ")";
         }
     }
 }
