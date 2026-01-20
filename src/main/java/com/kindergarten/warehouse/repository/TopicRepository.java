@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TopicRepository extends JpaRepository<Topic, Long> {
+    java.util.List<Topic> findByCategoryId(Long categoryId);
 }

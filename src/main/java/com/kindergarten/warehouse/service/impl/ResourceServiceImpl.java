@@ -86,7 +86,8 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setFileExtension(extension);
         resource.setFileType(type.name());
         resource.setFileSize(file.getSize());
-        resource.setCreatedBy(user);
+        resource.setCreatedBy(user.getId());
+        resource.setCreator(user); // Set in-memory for response mapping
         resource.setAgeGroups(ageGroups);
 
         return mapToResponse(resourceRepository.save(resource));
@@ -174,7 +175,7 @@ public class ResourceServiceImpl implements ResourceService {
                 .topicId(resource.getTopic().getId())
                 .topicName(resource.getTopic().getName())
                 .fileSize(resource.getFileSize())
-                .createdBy(resource.getCreatedBy() != null ? resource.getCreatedBy().getFullName() : null)
+                .createdBy(resource.getCreator() != null ? resource.getCreator().getFullName() : null)
                 .ageGroups(resource.getAgeGroups().stream()
                         .map(ag -> com.kindergarten.warehouse.dto.response.AgeGroupResponse.builder()
                                 .id(ag.getId())

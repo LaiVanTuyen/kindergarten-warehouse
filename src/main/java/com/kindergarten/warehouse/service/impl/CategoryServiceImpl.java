@@ -59,6 +59,9 @@ public class CategoryServiceImpl implements CategoryService {
                 .id(category.getId())
                 .name(category.getName())
                 .slug(category.getSlug())
+                .icon(category.getIcon())
+                .description(category.getDescription())
+                .topicCount(category.getTopicCount())
                 .build();
     }
 }

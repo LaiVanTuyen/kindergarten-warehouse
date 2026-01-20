@@ -5,7 +5,7 @@ import com.kindergarten.warehouse.dto.response.TopicResponse;
 import java.util.List;
 
 public interface TopicService {
-        List<TopicResponse> getAllTopics();
+        List<TopicResponse> getAllTopics(Long categoryId);
 
         TopicResponse createTopic(TopicRequest topicRequest, Long categoryId);
 

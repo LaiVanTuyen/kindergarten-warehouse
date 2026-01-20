@@ -2,6 +2,7 @@ package com.kindergarten.warehouse.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,41 +33,20 @@ public abstract class BaseEntity {
 
     @CreatedBy
     @Column(name = "created_by", updatable = false)
-    private String auditCreatedBy;
+    private Long createdBy;
 
     @LastModifiedBy
     @Column(name = "updated_by")
-    private String auditUpdatedBy;
+    private Long updatedBy;
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "created_by", insertable = false, updatable = false)
+    @lombok.ToString.Exclude
+    private User creator;
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "updated_by", insertable = false, updatable = false)
+    @lombok.ToString.Exclude
+    private User updater;
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getAuditCreatedBy() {
-        return auditCreatedBy;
-    }
-
-    public void setAuditCreatedBy(String auditCreatedBy) {
-        this.auditCreatedBy = auditCreatedBy;
-    }
-
-    public String getAuditUpdatedBy() {
-        return auditUpdatedBy;
-    }
-
-    public void setAuditUpdatedBy(String auditUpdatedBy) {
-        this.auditUpdatedBy = auditUpdatedBy;
-    }
 }

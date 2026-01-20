@@ -23,8 +23,15 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public List<TopicResponse> getAllTopics() {
-        return topicRepository.findAll().stream()
+    public List<TopicResponse> getAllTopics(Long categoryId) {
+        List<com.kindergarten.warehouse.entity.Topic> topics;
+        if (categoryId != null) {
+            topics = topicRepository.findByCategoryId(categoryId);
+        } else {
+            topics = topicRepository.findAll();
+        }
+
+        return topics.stream()
                 .map(this::mapToResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
@@ -71,6 +78,7 @@ public class TopicServiceImpl implements TopicService {
                 .description(topic.getDescription())
                 .categoryId(topic.getCategory().getId())
                 .categoryName(topic.getCategory().getName())
+                .resourceCount(topic.getResourceCount())
                 .build();
     }
 }

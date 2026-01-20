@@ -7,10 +7,12 @@ CREATE TABLE age_groups (
     min_age INT,
     max_age INT,
     description TEXT,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
+    created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_age_groups_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_age_groups_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- =============================================
