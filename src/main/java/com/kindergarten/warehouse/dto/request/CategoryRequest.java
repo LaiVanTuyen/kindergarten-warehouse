@@ -10,6 +10,18 @@ public class CategoryRequest {
     @NotBlank(message = "{validation.required}")
     private String slug;
 
+    private String description;
+
+    private Boolean isActive;
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
     public String getName() {
         return name;
     }
@@ -24,5 +36,13 @@ public class CategoryRequest {
 
     public void setSlug(String slug) {
         this.slug = slug;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

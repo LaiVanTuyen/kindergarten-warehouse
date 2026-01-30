@@ -1,7 +1,7 @@
 package com.kindergarten.warehouse.service;
 
 import com.kindergarten.warehouse.dto.response.AgeGroupResponse;
-import com.kindergarten.warehouse.entity.AgeGroup;
+import com.kindergarten.warehouse.mapper.AgeGroupMapper;
 import com.kindergarten.warehouse.repository.AgeGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,20 +14,11 @@ import java.util.stream.Collectors;
 public class AgeGroupService {
 
     private final AgeGroupRepository ageGroupRepository;
+    private final AgeGroupMapper ageGroupMapper;
 
     public List<AgeGroupResponse> getAllAgeGroups() {
         return ageGroupRepository.findAll().stream()
-                .map(this::mapToResponse)
+                .map(ageGroupMapper::toResponse)
                 .collect(Collectors.toList());
-    }
-
-    private AgeGroupResponse mapToResponse(AgeGroup ageGroup) {
-        return AgeGroupResponse.builder()
-                .id(ageGroup.getId())
-                .name(ageGroup.getName())
-                .minAge(ageGroup.getMinAge())
-                .maxAge(ageGroup.getMaxAge())
-                .description(ageGroup.getDescription())
-                .build();
     }
 }

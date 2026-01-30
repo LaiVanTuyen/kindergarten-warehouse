@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -43,7 +46,7 @@ public class AuditLogAspect {
 
         } catch (Exception e) {
             // Ensure logging failure doesn't break business logic
-            e.printStackTrace();
+            log.error("Failed to save audit log", e);
         }
     }
 

@@ -24,8 +24,6 @@ public class AgeGroupController {
     public ResponseEntity<ApiResponse<List<AgeGroupResponse>>> getAllAgeGroups() {
         return ResponseEntity.ok(ApiResponse.success(
                 ageGroupService.getAllAgeGroups(),
-                messageService.getMessage("agegroup.list.success") // Make sure to add this message key if needed or use
-                                                                   // a generic one
-        ));
+                messageService.getMessage("agegroup.list.success")));
     }
 }

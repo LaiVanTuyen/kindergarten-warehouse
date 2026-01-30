@@ -1,9 +1,13 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.dto.response.AuthResponseDto;
 import com.kindergarten.warehouse.dto.request.LoginDto;
 import com.kindergarten.warehouse.dto.request.RegisterDto;
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.dto.response.AuthResponseDto;
 import com.kindergarten.warehouse.service.AuthService;
+import com.kindergarten.warehouse.service.MessageService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,12 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kindergarten.warehouse.dto.response.ApiResponse;
-
-import com.kindergarten.warehouse.service.MessageService;
-
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
         private final AuthService authService;
@@ -31,17 +32,11 @@ public class AuthController {
         @Value("${app.cookie.same-site}")
         private String cookieSameSite;
 
-        public AuthController(AuthService authService, MessageService messageService) {
-                this.authService = authService;
-                this.messageService = messageService;
-        }
-
         @PostMapping("/login")
         public ResponseEntity<ApiResponse<AuthResponseDto>> login(
-                        @RequestBody @jakarta.validation.Valid LoginDto loginDto) {
+                        @RequestBody @Valid LoginDto loginDto) {
                 AuthResponseDto response = authService.login(loginDto);
-                String accessToken = response.getAccessToken(); // Assume DTO still has it, but we won't return
-                                                                // it in body
+                String accessToken = response.getAccessToken();
 
                 // Clear token from response body to force usage of cookie
                 response.setAccessToken(null);
@@ -62,15 +57,8 @@ public class AuthController {
 
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<AuthResponseDto>> register(
-                        @RequestBody @jakarta.validation.Valid RegisterDto registerDto) {
+                        @RequestBody @Valid RegisterDto registerDto) {
                 AuthResponseDto response = authService.register(registerDto);
-                // Initially register might not auto-login or set cookie, or we can choose to.
-                // For now, let's keep it as is, or we should set cookie here too if it logs
-                // them in.
-                // Assuming register just creates user. If it returns token, we should probably
-                // treat it like login.
-                // Let's assume for now register DOES return a token (based on response type).
-                // Ideally we should do same cookie logic here if we want auto-login.
 
                 String accessToken = response.getAccessToken();
                 response.setAccessToken(null);
@@ -88,5 +76,4 @@ public class AuthController {
                                 .body(ApiResponse.success(response,
                                                 messageService.getMessage("auth.register.success")));
         }
-
 }

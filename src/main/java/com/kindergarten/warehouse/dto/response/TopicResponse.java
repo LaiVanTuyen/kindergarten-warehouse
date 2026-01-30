@@ -1,80 +1,56 @@
 package com.kindergarten.warehouse.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-public class TopicResponse {
+@Setter
+@Getter
+public class TopicResponse extends BaseResponse {
     private Long id;
     private String name;
+    private String slug;
     private String description;
     private Long categoryId;
     private String categoryName;
     private Long resourceCount;
+    private Boolean isActive;
 
     public TopicResponse() {
+        super();
     }
 
-    public TopicResponse(Long id, String name, String description, Long categoryId, String categoryName,
-            Long resourceCount) {
+    public TopicResponse(Long id, String name, String slug, String description, Long categoryId, String categoryName,
+            Long resourceCount, Boolean isActive, java.time.LocalDateTime createdAt, java.time.LocalDateTime updatedAt,
+            String createdBy,
+            String updatedBy) {
+        super(createdAt, updatedAt, createdBy, updatedBy);
         this.id = id;
         this.name = name;
+        this.slug = slug;
         this.description = description;
         this.categoryId = categoryId;
         this.categoryName = categoryName;
         this.resourceCount = resourceCount;
+        this.isActive = isActive;
     }
 
     public static TopicResponseBuilder builder() {
         return new TopicResponseBuilder();
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
-
-    public String getCategoryName() {
-        return categoryName;
-    }
-
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
-    }
-
     public static class TopicResponseBuilder {
         private Long id;
         private String name;
+        private String slug;
         private String description;
         private Long categoryId;
         private String categoryName;
         private Long resourceCount;
+        private Boolean isActive;
+        private java.time.LocalDateTime createdAt;
+        private java.time.LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
 
         TopicResponseBuilder() {
         }
@@ -86,6 +62,11 @@ public class TopicResponse {
 
         public TopicResponseBuilder name(String name) {
             this.name = name;
+            return this;
+        }
+
+        public TopicResponseBuilder slug(String slug) {
+            this.slug = slug;
             return this;
         }
 
@@ -109,12 +90,40 @@ public class TopicResponse {
             return this;
         }
 
+        public TopicResponseBuilder isActive(Boolean isActive) {
+            this.isActive = isActive;
+            return this;
+        }
+
+        public TopicResponseBuilder createdAt(java.time.LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public TopicResponseBuilder updatedAt(java.time.LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public TopicResponseBuilder createdBy(String createdBy) {
+            this.createdBy = createdBy;
+            return this;
+        }
+
+        public TopicResponseBuilder updatedBy(String updatedBy) {
+            this.updatedBy = updatedBy;
+            return this;
+        }
+
         public TopicResponse build() {
-            return new TopicResponse(id, name, description, categoryId, categoryName, resourceCount);
+            return new TopicResponse(id, name, slug, description, categoryId, categoryName, resourceCount, isActive,
+                    createdAt,
+                    updatedAt, createdBy, updatedBy);
         }
 
         public String toString() {
-            return "TopicResponse.TopicResponseBuilder(id=" + this.id + ", name=" + this.name + ", description="
+            return "TopicResponse.TopicResponseBuilder(id=" + this.id + ", name=" + this.name + ", slug=" + this.slug
+                    + ", description="
                     + this.description + ", categoryId=" + this.categoryId + ", categoryName=" + this.categoryName
                     + ", resourceCount=" + this.resourceCount + ")";
         }

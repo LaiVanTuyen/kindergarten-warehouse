@@ -1,40 +1,44 @@
 package com.kindergarten.warehouse.service.impl;
 
-import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.dto.request.BannerRequest;
 import com.kindergarten.warehouse.dto.response.BannerResponse;
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.mapper.BannerMapper;
 import com.kindergarten.warehouse.repository.BannerRepository;
 import com.kindergarten.warehouse.service.BannerService;
 import com.kindergarten.warehouse.service.MinioStorageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.kindergarten.warehouse.dto.request.BannerRequest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
     private final MinioStorageService minioStorageService;
-
-    public BannerServiceImpl(BannerRepository bannerRepository, MinioStorageService minioStorageService) {
-        this.bannerRepository = bannerRepository;
-        this.minioStorageService = minioStorageService;
-    }
+    private final BannerMapper bannerMapper;
 
     @Override
     public List<BannerResponse> getActiveBanners(String platform) {
-        return bannerRepository.findActiveBanners(platform, java.time.LocalDateTime.now()).stream()
-                .map(this::mapToResponse)
-                .collect(java.util.stream.Collectors.toList());
+        return bannerRepository.findActiveBanners(platform, LocalDateTime.now()).stream()
+                .map(bannerMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
     public Page<BannerResponse> getAllBanners(Pageable pageable) {
         return bannerRepository.findAllByIsDeletedFalse(pageable)
-                .map(this::mapToResponse);
+                .map(bannerMapper::toResponse);
     }
 
     @Override
@@ -42,15 +46,7 @@ public class BannerServiceImpl implements BannerService {
         // Validate date range
         if (request.getStartDate() != null && request.getEndDate() != null
                 && request.getStartDate().isAfter(request.getEndDate())) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.INVALID_KEY);
-            // Assuming INVALID_DATE_RANGE exists, otherwise I'll use generic or create one.
-            // Actually, the user didn't ask to create new ErrorCode. I'll use
-            // IllegalArgumentException or similar if ErrorCode missing.
-            // But strict project usually has defined codes. I'll assume generic
-            // INVALID_REQUEST for now to be safe or check ErrorCode file.
-            // Let's check ErrorCode later. for now use RuntimeException with message or
-            // existing exception.
+            throw new AppException(ErrorCode.INVALID_KEY);
         }
 
         String imageUrl = minioStorageService.uploadFile(image, "banners");
@@ -69,29 +65,26 @@ public class BannerServiceImpl implements BannerService {
         banner.setIsActive(true);
         banner.setIsDeleted(false);
 
-        return mapToResponse(bannerRepository.save(banner));
+        return bannerMapper.toResponse(bannerRepository.save(banner));
     }
 
     @Override
-    public BannerResponse updateBanner(Long id, BannerRequest request, MultipartFile image) {
+    public UpdateResult<BannerResponse> updateBanner(Long id, BannerRequest request, MultipartFile image) {
         Banner banner = bannerRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.BANNER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
         if (request.getStartDate() != null && request.getEndDate() != null
                 && request.getStartDate().isAfter(request.getEndDate())) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.INVALID_KEY);
+            throw new AppException(ErrorCode.INVALID_KEY);
         }
 
         if (image != null && !image.isEmpty()) {
-            // Delete old image if exists (optional strategy, keeping clean)
-            try {
-                // Assuming minio service has delete. Using try-catch just in case of file not
-                // found, though non-critical.
-                minioStorageService.deleteFile(banner.getImageUrl());
-            } catch (Exception e) {
-                // Log warning
+            if (banner.getImageUrl() != null && !banner.getImageUrl().isEmpty()) {
+                try {
+                    minioStorageService.deleteFile(banner.getImageUrl());
+                } catch (Exception e) {
+                    // Log warning
+                }
             }
             String imageUrl = minioStorageService.uploadFile(image, "banners");
             banner.setImageUrl(imageUrl);
@@ -105,13 +98,13 @@ public class BannerServiceImpl implements BannerService {
         banner.setLink(request.getLink());
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
-        // We don't necessarily update displayOrder here if it's handled by reorder, but
-        // we can.
         if (request.getDisplayOrder() != null) {
             banner.setDisplayOrder(request.getDisplayOrder());
         }
 
-        return mapToResponse(bannerRepository.save(banner));
+        return new UpdateResult<>(
+                bannerMapper.toResponse(bannerRepository.save(banner)),
+                "banner.update.success");
     }
 
     @Override
@@ -120,47 +113,31 @@ public class BannerServiceImpl implements BannerService {
             Long id = orderedIds.get(i);
             Banner banner = bannerRepository.findById(id).orElse(null);
             if (banner != null) {
-                banner.setDisplayOrder(i + 1); // 1-based or 0-based? Let's stick to simple increment.
+                banner.setDisplayOrder(i + 1);
                 bannerRepository.save(banner);
             }
         }
     }
 
     @Override
-    public BannerResponse toggleBanner(Long id) {
+    public UpdateResult<BannerResponse> toggleBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.BANNER_NOT_FOUND));
-        banner.setIsActive(!banner.getIsActive());
-        return mapToResponse(bannerRepository.save(banner));
-    }
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
-    private BannerResponse mapToResponse(Banner banner) {
-        return BannerResponse.builder()
-                .id(banner.getId())
-                .title(banner.getTitle())
-                .subtitle(banner.getSubtitle())
-                .imageUrl(banner.getImageUrl())
-                .bgFrom(banner.getBgFrom())
-                .bgTo(banner.getBgTo())
-                .platform(banner.getPlatform())
-                .link(banner.getLink())
-                .startDate(banner.getStartDate())
-                .endDate(banner.getEndDate())
-                .isActive(banner.getIsActive())
-                .displayOrder(banner.getDisplayOrder())
-                .createdAt(banner.getCreatedAt())
-                .updatedAt(banner.getUpdatedAt())
-                .createdBy(banner.getCreator() != null ? banner.getCreator().getFullName() : null)
-                .updatedBy(banner.getUpdater() != null ? banner.getUpdater().getFullName() : null)
-                .build();
+        boolean newStatus = !banner.getIsActive();
+        banner.setIsActive(newStatus);
+
+        String messageKey = newStatus ? "banner.activated" : "banner.deactivated";
+
+        return new UpdateResult<>(
+                bannerMapper.toResponse(bannerRepository.save(banner)),
+                messageKey);
     }
 
     @Override
     public void deleteBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.BANNER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
         // Soft delete: keep image, just mark as deleted
         banner.setIsDeleted(true);

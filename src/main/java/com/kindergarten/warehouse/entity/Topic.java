@@ -12,6 +12,7 @@ import lombok.EqualsAndHashCode;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -37,7 +38,15 @@ public class Topic extends BaseEntity {
     @ToString.Exclude
     private Category category;
 
-    @org.hibernate.annotations.Formula("(SELECT COUNT(*) FROM resources r WHERE r.topic_id = id)")
+    @org.hibernate.annotations.Formula("(SELECT COUNT(*) FROM resources r WHERE r.topic_id = id AND r.is_deleted = false)")
     private Long resourceCount;
+
+    @Builder.Default
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
 }

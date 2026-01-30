@@ -9,18 +9,30 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ResourceRepository extends JpaRepository<Resource, String>,
                 org.springframework.data.jpa.repository.JpaSpecificationExecutor<Resource> {
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "ageGroups" })
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "updater",
+                        "ageGroups" })
         Page<Resource> findAll(org.springframework.data.jpa.domain.Specification<Resource> spec, Pageable pageable);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "ageGroups" })
-        Page<Resource> findByTopicIdAndIsDeletedFalse(Long topicId, Pageable pageable);
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "updater",
+                        "ageGroups" })
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r WHERE r.topic.id = :topicId AND r.isDeleted = false AND r.topic.isDeleted = false AND r.topic.category.isDeleted = false")
+        Page<Resource> findByTopicIdAndIsDeletedFalse(
+                        @org.springframework.data.repository.query.Param("topicId") Long topicId, Pageable pageable);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "ageGroups" })
-        Page<Resource> findByTopicCategoryIdAndIsDeletedFalse(Long categoryId, Pageable pageable);
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "updater",
+                        "ageGroups" })
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r WHERE r.topic.category.id = :categoryId AND r.isDeleted = false AND r.topic.isDeleted = false AND r.topic.category.isDeleted = false")
+        Page<Resource> findByTopicCategoryIdAndIsDeletedFalse(
+                        @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+                        Pageable pageable);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "ageGroups" })
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "updater",
+                        "ageGroups" })
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r WHERE r.isDeleted = false AND r.topic.isDeleted = false AND r.topic.category.isDeleted = false")
         Page<Resource> findByIsDeletedFalse(Pageable pageable);
 
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "creator", "updater",
+                        "ageGroups" })
         java.util.Optional<Resource> findBySlug(String slug);
 
         @org.springframework.data.jpa.repository.Modifying

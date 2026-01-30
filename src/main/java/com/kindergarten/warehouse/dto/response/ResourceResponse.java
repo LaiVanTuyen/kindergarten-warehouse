@@ -1,17 +1,19 @@
 package com.kindergarten.warehouse.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-public class ResourceResponse {
+@Setter
+@Getter
+public class ResourceResponse extends BaseResponse {
     private String id;
     private String title;
     private String slug;
     private String description;
     private Long viewsCount;
-    private LocalDateTime createdAt;
+    // createdAt moved to BaseResponse
     private String fileUrl;
     private String thumbnailUrl;
     private String fileType;
@@ -19,7 +21,7 @@ public class ResourceResponse {
     private Long topicId;
     private String topicName;
     private Long fileSize;
-    private String createdBy;
+    // createdBy moved to BaseResponse
     private java.util.List<AgeGroupResponse> ageGroups;
     private java.util.List<String> highlights;
     private Boolean isFavorited;
@@ -28,6 +30,7 @@ public class ResourceResponse {
     private Long downloadCount;
 
     public ResourceResponse() {
+        super();
     }
 
     public ResourceResponse(String id, String title, String slug, String description, Long viewsCount,
@@ -35,13 +38,14 @@ public class ResourceResponse {
             Long topicId, String topicName, Long fileSize, String createdBy,
             java.util.List<AgeGroupResponse> ageGroups,
             java.util.List<String> highlights, Boolean isFavorited, Double averageRating,
-            String status, Long downloadCount) {
+            String status, Long downloadCount,
+            LocalDateTime updatedAt, String updatedBy) {
+        super(createdAt, updatedAt, createdBy, updatedBy);
         this.id = id;
         this.title = title;
         this.slug = slug;
         this.description = description;
         this.viewsCount = viewsCount;
-        this.createdAt = createdAt;
         this.fileUrl = fileUrl;
         this.thumbnailUrl = thumbnailUrl;
         this.fileType = fileType;
@@ -49,7 +53,6 @@ public class ResourceResponse {
         this.topicId = topicId;
         this.topicName = topicName;
         this.fileSize = fileSize;
-        this.createdBy = createdBy;
         this.ageGroups = ageGroups;
         this.highlights = highlights;
         this.isFavorited = isFavorited;
@@ -60,167 +63,6 @@ public class ResourceResponse {
 
     public static ResourceResponseBuilder builder() {
         return new ResourceResponseBuilder();
-    }
-
-    // Getters and Setters
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getSlug() {
-        return slug;
-    }
-
-    public void setSlug(String slug) {
-        this.slug = slug;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Long getViewsCount() {
-        return viewsCount;
-    }
-
-    public void setViewsCount(Long viewsCount) {
-        this.viewsCount = viewsCount;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getFileUrl() {
-        return fileUrl;
-    }
-
-    public void setFileUrl(String fileUrl) {
-        this.fileUrl = fileUrl;
-    }
-
-    public String getThumbnailUrl() {
-        return thumbnailUrl;
-    }
-
-    public void setThumbnailUrl(String thumbnailUrl) {
-        this.thumbnailUrl = thumbnailUrl;
-    }
-
-    public String getFileType() {
-        return fileType;
-    }
-
-    public void setFileType(String fileType) {
-        this.fileType = fileType;
-    }
-
-    public String getFileExtension() {
-        return fileExtension;
-    }
-
-    public void setFileExtension(String fileExtension) {
-        this.fileExtension = fileExtension;
-    }
-
-    public Long getTopicId() {
-        return topicId;
-    }
-
-    public void setTopicId(Long topicId) {
-        this.topicId = topicId;
-    }
-
-    public String getTopicName() {
-        return topicName;
-    }
-
-    public void setTopicName(String topicName) {
-        this.topicName = topicName;
-    }
-
-    public Long getFileSize() {
-        return fileSize;
-    }
-
-    public void setFileSize(Long fileSize) {
-        this.fileSize = fileSize;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public java.util.List<AgeGroupResponse> getAgeGroups() {
-        return ageGroups;
-    }
-
-    public void setAgeGroups(java.util.List<AgeGroupResponse> ageGroups) {
-        this.ageGroups = ageGroups;
-    }
-
-    public java.util.List<String> getHighlights() {
-        return highlights;
-    }
-
-    public void setHighlights(java.util.List<String> highlights) {
-        this.highlights = highlights;
-    }
-
-    public Boolean getIsFavorited() {
-        return isFavorited;
-    }
-
-    public void setIsFavorited(Boolean isFavorited) {
-        this.isFavorited = isFavorited;
-    }
-
-    public Double getAverageRating() {
-        return averageRating;
-    }
-
-    public void setAverageRating(Double averageRating) {
-        this.averageRating = averageRating;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Long getDownloadCount() {
-        return downloadCount;
-    }
-
-    public void setDownloadCount(Long downloadCount) {
-        this.downloadCount = downloadCount;
     }
 
     public static class ResourceResponseBuilder {
@@ -244,6 +86,8 @@ public class ResourceResponse {
         private Double averageRating;
         private String status;
         private Long downloadCount;
+        private LocalDateTime updatedAt;
+        private String updatedBy;
 
         ResourceResponseBuilder() {
         }
@@ -348,10 +192,20 @@ public class ResourceResponse {
             return this;
         }
 
+        public ResourceResponseBuilder updatedAt(LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public ResourceResponseBuilder updatedBy(String updatedBy) {
+            this.updatedBy = updatedBy;
+            return this;
+        }
+
         public ResourceResponse build() {
             return new ResourceResponse(id, title, slug, description, viewsCount, createdAt, fileUrl, thumbnailUrl,
                     fileType, fileExtension, topicId, topicName, fileSize, createdBy, ageGroups, highlights,
-                    isFavorited, averageRating, status, downloadCount);
+                    isFavorited, averageRating, status, downloadCount, updatedAt, updatedBy);
         }
     }
 }

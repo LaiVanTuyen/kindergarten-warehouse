@@ -1,73 +1,81 @@
 package com.kindergarten.warehouse.service.impl;
 
-import com.kindergarten.warehouse.entity.Resource;
-import com.kindergarten.warehouse.entity.FileType;
 import com.kindergarten.warehouse.aspect.LogAction;
+import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
+import com.kindergarten.warehouse.dto.response.ResourceResponse;
+import com.kindergarten.warehouse.entity.AgeGroup;
+import com.kindergarten.warehouse.entity.FileType;
+import com.kindergarten.warehouse.entity.Resource;
+import com.kindergarten.warehouse.entity.ResourceStatus;
 import com.kindergarten.warehouse.entity.Topic;
+import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.mapper.ResourceMapper;
+import com.kindergarten.warehouse.repository.AgeGroupRepository;
+import com.kindergarten.warehouse.repository.CommentRepository;
+import com.kindergarten.warehouse.repository.FavoriteRepository;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.TopicRepository;
-import com.kindergarten.warehouse.dto.response.ResourceResponse;
-import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.repository.UserRepository;
 import com.kindergarten.warehouse.service.MinioStorageService;
 import com.kindergarten.warehouse.service.ResourceService;
+import com.kindergarten.warehouse.util.SlugUtil;
+import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
+@RequiredArgsConstructor
 public class ResourceServiceImpl implements ResourceService {
 
     // Map to store IP_ResourceID -> LastViewTimestamp
-    private final java.util.Map<String, Long> viewTracker = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> viewTracker = new ConcurrentHashMap<>();
 
     private final ResourceRepository resourceRepository;
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
-    private final com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository;
+    private final AgeGroupRepository ageGroupRepository;
     private final MinioStorageService minioStorageService;
-    private final com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository;
-    private final com.kindergarten.warehouse.repository.CommentRepository commentRepository;
-    private final org.springframework.cache.CacheManager cacheManager;
-    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
-
-    public ResourceServiceImpl(ResourceRepository resourceRepository, TopicRepository topicRepository,
-            UserRepository userRepository, com.kindergarten.warehouse.repository.AgeGroupRepository ageGroupRepository,
-            MinioStorageService minioStorageService,
-            com.kindergarten.warehouse.repository.FavoriteRepository favoriteRepository,
-            com.kindergarten.warehouse.repository.CommentRepository commentRepository,
-            org.springframework.cache.CacheManager cacheManager,
-            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
-        this.resourceRepository = resourceRepository;
-        this.topicRepository = topicRepository;
-        this.userRepository = userRepository;
-        this.ageGroupRepository = ageGroupRepository;
-        this.minioStorageService = minioStorageService;
-        this.favoriteRepository = favoriteRepository;
-        this.commentRepository = commentRepository;
-        this.cacheManager = cacheManager;
-        this.redisTemplate = redisTemplate;
-    }
+    private final FavoriteRepository favoriteRepository;
+    private final CommentRepository commentRepository;
+    private final CacheManager cacheManager;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final ResourceMapper resourceMapper;
 
     @Override
     @LogAction(action = "CREATE", description = "Uploaded resource")
     public ResourceResponse uploadResource(MultipartFile file, String title,
-            String description, Long topicId, java.util.List<Long> ageGroupIds, String username) {
+            String description, Long topicId, List<Long> ageGroupIds, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         Topic topic = topicRepository.findById(topicId)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.TOPIC_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
 
-        java.util.Set<com.kindergarten.warehouse.entity.AgeGroup> ageGroups = new java.util.HashSet<>();
+        Set<AgeGroup> ageGroups = new HashSet<>();
         if (ageGroupIds != null && !ageGroupIds.isEmpty()) {
             @SuppressWarnings("unchecked")
-            java.util.List<Long> safeIds = (java.util.List<Long>) (java.util.List<?>) ageGroupIds;
+            List<Long> safeIds = (List<Long>) (List<?>) ageGroupIds;
             ageGroups.addAll(ageGroupRepository.findAllById(safeIds));
         }
 
@@ -77,9 +85,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         Resource resource = new Resource();
         resource.setTitle(title);
-        // Generate slug from title + random/timestamp or just accept user input later.
-        // For now, using title-timestamp for uniqueness.
-        resource.setSlug(com.kindergarten.warehouse.util.SlugUtil.toSlug(title + "-" + System.currentTimeMillis()));
+        resource.setSlug(SlugUtil.toSlug(title + "-" + System.currentTimeMillis()));
         resource.setDescription(description);
         resource.setTopic(topic);
         resource.setFileUrl(fileUrl);
@@ -87,19 +93,19 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setFileType(type.name());
         resource.setFileSize(file.getSize());
         resource.setCreatedBy(user.getId());
-        resource.setCreator(user); // Set in-memory for response mapping
+        resource.setCreator(user);
         resource.setAgeGroups(ageGroups);
 
-        return mapToResponse(resourceRepository.save(resource));
+        return resourceMapper.toResponse(resourceRepository.save(resource), false);
     }
 
     @Override
     public Page<ResourceResponse> getResources(
-            com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest, int page, int size) {
+            ResourceFilterRequest filterRequest, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        org.springframework.data.jpa.domain.Specification<Resource> spec = (root, query, cb) -> {
-            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+        Specification<Resource> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("isDeleted"), false));
 
             if (filterRequest.getTopicSlug() != null && !filterRequest.getTopicSlug().isEmpty()) {
@@ -112,7 +118,6 @@ public class ResourceServiceImpl implements ResourceService {
             if (filterRequest.getTopicId() != null) {
                 predicates.add(cb.equal(root.get("topic").get("id"), filterRequest.getTopicId()));
             } else if (filterRequest.getCategoryId() != null) {
-                // Assuming Topic has category field
                 predicates.add(cb.equal(root.get("topic").get("category").get("id"), filterRequest.getCategoryId()));
             }
 
@@ -121,7 +126,6 @@ public class ResourceServiceImpl implements ResourceService {
             }
 
             if (filterRequest.getAgeSlugs() != null && !filterRequest.getAgeSlugs().isEmpty()) {
-                // Join with ageGroups and check if slug is in the list
                 predicates.add(root.join("ageGroups").get("slug").in(filterRequest.getAgeSlugs()));
             }
 
@@ -133,10 +137,10 @@ public class ResourceServiceImpl implements ResourceService {
             if (filterRequest.getStatus() != null && !filterRequest.getStatus().isEmpty()) {
                 predicates.add(
                         cb.equal(root.get("status"),
-                                com.kindergarten.warehouse.entity.ResourceStatus.valueOf(filterRequest.getStatus())));
+                                ResourceStatus.valueOf(filterRequest.getStatus())));
             }
 
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
@@ -144,14 +148,8 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private ResourceResponse mapToResponse(Resource resource) {
-        // Average rating is now fetched from cache column in Resource entity
-        // Double averageRating =
-        // commentRepository.getAverageRatingByResourceId(resource.getId());
-
-        // Check isFavorited
         boolean isFavorited = false;
-        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()
                 && !authentication.getPrincipal().equals("anonymousUser")) {
             String username = authentication.getName();
@@ -160,38 +158,7 @@ public class ResourceServiceImpl implements ResourceService {
                 isFavorited = favoriteRepository.existsByUserIdAndResourceId(currentUser.getId(), resource.getId());
             }
         }
-
-        return ResourceResponse.builder()
-                .id(resource.getId())
-                .title(resource.getTitle())
-                .slug(resource.getSlug())
-                .description(resource.getDescription())
-                .viewsCount(resource.getViewsCount())
-                .createdAt(resource.getCreatedAt())
-                .fileUrl(minioStorageService.getPresignedUrl(extractKeyFromUrl(resource.getFileUrl())))
-                .thumbnailUrl(resource.getThumbnailUrl())
-                .fileType(resource.getFileType())
-                .fileExtension(resource.getFileExtension())
-                .topicId(resource.getTopic().getId())
-                .topicName(resource.getTopic().getName())
-                .fileSize(resource.getFileSize())
-                .createdBy(resource.getCreator() != null ? resource.getCreator().getFullName() : null)
-                .ageGroups(resource.getAgeGroups().stream()
-                        .map(ag -> com.kindergarten.warehouse.dto.response.AgeGroupResponse.builder()
-                                .id(ag.getId())
-                                .name(ag.getName())
-                                .slug(ag.getSlug())
-                                .minAge(ag.getMinAge())
-                                .maxAge(ag.getMaxAge())
-                                .description(ag.getDescription())
-                                .build())
-                        .collect(java.util.stream.Collectors.toList()))
-                .highlights(resource.getHighlights())
-                .isFavorited(isFavorited)
-                .averageRating(resource.getAverageRating() != null ? resource.getAverageRating() : 0.0)
-                .status(resource.getStatus().name())
-                .downloadCount(resource.getDownloadCount())
-                .build();
+        return resourceMapper.toResponse(resource, isFavorited);
     }
 
     @Override
@@ -203,34 +170,26 @@ public class ResourceServiceImpl implements ResourceService {
         if (viewTracker.containsKey(key)) {
             long lastViewTime = viewTracker.get(key);
             if (currentTime - lastViewTime < oneHourInMillis) {
-                // Debounce: view already counted recently
                 return;
             }
         }
 
         if (!resourceRepository.existsById(id)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        // Write-Behind Caching: Increment in Redis and mark as dirty
         redisTemplate.opsForValue().increment("kindergarten:views:" + id);
         redisTemplate.opsForSet().add("kindergarten:dirty_views", id);
 
         viewTracker.put(key, currentTime);
-
-        // Optional: Cleanup old entries logic could be added here or via scheduled task
-        // but for simplicity/MVP we keep it simple.
     }
 
     @Override
     public void incrementDownloadCount(String id) {
         if (!resourceRepository.existsById(id)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        // Write-Behind Caching
         redisTemplate.opsForValue().increment("kindergarten:downloads:" + id);
         redisTemplate.opsForSet().add("kindergarten:dirty_downloads", id);
     }
@@ -239,15 +198,12 @@ public class ResourceServiceImpl implements ResourceService {
     @LogAction(action = "DELETE", description = "Deleted resource")
     public void deleteResource(String id) {
         Resource resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // Soft Delete
         resource.setIsDeleted(true);
         resourceRepository.save(resource);
 
-        // Evict cache
-        org.springframework.cache.Cache cache = cacheManager.getCache("resources");
+        Cache cache = cacheManager.getCache("resources");
         if (cache != null) {
             cache.evict(resource.getSlug());
         }
@@ -261,17 +217,13 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "resources", key = "#slug")
+    @Cacheable(value = "resources", key = "#slug")
     public ResourceResponse getResourceBySlug(String slug) {
         Resource resource = resourceRepository.findBySlug(slug)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // Logic check: only active/non-deleted? Repository findBySlug should probably
-        // handle this or check here.
         if (resource.getIsDeleted()) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.RESOURCE_NOT_FOUND);
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
         return mapToResponse(resource);
@@ -292,23 +244,7 @@ public class ResourceServiceImpl implements ResourceService {
             case "pdf":
                 return FileType.PDF;
             default:
-                return FileType.DOCUMENT; // Default fallback
+                return FileType.DOCUMENT;
         }
-    }
-
-    private String extractKeyFromUrl(String fileUrl) {
-        if (fileUrl == null)
-            return null;
-        // Delegate to MinioStorageService if possible, but here we can't easily change
-        // the interface in one go without errors.
-        // Let's rely on the fact that we know the structure or add the helper to
-        // MinioStorageService.
-        // For now, let's just try to be smart:
-        // We know we upload to "resources/" folder.
-        if (fileUrl.contains("/resources/")) {
-            return fileUrl.substring(fileUrl.indexOf("resources/"));
-        }
-        // Fallback for old files (at root)
-        return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
     }
 }

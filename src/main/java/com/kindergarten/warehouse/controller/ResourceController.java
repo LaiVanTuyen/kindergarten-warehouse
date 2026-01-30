@@ -1,6 +1,12 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.dto.response.ResourceResponse;
+import com.kindergarten.warehouse.service.MessageService;
 import com.kindergarten.warehouse.service.ResourceService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,24 +16,15 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
-
-import com.kindergarten.warehouse.dto.response.ResourceResponse;
-
-import com.kindergarten.warehouse.dto.response.ApiResponse;
-
-import com.kindergarten.warehouse.service.MessageService;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/resources")
+@RequiredArgsConstructor
 public class ResourceController {
 
         private final ResourceService resourceService;
         private final MessageService messageService;
-
-        public ResourceController(ResourceService resourceService, MessageService messageService) {
-                this.resourceService = resourceService;
-                this.messageService = messageService;
-        }
 
         @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
@@ -36,7 +33,7 @@ public class ResourceController {
                         @RequestParam("title") String title,
                         @RequestParam(value = "description", required = false) String description,
                         @RequestParam("topicId") Long topicId,
-                        @RequestParam(value = "ageGroupIds", required = false) java.util.List<Long> ageGroupIds,
+                        @RequestParam(value = "ageGroupIds", required = false) List<Long> ageGroupIds,
                         Principal principal) {
 
                 return new ResponseEntity<>(
@@ -55,21 +52,20 @@ public class ResourceController {
                         @RequestParam(value = "categoryId", required = false) Long categoryId,
                         @RequestParam(value = "topic", required = false) String topicSlug,
                         @RequestParam(value = "category", required = false) String categorySlug,
-                        @RequestParam(value = "ages", required = false) java.util.List<String> ages,
+                        @RequestParam(value = "ages", required = false) List<String> ages,
                         @RequestParam(value = "ageGroupId", required = false) Long ageGroupId,
                         @RequestParam(value = "status", required = false) String status,
                         @RequestParam(value = "page", defaultValue = "0") int page,
                         @RequestParam(value = "size", defaultValue = "10") int size) {
 
-                com.kindergarten.warehouse.dto.request.ResourceFilterRequest filterRequest = new com.kindergarten.warehouse.dto.request.ResourceFilterRequest();
+                ResourceFilterRequest filterRequest = new ResourceFilterRequest();
                 filterRequest.setKeyword(keyword);
                 filterRequest.setTopicId(topicId);
                 filterRequest.setCategoryId(categoryId);
                 filterRequest.setAgeGroupId(ageGroupId);
                 filterRequest.setTopicSlug(topicSlug);
                 filterRequest.setCategorySlug(categorySlug);
-                filterRequest.setTopicSlug(topicSlug);
-                filterRequest.setCategorySlug(categorySlug);
+                // Duplicate setTopicSlug/CategorySlug was present in original code
                 filterRequest.setAgeSlugs(ages);
                 filterRequest.setStatus(status);
 
@@ -90,7 +86,7 @@ public class ResourceController {
         @PutMapping("/{id}/view")
         public ResponseEntity<ApiResponse<Void>> incrementViewCount(
                         @PathVariable String id,
-                        jakarta.servlet.http.HttpServletRequest request) {
+                        HttpServletRequest request) {
                 String ipAddress = request.getHeader("X-Forwarded-For");
                 if (ipAddress == null || ipAddress.isEmpty()) {
                         ipAddress = request.getRemoteAddr();

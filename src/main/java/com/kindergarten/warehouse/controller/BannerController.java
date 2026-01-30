@@ -1,6 +1,16 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.BannerRequest;
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.dto.response.BannerResponse;
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.service.BannerService;
+import com.kindergarten.warehouse.service.MessageService;
+import com.kindergarten.warehouse.util.PageableUtils;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,28 +20,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-import com.kindergarten.warehouse.dto.response.ApiResponse;
-import com.kindergarten.warehouse.dto.response.BannerResponse;
-import com.kindergarten.warehouse.dto.request.BannerRequest;
-import jakarta.validation.Valid;
-
-import com.kindergarten.warehouse.service.MessageService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-
 @RestController
 @RequestMapping("/api/v1/banners")
+@RequiredArgsConstructor
 public class BannerController {
 
         private final BannerService bannerService;
         private final MessageService messageService;
-
-        public BannerController(BannerService bannerService, MessageService messageService) {
-                this.bannerService = bannerService;
-                this.messageService = messageService;
-        }
 
         @GetMapping
         public ResponseEntity<ApiResponse<List<BannerResponse>>> getActiveBanners(
@@ -48,9 +43,7 @@ public class BannerController {
                         @RequestParam(defaultValue = "displayOrder") String sortBy,
                         @RequestParam(defaultValue = "asc") String sortDir) {
 
-                Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending()
-                                : Sort.by(sortBy).descending();
-                Pageable pageable = PageRequest.of(page, size, sort);
+                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity.ok(
                                 ApiResponse.success(bannerService.getAllBanners(pageable),
@@ -76,11 +69,11 @@ public class BannerController {
                         @PathVariable Long id,
                         @RequestPart(value = "image", required = false) MultipartFile image,
                         @ModelAttribute @Valid BannerRequest request) {
-
+                UpdateResult<BannerResponse> updateResult = bannerService.updateBanner(id, request, image);
                 return ResponseEntity.ok(
                                 ApiResponse.success(
-                                                bannerService.updateBanner(id, request, image),
-                                                messageService.getMessage("banner.update.success")));
+                                                updateResult.getResult(),
+                                                messageService.getMessage(updateResult.getMessageKey())));
         }
 
         @PatchMapping("/reorder")
@@ -93,9 +86,9 @@ public class BannerController {
         @PutMapping("/{id}/toggle")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<BannerResponse>> toggleBanner(@PathVariable Long id) {
-                return ResponseEntity
-                                .ok(ApiResponse.success(bannerService.toggleBanner(id),
-                                                messageService.getMessage("banner.toggle.success")));
+                UpdateResult<BannerResponse> updateResult = bannerService.toggleBanner(id);
+                return ResponseEntity.ok(ApiResponse.success(updateResult.getResult(),
+                                messageService.getMessage(updateResult.getMessageKey())));
         }
 
         @DeleteMapping("/{id}")

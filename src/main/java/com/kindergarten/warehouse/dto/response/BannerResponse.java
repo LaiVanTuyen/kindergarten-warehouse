@@ -1,10 +1,12 @@
 package com.kindergarten.warehouse.dto.response;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
-public class BannerResponse {
+@Setter
+@Getter
+public class BannerResponse extends BaseResponse {
     private Long id;
     private String title;
     private String subtitle;
@@ -16,20 +18,18 @@ public class BannerResponse {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Boolean isActive;
-
     private Integer displayOrder;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private String createdBy;
-    private String updatedBy;
+    // auditing fields moved to BaseResponse
 
     public BannerResponse() {
+        super();
     }
 
     public BannerResponse(Long id, String title, String subtitle, String imageUrl, String bgFrom, String bgTo,
             String platform,
             String link, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive, Integer displayOrder,
             LocalDateTime createdAt, LocalDateTime updatedAt, String createdBy, String updatedBy) {
+        super(createdAt, updatedAt, createdBy, updatedBy);
         this.id = id;
         this.title = title;
         this.subtitle = subtitle;
@@ -42,142 +42,10 @@ public class BannerResponse {
         this.endDate = endDate;
         this.isActive = isActive;
         this.displayOrder = displayOrder;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.createdBy = createdBy;
-        this.updatedBy = updatedBy;
     }
 
     public static BannerResponseBuilder builder() {
         return new BannerResponseBuilder();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getSubtitle() {
-        return subtitle;
-    }
-
-    public void setSubtitle(String subtitle) {
-        this.subtitle = subtitle;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getBgFrom() {
-        return bgFrom;
-    }
-
-    public void setBgFrom(String bgFrom) {
-        this.bgFrom = bgFrom;
-    }
-
-    public String getBgTo() {
-        return bgTo;
-    }
-
-    public void setBgTo(String bgTo) {
-        this.bgTo = bgTo;
-    }
-
-    public String getPlatform() {
-        return platform;
-    }
-
-    public void setPlatform(String platform) {
-        this.platform = platform;
-    }
-
-    public String getLink() {
-        return link;
-    }
-
-    public void setLink(String link) {
-        this.link = link;
-    }
-
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
-    }
-
-    public Boolean getIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
-    }
-
-    public Integer getDisplayOrder() {
-        return displayOrder;
-    }
-
-    public void setDisplayOrder(Integer displayOrder) {
-        this.displayOrder = displayOrder;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public String getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public void setUpdatedBy(String updatedBy) {
-        this.updatedBy = updatedBy;
     }
 
     public static class BannerResponseBuilder {

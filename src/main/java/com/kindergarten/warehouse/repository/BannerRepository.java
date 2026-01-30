@@ -15,7 +15,10 @@ import java.time.LocalDateTime;
 @Repository
 public interface BannerRepository extends JpaRepository<Banner, Long> {
 
-    @Query("SELECT b FROM Banner b WHERE b.isActive = true " +
+    @Query("SELECT b FROM Banner b " +
+            "LEFT JOIN FETCH b.creator " +
+            "LEFT JOIN FETCH b.updater " +
+            "WHERE b.isActive = true " +
             "AND b.isDeleted = false " +
             "AND (:platform IS NULL OR b.platform = :platform) " +
             "AND (b.startDate IS NULL OR b.startDate <= :now) " +
@@ -23,5 +26,6 @@ public interface BannerRepository extends JpaRepository<Banner, Long> {
             "ORDER BY b.displayOrder ASC")
     List<Banner> findActiveBanners(@Param("platform") String platform, @Param("now") LocalDateTime now);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
     Page<Banner> findAllByIsDeletedFalse(Pageable pageable);
 }

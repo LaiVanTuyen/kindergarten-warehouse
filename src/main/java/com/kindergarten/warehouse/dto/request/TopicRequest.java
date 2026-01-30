@@ -2,26 +2,19 @@ package com.kindergarten.warehouse.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 public class TopicRequest {
     @NotBlank(message = "{validation.required}")
     private String name;
 
     private String description;
 
-    public String getName() {
-        return name;
-    }
+    private Long categoryId;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    private Boolean isActive;
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }

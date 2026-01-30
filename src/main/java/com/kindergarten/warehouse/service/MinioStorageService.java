@@ -1,36 +1,37 @@
 package com.kindergarten.warehouse.service;
 
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutBucketPolicyRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class MinioStorageService {
 
     private final S3Client s3Client;
-    private final software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner;
+    private final S3Presigner s3Presigner;
 
     @Value("${minio.bucket-name}")
     private String bucketName;
 
     @Value("${minio.public-endpoint}")
     private String publicEndpoint;
-
-    public MinioStorageService(S3Client s3Client,
-            software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner) {
-        this.s3Client = s3Client;
-        this.s3Presigner = s3Presigner;
-    }
 
     @PostConstruct
     public void init() {
@@ -72,11 +73,12 @@ public class MinioStorageService {
                     "                \"arn:aws:s3:::%s/avatars/*\",\n" +
                     "                \"arn:aws:s3:::%s/banners/*\",\n" +
                     "                \"arn:aws:s3:::%s/icons/*\",\n" +
-                    "                \"arn:aws:s3:::%s/profiles/*\"\n" +
+                    "                \"arn:aws:s3:::%s/profiles/*\",\n" +
+                    "                \"arn:aws:s3:::%s/categories/*\"\n" +
                     "            ]\n" +
                     "        }\n" +
                     "    ]\n" +
-                    "}", bucketName, bucketName, bucketName, bucketName);
+                    "}", bucketName, bucketName, bucketName, bucketName, bucketName);
 
             PutBucketPolicyRequest policyRequest = PutBucketPolicyRequest.builder()
                     .bucket(bucketName)
@@ -100,7 +102,7 @@ public class MinioStorageService {
         }
     }
 
-    public String uploadFile(java.io.InputStream inputStream, String folderName, String originalFilename,
+    public String uploadFile(InputStream inputStream, String folderName, String originalFilename,
             String contentType) {
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
@@ -157,13 +159,13 @@ public class MinioStorageService {
                     .key(objectKey)
                     .build();
 
-            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest presignRequest = software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest
                     .builder()
-                    .signatureDuration(java.time.Duration.ofMinutes(10))
+                    .signatureDuration(Duration.ofMinutes(10))
                     .getObjectRequest(getObjectRequest)
                     .build();
 
-            software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest presignedRequest = s3Presigner
+            PresignedGetObjectRequest presignedRequest = s3Presigner
                     .presignGetObject(presignRequest);
 
             return presignedRequest.url().toString();

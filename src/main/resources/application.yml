@@ -20,6 +20,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+        default_batch_fetch_size: 50
+        order_inserts: true
+        order_updates: true
 
   messages:
     basename: i18n/messages

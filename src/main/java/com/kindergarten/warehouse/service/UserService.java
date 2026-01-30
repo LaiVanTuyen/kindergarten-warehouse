@@ -1,61 +1,89 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.dto.response.UserResponse;
-import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.aspect.LogAction;
+import com.kindergarten.warehouse.dto.request.ChangePasswordRequest;
+import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
+import com.kindergarten.warehouse.dto.request.UserCreationRequest;
+import com.kindergarten.warehouse.dto.response.UserResponse;
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.Role;
+import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.entity.UserStatus;
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.mapper.UserMapper;
 import com.kindergarten.warehouse.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final org.springframework.cache.CacheManager cacheManager;
+    private final CacheManager cacheManager;
     private final MinioStorageService minioStorageService;
-
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            org.springframework.cache.CacheManager cacheManager, MinioStorageService minioStorageService) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.cacheManager = cacheManager;
-        this.minioStorageService = minioStorageService;
-    }
+    private final UserMapper userMapper;
 
     private void clearUserCache(User user) {
-        org.springframework.cache.Cache cache = cacheManager.getCache("users");
+        Cache cache = cacheManager.getCache("users");
         if (cache != null) {
             cache.evict(user.getUsername());
             cache.evict(user.getEmail());
         }
     }
 
-    public List<UserResponse> getUsers(String status) {
-        if ("DELETED".equalsIgnoreCase(status)) {
-            return userRepository.findByIsDeletedTrue(org.springframework.data.domain.Pageable.unpaged())
-                    .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
-        } else if (status != null && !status.isEmpty()) {
-            try {
-                com.kindergarten.warehouse.entity.UserStatus userStatus = com.kindergarten.warehouse.entity.UserStatus
-                        .valueOf(status.toUpperCase());
-                return userRepository
-                        .findByIsDeletedFalseAndStatus(userStatus, org.springframework.data.domain.Pageable.unpaged())
-                        .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
-            } catch (IllegalArgumentException e) {
-                // Should probably throw bad request, but for now just return active
-                return userRepository.findByIsDeletedFalse(org.springframework.data.domain.Pageable.unpaged())
-                        .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
+    public Page<UserResponse> getUsers(String status, String keyword, Pageable pageable) {
+        Specification<User> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Status Filter
+            if ("DELETED".equalsIgnoreCase(status)) {
+                predicates.add(cb.equal(root.get("isDeleted"), true));
+            } else {
+                predicates.add(cb.equal(root.get("isDeleted"), false));
+                if (status != null && !status.isEmpty()) {
+                    try {
+                        UserStatus userStatus = UserStatus.valueOf(status.toUpperCase());
+                        predicates.add(cb.equal(root.get("status"), userStatus));
+                    } catch (IllegalArgumentException e) {
+                        // Ignore invalid status or handle error
+                    }
+                }
             }
-        }
-        return userRepository.findByIsDeletedFalse(org.springframework.data.domain.Pageable.unpaged())
-                .stream().map(this::mapToResponse).collect(java.util.stream.Collectors.toList());
+
+            // Keyword Search
+            if (keyword != null && !keyword.isEmpty()) {
+                String likePattern = "%" + keyword.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("username")), likePattern),
+                        cb.like(cb.lower(root.get("email")), likePattern),
+                        cb.like(cb.lower(root.get("fullName")), likePattern)));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return userRepository.findAll(spec, pageable).map(userMapper::toResponse);
     }
 
     @LogAction(action = "CREATE", description = "Created user")
-    public UserResponse createUser(com.kindergarten.warehouse.dto.request.UserCreationRequest request) {
+    public UserResponse createUser(UserCreationRequest request) {
         checkUsernameAndEmailAvailability(request.getUsername(), request.getEmail());
 
         User user = new User();
@@ -66,24 +94,22 @@ public class UserService {
 
         if (request.getRoles() != null && !request.getRoles().isEmpty()) {
             user.setRoles(request.getRoles().stream()
-                    .map(com.kindergarten.warehouse.entity.Role::valueOf)
-                    .collect(java.util.stream.Collectors.toSet()));
+                    .map(Role::valueOf)
+                    .collect(Collectors.toSet()));
         } else {
-            user.setRoles(java.util.Collections.singleton(com.kindergarten.warehouse.entity.Role.USER));
+            user.setRoles(Collections.singleton(Role.USER));
         }
 
-        user.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
+        user.setStatus(UserStatus.ACTIVE);
 
-        return mapToResponse(userRepository.save(user));
+        return userMapper.toResponse(userRepository.save(user));
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     @LogAction(action = "DELETE", description = "Deleted user")
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(
-                        () -> new com.kindergarten.warehouse.exception.AppException(
-                                com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getIsDeleted()) {
             return;
@@ -92,22 +118,19 @@ public class UserService {
         user.setEmail(user.getEmail() + "_deleted_" + System.currentTimeMillis());
         user.setUsername(user.getUsername() + "_deleted_" + System.currentTimeMillis());
         user.setIsDeleted(true);
-        // user.setStatus(com.kindergarten.warehouse.entity.UserStatus.BLOCKED); // Do
-        // not change status explicitly
+        // user.setStatus(UserStatus.BLOCKED); // Do not change status explicitly
         userRepository.save(user);
         clearUserCache(user);
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     @LogAction(action = "UPDATE", description = "Restored user")
     public UserResponse restoreUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(
-                        () -> new com.kindergarten.warehouse.exception.AppException(
-                                com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!user.getIsDeleted()) {
-            return mapToResponse(user);
+            return userMapper.toResponse(user);
         }
 
         String originalEmail = user.getEmail().replaceAll("_deleted_\\d+$", "");
@@ -118,34 +141,33 @@ public class UserService {
         user.setEmail(originalEmail);
         user.setUsername(originalUsername);
         user.setIsDeleted(false);
-        // user.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE); // Do
-        // not change status
+        // user.setStatus(UserStatus.ACTIVE); // Do not change status
 
         User savedUser = userRepository.save(user);
         clearUserCache(savedUser);
-        return mapToResponse(savedUser);
+        return userMapper.toResponse(savedUser);
     }
 
     @LogAction(action = "UPDATE", description = "Toggled block status for user")
-    public UserResponse toggleBlockUser(Long userId) {
+    public UpdateResult<UserResponse> toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
-        user.setStatus(user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE
-                ? com.kindergarten.warehouse.entity.UserStatus.BLOCKED
-                : com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        boolean isBlocking = user.getStatus() == UserStatus.ACTIVE;
+        user.setStatus(isBlocking ? UserStatus.BLOCKED : UserStatus.ACTIVE);
+
         User savedUser = userRepository.save(user);
         clearUserCache(savedUser);
-        return mapToResponse(savedUser);
+
+        String messageKey = isBlocking ? "user.blocked" : "user.unblocked";
+        return new UpdateResult<>(userMapper.toResponse(savedUser), messageKey);
     }
 
     @LogAction(action = "UPDATE", description = "Updated profile info")
-    public UserResponse updateProfile(String usernameOrEmail,
-            com.kindergarten.warehouse.dto.request.UpdateProfileRequest request) {
+    public UserResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (request.getFullName() != null && !request.getFullName().isEmpty()) {
             user.setFullName(request.getFullName());
@@ -161,20 +183,17 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
         clearUserCache(savedUser);
-        return mapToResponse(savedUser);
+        return userMapper.toResponse(savedUser);
     }
 
     @LogAction(action = "UPDATE", description = "Changed password")
-    public void changePassword(String usernameOrEmail,
-            com.kindergarten.warehouse.dto.request.ChangePasswordRequest request) {
+    public void changePassword(String usernameOrEmail, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.INVALID_PASSWORD);
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -183,11 +202,10 @@ public class UserService {
     }
 
     @LogAction(action = "UPDATE", description = "Updated avatar")
-    public UserResponse updateAvatar(String usernameOrEmail, org.springframework.web.multipart.MultipartFile file) {
+    public UserResponse updateAvatar(String usernameOrEmail, MultipartFile file) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() -> new com.kindergarten.warehouse.exception.AppException(
-                        com.kindergarten.warehouse.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
@@ -206,42 +224,19 @@ public class UserService {
                 minioStorageService.deleteFile(oldAvatarUrl);
             } catch (Exception e) {
                 // Silently fail or log warning so user experience isn't affected
-                // In production, effective logging should be used here
             }
         }
 
         clearUserCache(savedUser);
-        return mapToResponse(savedUser);
-    }
-
-    private UserResponse mapToResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .avatarUrl(user.getAvatarUrl())
-                // Map Set<Role> to Set<String>
-                .roles(user.getRoles().stream()
-                        .map(Enum::name)
-                        .collect(java.util.stream.Collectors.toSet()))
-                // Map UserStatus to String
-                .status(user.getStatus().name())
-                .isDeleted(user.getIsDeleted())
-                .phoneNumber(user.getPhoneNumber())
-                .createdAt(user.getCreatedAt())
-                .bio(user.getBio())
-                .build();
+        return userMapper.toResponse(savedUser);
     }
 
     private void checkUsernameAndEmailAvailability(String username, String email) {
         if (userRepository.existsByUsername(username)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.USER_EXISTED);
+            throw new AppException(ErrorCode.USER_EXISTED);
         }
         if (userRepository.existsByEmail(email)) {
-            throw new com.kindergarten.warehouse.exception.AppException(
-                    com.kindergarten.warehouse.exception.ErrorCode.EMAIL_EXISTED);
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
     }
 }
