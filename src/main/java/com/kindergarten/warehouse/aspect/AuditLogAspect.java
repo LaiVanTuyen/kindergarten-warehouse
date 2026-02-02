@@ -42,7 +42,10 @@ public class AuditLogAspect {
                 target += " " + joinPoint.getArgs()[0];
             }
 
-            auditLogService.saveLog(action, username, target, detail);
+            String ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
+            String userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
+
+            auditLogService.saveLog(action, username, target, detail, ipAddress, userAgent);
 
         } catch (Exception e) {
             // Ensure logging failure doesn't break business logic

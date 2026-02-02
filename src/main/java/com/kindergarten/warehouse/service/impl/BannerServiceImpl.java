@@ -42,6 +42,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created banner")
     public BannerResponse createBanner(BannerRequest request, MultipartFile image) {
         // Validate date range
         if (request.getStartDate() != null && request.getEndDate() != null
@@ -69,6 +70,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated banner")
     public UpdateResult<BannerResponse> updateBanner(Long id, BannerRequest request, MultipartFile image) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
@@ -108,6 +110,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Reordered banners")
     public void reorderBanners(List<Long> orderedIds) {
         for (int i = 0; i < orderedIds.size(); i++) {
             Long id = orderedIds.get(i);
@@ -120,6 +123,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Toggled banner status")
     public UpdateResult<BannerResponse> toggleBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
@@ -135,6 +139,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted banner")
     public void deleteBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));

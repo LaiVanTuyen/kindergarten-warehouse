@@ -55,6 +55,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created category")
     public CategoryResponse createCategory(CategoryRequest categoryRequest, MultipartFile icon) {
         // Proactive validation for better UX
         if (categoryRepository.existsBySlugAndIsDeletedFalse(categoryRequest.getSlug())) {
@@ -81,6 +82,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated category")
     public UpdateResult<CategoryResponse> updateCategory(Long id, CategoryRequest categoryRequest, MultipartFile icon) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -130,6 +132,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted category")
     public void deleteCategory(Long id, boolean hard) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -143,6 +146,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Restored category")
     public CategoryResponse restoreCategory(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -154,6 +158,7 @@ public class CategoryServiceImpl implements CategoryService {
     private static final int BATCH_SIZE = 100;
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Bulk deleted categories")
     public void deleteCategories(List<Long> ids, boolean hard) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -189,6 +194,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Bulk restored categories")
     public void restoreCategories(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

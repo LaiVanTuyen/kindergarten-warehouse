@@ -36,6 +36,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserMapper userMapper;
+    private final AuditLogService auditLogService;
 
     public AuthResponseDto login(LoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
@@ -48,8 +49,11 @@ public class AuthService {
         User user = userRepository.findByEmail(loginDto.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // Last Active is now handled by RedisLastActiveService via LastActiveFilter
-        // user.setLastLogin(...) removed.
+        // Audit Log
+        String ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
+        String userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
+        auditLogService.saveLog("LOGIN", user.getUsername(), "AuthService", "User logged in successfully", ipAddress,
+                userAgent);
 
         return new AuthResponseDto(userMapper.toResponse(user), token, null);
     }
@@ -75,6 +79,12 @@ public class AuthService {
         // Auto-login: Generate token
         Authentication authentication = new UsernamePasswordAuthenticationToken(savedUser.getUsername(), null, null);
         String token = jwtTokenProvider.generateToken(authentication);
+
+        // Audit Log
+        String ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
+        String userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
+        auditLogService.saveLog("CREATE", savedUser.getUsername(), "AuthService", "User registered successfully",
+                ipAddress, userAgent);
 
         return new AuthResponseDto(userMapper.toResponse(savedUser), token, null);
     }

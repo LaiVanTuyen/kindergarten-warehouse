@@ -1,33 +1,44 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.entity.AuditLog;
 import com.kindergarten.warehouse.service.AuditLogService;
+import com.kindergarten.warehouse.service.MessageService;
+import com.kindergarten.warehouse.util.PageableUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/audit-logs")
+@RequestMapping("/api/v1/audit-logs")
 @RequiredArgsConstructor
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AuditLog>> getAllLogs() {
-        return ResponseEntity.ok(auditLogService.getAllLogs());
-    }
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String startDate, // Format: yyyy-MM-dd
+            @RequestParam(required = false) String endDate, // Format: yyyy-MM-dd
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
 
-    @GetMapping("/user/{username}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AuditLog>> getLogsByUser(@PathVariable String username) {
-        return ResponseEntity.ok(auditLogService.getLogsByUsername(username));
+        Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+
+        Page<AuditLog> logs = auditLogService.getLogs(action, username, startDate, endDate, pageable);
+
+        return ResponseEntity.ok(ApiResponse.success(logs, "Audit logs retrieved successfully"));
     }
 }

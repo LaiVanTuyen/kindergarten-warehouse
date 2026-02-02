@@ -59,6 +59,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created topic")
     public TopicResponse createTopic(TopicRequest topicRequest, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -80,6 +81,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated topic")
     public UpdateResult<TopicResponse> updateTopic(Long id, TopicRequest topicRequest) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
@@ -112,6 +114,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted topic")
     public void deleteTopic(Long id, boolean hard) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
@@ -125,6 +128,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
+    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Restored topic")
     public TopicResponse restoreTopic(Long id) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
