@@ -48,6 +48,9 @@ public class AuthService {
         User user = userRepository.findByEmail(loginDto.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        // Last Active is now handled by RedisLastActiveService via LastActiveFilter
+        // user.setLastLogin(...) removed.
+
         return new AuthResponseDto(userMapper.toResponse(user), token, null);
     }
 

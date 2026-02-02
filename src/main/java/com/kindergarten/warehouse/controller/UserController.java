@@ -1,5 +1,8 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.AdminUpdateUserRequest;
+import com.kindergarten.warehouse.dto.request.ConfirmResetPasswordRequest;
+
 import com.kindergarten.warehouse.dto.request.ChangePasswordRequest;
 import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
 import com.kindergarten.warehouse.dto.request.UserCreationRequest;
@@ -44,6 +47,7 @@ public class UserController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
                         @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String role,
                         @RequestParam(required = false) String keyword,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
@@ -53,7 +57,7 @@ public class UserController {
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity
-                                .ok(ApiResponse.success(userService.getUsers(status, keyword, pageable),
+                                .ok(ApiResponse.success(userService.getUsers(status, role, keyword, pageable),
                                                 messageService.getMessage("user.list.success")));
         }
 
@@ -80,6 +84,29 @@ public class UserController {
                 return ResponseEntity.ok(
                                 ApiResponse.success(updateResult.getResult(),
                                                 messageService.getMessage(updateResult.getMessageKey())));
+        }
+
+        @PutMapping("/{id}")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<UserResponse>> updateUser(@PathVariable Long id,
+                        @RequestBody AdminUpdateUserRequest request) {
+                return ResponseEntity.ok(ApiResponse.success(userService.updateUser(id, request),
+                                messageService.getMessage("user.update.success")));
+        }
+
+        @PostMapping("/{id}/reset-password/init")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<String>> initPasswordReset(@PathVariable Long id) {
+                userService.initPasswordReset(id);
+                return ResponseEntity.ok(ApiResponse.success(null, "OTP sent to user email"));
+        }
+
+        @PostMapping("/{id}/reset-password/confirm")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<String>> confirmPasswordReset(@PathVariable Long id,
+                        @RequestBody ConfirmResetPasswordRequest request) {
+                userService.confirmPasswordReset(id, request.getOtp());
+                return ResponseEntity.ok(ApiResponse.success(null, "Password reset successfully and sent to email"));
         }
 
         @PutMapping("/profile")

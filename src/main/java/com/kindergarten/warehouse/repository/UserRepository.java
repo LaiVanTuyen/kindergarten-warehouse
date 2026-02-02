@@ -8,21 +8,29 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository
-        extends JpaRepository<User, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
-    Optional<User> findByUsername(String username);
+                extends JpaRepository<User, Long>,
+                org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
+        Optional<User> findByUsername(String username);
 
-    Optional<User> findByUsernameAndIsDeletedFalse(String username);
+        Optional<User> findByUsernameAndIsDeletedFalse(String username);
 
-    Boolean existsByUsername(String username);
+        Boolean existsByUsername(String username);
 
-    Boolean existsByEmail(String email);
+        Boolean existsByEmail(String email);
 
-    org.springframework.data.domain.Page<User> findByIsDeletedFalse(org.springframework.data.domain.Pageable pageable);
+        org.springframework.data.domain.Page<User> findByIsDeletedFalse(
+                        org.springframework.data.domain.Pageable pageable);
 
-    org.springframework.data.domain.Page<User> findByIsDeletedTrue(org.springframework.data.domain.Pageable pageable);
+        org.springframework.data.domain.Page<User> findByIsDeletedTrue(
+                        org.springframework.data.domain.Pageable pageable);
 
-    org.springframework.data.domain.Page<User> findByIsDeletedFalseAndStatus(
-            com.kindergarten.warehouse.entity.UserStatus status, org.springframework.data.domain.Pageable pageable);
+        org.springframework.data.domain.Page<User> findByIsDeletedFalseAndStatus(
+                        com.kindergarten.warehouse.entity.UserStatus status,
+                        org.springframework.data.domain.Pageable pageable);
 
-    Optional<User> findByEmail(String email);
+        Optional<User> findByEmail(String email);
+
+        @org.springframework.data.jpa.repository.Modifying
+        @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id = :id")
+        void updateLastActive(Long id, java.time.LocalDateTime lastActive);
 }

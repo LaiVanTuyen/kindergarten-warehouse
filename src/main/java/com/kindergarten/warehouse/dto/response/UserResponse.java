@@ -21,9 +21,11 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private String phoneNumber;
     private String bio;
+    private LocalDateTime lastActive;
 
     public UserResponse(Long id, String username, String fullName, String email, String avatarUrl, Set<String> roles,
-            String status, Boolean isDeleted, LocalDateTime createdAt, String phoneNumber, String bio) {
+            String status, Boolean isDeleted, LocalDateTime createdAt, String phoneNumber, String bio,
+            LocalDateTime lastActive) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
@@ -35,6 +37,7 @@ public class UserResponse {
         this.createdAt = createdAt;
         this.phoneNumber = phoneNumber;
         this.bio = bio;
+        this.lastActive = lastActive;
     }
 
     public static UserResponseBuilder builder() {
@@ -53,6 +56,7 @@ public class UserResponse {
         private LocalDateTime createdAt;
         private String phoneNumber;
         private String bio;
+        private LocalDateTime lastActive;
 
         UserResponseBuilder() {
         }
@@ -102,6 +106,11 @@ public class UserResponse {
             return this;
         }
 
+        public UserResponseBuilder lastActive(LocalDateTime lastActive) {
+            this.lastActive = lastActive;
+            return this;
+        }
+
         public UserResponseBuilder phoneNumber(String phoneNumber) {
             this.phoneNumber = phoneNumber;
             return this;
@@ -114,7 +123,7 @@ public class UserResponse {
 
         public UserResponse build() {
             return new UserResponse(id, username, fullName, email, avatarUrl, roles, status, isDeleted, createdAt,
-                    phoneNumber, bio);
+                    phoneNumber, bio, lastActive);
         }
     }
 }

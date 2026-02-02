@@ -14,6 +14,8 @@ public class UserMapper {
             return null;
         }
 
+        // Debug Log Removed
+
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -30,6 +32,7 @@ public class UserMapper {
                 .phoneNumber(user.getPhoneNumber())
                 .createdAt(user.getCreatedAt())
                 .bio(user.getBio())
+                .lastActive(user.getLastActive())
                 .build();
     }
 }

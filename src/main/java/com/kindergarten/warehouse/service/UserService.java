@@ -1,6 +1,7 @@
 package com.kindergarten.warehouse.service;
 
 import com.kindergarten.warehouse.aspect.LogAction;
+import com.kindergarten.warehouse.dto.request.AdminUpdateUserRequest;
 import com.kindergarten.warehouse.dto.request.ChangePasswordRequest;
 import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
 import com.kindergarten.warehouse.dto.request.UserCreationRequest;
@@ -38,6 +39,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
     private final MinioStorageService minioStorageService;
+    private final RedisOtpService redisOtpService;
+    private final EmailService emailService;
     private final UserMapper userMapper;
 
     private void clearUserCache(User user) {
@@ -48,9 +51,19 @@ public class UserService {
         }
     }
 
-    public Page<UserResponse> getUsers(String status, String keyword, Pageable pageable) {
+    public Page<UserResponse> getUsers(String status, String role, String keyword, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // Role Filter
+            if (role != null && !role.isEmpty()) {
+                try {
+                    Role roleEnum = Role.valueOf(role.toUpperCase());
+                    predicates.add(cb.isMember(roleEnum, root.get("roles")));
+                } catch (IllegalArgumentException e) {
+                    // Ignore invalid role
+                }
+            }
 
             // Status Filter
             if ("DELETED".equalsIgnoreCase(status)) {
@@ -62,7 +75,7 @@ public class UserService {
                         UserStatus userStatus = UserStatus.valueOf(status.toUpperCase());
                         predicates.add(cb.equal(root.get("status"), userStatus));
                     } catch (IllegalArgumentException e) {
-                        // Ignore invalid status or handle error
+                        // Ignore invalid status
                     }
                 }
             }
@@ -73,7 +86,8 @@ public class UserService {
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("username")), likePattern),
                         cb.like(cb.lower(root.get("email")), likePattern),
-                        cb.like(cb.lower(root.get("fullName")), likePattern)));
+                        cb.like(cb.lower(root.get("fullName")), likePattern),
+                        cb.like(cb.lower(root.get("phoneNumber")), likePattern)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -163,6 +177,67 @@ public class UserService {
         return new UpdateResult<>(userMapper.toResponse(savedUser), messageKey);
     }
 
+    @LogAction(action = "UPDATE", description = "Admin updated user details")
+    public UserResponse updateUser(Long id, AdminUpdateUserRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getPhoneNumber() != null) {
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus());
+        }
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            user.setRoles(request.getRoles().stream()
+                    .map(Role::valueOf)
+                    .collect(Collectors.toSet()));
+        }
+
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
+        return userMapper.toResponse(savedUser);
+    }
+
+    @LogAction(action = "UPDATE", description = "Admin initiated password reset")
+    public void initPasswordReset(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String otp = redisOtpService.generateOtp(id);
+
+        // Asynchronously send email
+        emailService.sendOtp(user.getEmail(), otp);
+    }
+
+    @LogAction(action = "UPDATE", description = "Admin confirmed password reset")
+    public void confirmPasswordReset(Long id, String otp) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!redisOtpService.validateOtp(id, otp)) {
+            // Throw exception for Invalid OTP
+            // We might need a specific ErrorCode for this, but for now reuse or create
+            // generic
+            throw new IllegalArgumentException("Invalid or Expired OTP");
+        }
+
+        String newPassword = generateStrongPassword();
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        User savedUser = userRepository.save(user);
+        clearUserCache(savedUser);
+
+        // Send new password to user
+        emailService.sendNewPassword(user.getEmail(), newPassword);
+    }
+
     @LogAction(action = "UPDATE", description = "Updated profile info")
     public UserResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -238,5 +313,32 @@ public class UserService {
         if (userRepository.existsByEmail(email)) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
+    }
+
+    private String generateStrongPassword() {
+        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lower = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String special = "@$!%*?&";
+        String all = upper + lower + digits + special;
+
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        // Ensure at least one of each required type
+        password.append(upper.charAt(random.nextInt(upper.length())));
+        password.append(lower.charAt(random.nextInt(lower.length())));
+        password.append(digits.charAt(random.nextInt(digits.length())));
+        password.append(special.charAt(random.nextInt(special.length())));
+
+        // Fill remaining 4 chars (to make total 8)
+        for (int i = 0; i < 4; i++) {
+            password.append(all.charAt(random.nextInt(all.length())));
+        }
+
+        // Shuffle to avoid predictable pattern
+        List<String> chars = java.util.Arrays.asList(password.toString().split(""));
+        Collections.shuffle(chars);
+        return String.join("", chars);
     }
 }

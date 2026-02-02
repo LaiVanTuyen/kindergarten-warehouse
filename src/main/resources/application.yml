@@ -13,6 +13,22 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:} # Default empty for local
   
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  
   jpa:
     hibernate:
       ddl-auto: validate # Disable auto-ddl in favor of Flyway

@@ -30,12 +30,14 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LastActiveFilter lastActiveFilter;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LastActiveFilter lastActiveFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.lastActiveFilter = lastActiveFilter;
     }
 
     @Bean
@@ -118,6 +120,7 @@ public class SecurityConfig {
                         }));
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(lastActiveFilter, JwtAuthenticationFilter.class);
 
         // Filter to ensure CSRF Token is generated and sent (Lazy by default in Spring
         // Security 6)

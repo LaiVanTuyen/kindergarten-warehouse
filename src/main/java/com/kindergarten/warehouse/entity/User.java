@@ -61,6 +61,9 @@ public class User extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "last_active")
+    private java.time.LocalDateTime lastActive;
+
     public Long getId() {
         return id;
     }
@@ -139,6 +142,14 @@ public class User extends BaseEntity {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public java.time.LocalDateTime getLastActive() {
+        return lastActive;
+    }
+
+    public void setLastActive(java.time.LocalDateTime lastActive) {
+        this.lastActive = lastActive;
     }
 
     public Boolean getIsDeleted() {
