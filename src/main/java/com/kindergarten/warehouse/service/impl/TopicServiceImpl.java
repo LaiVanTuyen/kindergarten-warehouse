@@ -1,8 +1,10 @@
 package com.kindergarten.warehouse.service.impl;
 
+import com.kindergarten.warehouse.aspect.LogAction;
 import com.kindergarten.warehouse.dto.request.TopicRequest;
 import com.kindergarten.warehouse.dto.response.TopicResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Category;
 import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.exception.AppException;
@@ -32,6 +34,7 @@ public class TopicServiceImpl implements TopicService {
     private final TopicMapper topicMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<TopicResponse> getAllTopics(Long categoryId, boolean deleted, String keyword, Pageable pageable) {
         Specification<Topic> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -59,7 +62,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created topic")
+    @LogAction(action = AuditAction.CREATE, description = "Created topic", target = "TOPIC")
     public TopicResponse createTopic(TopicRequest topicRequest, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -81,7 +84,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated topic")
+    @LogAction(action = AuditAction.UPDATE, description = "Updated topic", target = "TOPIC")
     public UpdateResult<TopicResponse> updateTopic(Long id, TopicRequest topicRequest) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
@@ -114,7 +117,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted topic")
+    @LogAction(action = AuditAction.DELETE, description = "Deleted topic", target = "TOPIC")
     public void deleteTopic(Long id, boolean hard) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
@@ -128,7 +131,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Restored topic")
+    @LogAction(action = AuditAction.RESTORE, description = "Restored topic", target = "TOPIC")
     public TopicResponse restoreTopic(Long id) {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));

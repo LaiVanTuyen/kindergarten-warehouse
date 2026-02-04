@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AgeGroupRepository extends JpaRepository<AgeGroup, Long> {
+    boolean existsBySlug(String slug);
 }

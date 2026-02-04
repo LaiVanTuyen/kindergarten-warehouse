@@ -6,7 +6,11 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "audit_log")
+@Table(name = "audit_log", indexes = {
+    @Index(name = "idx_audit_username", columnList = "username"),
+    @Index(name = "idx_audit_action", columnList = "action"),
+    @Index(name = "idx_audit_timestamp", columnList = "timestamp")
+})
 @Setter
 @Getter
 public class AuditLog {
@@ -108,44 +112,4 @@ public class AuditLog {
             return new AuditLog(id, action, username, target, detail, ipAddress, userAgent, timestamp);
         }
     }
-
-//    public String getAction() {
-//        return action;
-//    }
-//
-//    public void setAction(String action) {
-//        this.action = action;
-//    }
-//
-//    public String getUsername() {
-//        return username;
-//    }
-//
-//    public void setUsername(String username) {
-//        this.username = username;
-//    }
-//
-//    public String getTarget() {
-//        return target;
-//    }
-//
-//    public void setTarget(String target) {
-//        this.target = target;
-//    }
-//
-//    public String getDetail() {
-//        return detail;
-//    }
-//
-//    public void setDetail(String detail) {
-//        this.detail = detail;
-//    }
-//
-//    public LocalDateTime getTimestamp() {
-//        return timestamp;
-//    }
-//
-//    public void setTimestamp(LocalDateTime timestamp) {
-//        this.timestamp = timestamp;
-//    }
 }

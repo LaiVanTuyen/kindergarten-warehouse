@@ -7,6 +7,7 @@ import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
 import com.kindergarten.warehouse.dto.request.UserCreationRequest;
 import com.kindergarten.warehouse.dto.response.UserResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Role;
 import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.entity.UserStatus;
@@ -16,6 +17,7 @@ import com.kindergarten.warehouse.mapper.UserMapper;
 import com.kindergarten.warehouse.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -44,13 +47,18 @@ public class UserService {
     private final UserMapper userMapper;
 
     private void clearUserCache(User user) {
-        Cache cache = cacheManager.getCache("users");
-        if (cache != null) {
-            cache.evict(user.getUsername());
-            cache.evict(user.getEmail());
+        try {
+            Cache cache = cacheManager.getCache("users");
+            if (cache != null) {
+                cache.evict(user.getUsername());
+                cache.evict(user.getEmail());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to clear user cache: {}", e.getMessage());
         }
     }
 
+    @Transactional(readOnly = true)
     public Page<UserResponse> getUsers(String status, String role, String keyword, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -96,7 +104,8 @@ public class UserService {
         return userRepository.findAll(spec, pageable).map(userMapper::toResponse);
     }
 
-    @LogAction(action = "CREATE", description = "Created user")
+    @Transactional
+    @LogAction(action = AuditAction.CREATE, description = "Created user", target = "USER")
     public UserResponse createUser(UserCreationRequest request) {
         checkUsernameAndEmailAvailability(request.getUsername(), request.getEmail());
 
@@ -120,7 +129,7 @@ public class UserService {
     }
 
     @Transactional
-    @LogAction(action = "DELETE", description = "Deleted user")
+    @LogAction(action = AuditAction.DELETE, description = "Deleted user", target = "USER")
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -129,8 +138,25 @@ public class UserService {
             return;
         }
 
-        user.setEmail(user.getEmail() + "_deleted_" + System.currentTimeMillis());
-        user.setUsername(user.getUsername() + "_deleted_" + System.currentTimeMillis());
+        // Handle length constraints when appending suffix
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String suffix = "_deleted_" + timestamp;
+        
+        String newEmail = user.getEmail() + suffix;
+        if (newEmail.length() > 100) {
+            // Truncate original email to fit
+            int maxOriginalLength = 100 - suffix.length();
+            newEmail = user.getEmail().substring(0, maxOriginalLength) + suffix;
+        }
+        
+        String newUsername = user.getUsername() + suffix;
+        if (newUsername.length() > 50) {
+             int maxOriginalLength = 50 - suffix.length();
+             newUsername = user.getUsername().substring(0, maxOriginalLength) + suffix;
+        }
+
+        user.setEmail(newEmail);
+        user.setUsername(newUsername);
         user.setIsDeleted(true);
         // user.setStatus(UserStatus.BLOCKED); // Do not change status explicitly
         userRepository.save(user);
@@ -138,7 +164,7 @@ public class UserService {
     }
 
     @Transactional
-    @LogAction(action = "UPDATE", description = "Restored user")
+    @LogAction(action = AuditAction.RESTORE, description = "Restored user", target = "USER")
     public UserResponse restoreUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -162,7 +188,8 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    @LogAction(action = "UPDATE", description = "Toggled block status for user")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Toggled block status for user", target = "USER_TOGGLE_BLOCK")
     public UpdateResult<UserResponse> toggleBlockUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -177,7 +204,8 @@ public class UserService {
         return new UpdateResult<>(userMapper.toResponse(savedUser), messageKey);
     }
 
-    @LogAction(action = "UPDATE", description = "Admin updated user details")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Admin updated user details", target = "USER")
     public UserResponse updateUser(Long id, AdminUpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -205,7 +233,8 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    @LogAction(action = "UPDATE", description = "Admin initiated password reset")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Admin initiated password reset", target = "USER_PASSWORD_RESET")
     public void initPasswordReset(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -216,15 +245,14 @@ public class UserService {
         emailService.sendOtp(user.getEmail(), otp);
     }
 
-    @LogAction(action = "UPDATE", description = "Admin confirmed password reset")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Admin confirmed password reset", target = "USER_PASSWORD_RESET")
     public void confirmPasswordReset(Long id, String otp) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!redisOtpService.validateOtp(id, otp)) {
             // Throw exception for Invalid OTP
-            // We might need a specific ErrorCode for this, but for now reuse or create
-            // generic
             throw new IllegalArgumentException("Invalid or Expired OTP");
         }
 
@@ -238,7 +266,8 @@ public class UserService {
         emailService.sendNewPassword(user.getEmail(), newPassword);
     }
 
-    @LogAction(action = "UPDATE", description = "Updated profile info")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Updated profile info", target = "USER_PROFILE")
     public UserResponse updateProfile(String usernameOrEmail, UpdateProfileRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
@@ -261,7 +290,8 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    @LogAction(action = "UPDATE", description = "Changed password")
+    @Transactional
+    @LogAction(action = AuditAction.UPDATE, description = "Changed password", target = "USER_PASSWORD_CHANGE")
     public void changePassword(String usernameOrEmail, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
@@ -276,7 +306,8 @@ public class UserService {
         clearUserCache(savedUser);
     }
 
-    @LogAction(action = "UPDATE", description = "Updated avatar")
+    @Transactional
+    @LogAction(action = AuditAction.UPLOAD, description = "Updated avatar", target = "USER_AVATAR")
     public UserResponse updateAvatar(String usernameOrEmail, MultipartFile file) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
@@ -299,6 +330,7 @@ public class UserService {
                 minioStorageService.deleteFile(oldAvatarUrl);
             } catch (Exception e) {
                 // Silently fail or log warning so user experience isn't affected
+                log.warn("Failed to delete old avatar: {}", e.getMessage());
             }
         }
 

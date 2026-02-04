@@ -1,8 +1,10 @@
 package com.kindergarten.warehouse.service.impl;
 
+import com.kindergarten.warehouse.aspect.LogAction;
 import com.kindergarten.warehouse.dto.request.CategoryRequest;
 import com.kindergarten.warehouse.dto.response.CategoryResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Category;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
@@ -32,6 +34,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryMapper categoryMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<CategoryResponse> getAllCategories(boolean deleted, String keyword, Pageable pageable) {
         Specification<Category> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -55,7 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created category")
+    @LogAction(action = AuditAction.CREATE, description = "Created category", target = "CATEGORY")
     public CategoryResponse createCategory(CategoryRequest categoryRequest, MultipartFile icon) {
         // Proactive validation for better UX
         if (categoryRepository.existsBySlugAndIsDeletedFalse(categoryRequest.getSlug())) {
@@ -82,7 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated category")
+    @LogAction(action = AuditAction.UPDATE, description = "Updated category", target = "CATEGORY")
     public UpdateResult<CategoryResponse> updateCategory(Long id, CategoryRequest categoryRequest, MultipartFile icon) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -132,7 +135,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted category")
+    @LogAction(action = AuditAction.DELETE, description = "Deleted category", target = "CATEGORY")
     public void deleteCategory(Long id, boolean hard) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -146,7 +149,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Restored category")
+    @LogAction(action = AuditAction.RESTORE, description = "Restored category", target = "CATEGORY")
     public CategoryResponse restoreCategory(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -158,7 +161,7 @@ public class CategoryServiceImpl implements CategoryService {
     private static final int BATCH_SIZE = 100;
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Bulk deleted categories")
+    @LogAction(action = AuditAction.DELETE, description = "Bulk deleted categories", target = "CATEGORY_BULK")
     public void deleteCategories(List<Long> ids, boolean hard) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -194,7 +197,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "RESTORE", description = "Bulk restored categories")
+    @LogAction(action = AuditAction.RESTORE, description = "Bulk restored categories", target = "CATEGORY_BULK")
     public void restoreCategories(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

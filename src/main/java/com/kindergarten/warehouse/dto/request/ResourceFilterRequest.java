@@ -16,5 +16,5 @@ public class ResourceFilterRequest {
     private java.util.List<String> ageSlugs;
 
     private String status;
-
+    private Long createdBy; // Filter by creator ID
 }

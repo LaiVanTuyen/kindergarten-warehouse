@@ -37,6 +37,9 @@ public enum ErrorCode {
     RESOURCE_NOT_FOUND(6001, "error.resource.not_found", HttpStatus.NOT_FOUND),
     FILE_UPLOAD_ERROR(6002, "error.file.upload", HttpStatus.BAD_REQUEST),
 
+    // ========== Age Group Errors (65xx) ==========
+    AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),
+
     // ========== Duplicate Errors (70xx) ==========
     DUPLICATE_SLUG(7001, "error.duplicate.slug", HttpStatus.CONFLICT),
     DUPLICATE_NAME(7002, "error.duplicate.name", HttpStatus.CONFLICT),

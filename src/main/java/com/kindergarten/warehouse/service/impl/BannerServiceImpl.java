@@ -1,8 +1,10 @@
 package com.kindergarten.warehouse.service.impl;
 
+import com.kindergarten.warehouse.aspect.LogAction;
 import com.kindergarten.warehouse.dto.request.BannerRequest;
 import com.kindergarten.warehouse.dto.response.BannerResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Banner;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
@@ -29,6 +33,7 @@ public class BannerServiceImpl implements BannerService {
     private final BannerMapper bannerMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public List<BannerResponse> getActiveBanners(String platform) {
         return bannerRepository.findActiveBanners(platform, LocalDateTime.now()).stream()
                 .map(bannerMapper::toResponse)
@@ -36,13 +41,14 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<BannerResponse> getAllBanners(Pageable pageable) {
         return bannerRepository.findAllByIsDeletedFalse(pageable)
                 .map(bannerMapper::toResponse);
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "CREATE", description = "Created banner")
+    @LogAction(action = AuditAction.CREATE, description = "Created banner", target = "BANNER")
     public BannerResponse createBanner(BannerRequest request, MultipartFile image) {
         // Validate date range
         if (request.getStartDate() != null && request.getEndDate() != null
@@ -70,7 +76,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Updated banner")
+    @LogAction(action = AuditAction.UPDATE, description = "Updated banner", target = "BANNER")
     public UpdateResult<BannerResponse> updateBanner(Long id, BannerRequest request, MultipartFile image) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
@@ -110,7 +116,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Reordered banners")
+    @LogAction(action = AuditAction.UPDATE, description = "Reordered banners", target = "BANNER_REORDER")
     public void reorderBanners(List<Long> orderedIds) {
         for (int i = 0; i < orderedIds.size(); i++) {
             Long id = orderedIds.get(i);
@@ -123,7 +129,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "UPDATE", description = "Toggled banner status")
+    @LogAction(action = AuditAction.UPDATE, description = "Toggled banner status", target = "BANNER_TOGGLE")
     public UpdateResult<BannerResponse> toggleBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
@@ -139,7 +145,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
-    @com.kindergarten.warehouse.aspect.LogAction(action = "DELETE", description = "Deleted banner")
+    @LogAction(action = AuditAction.DELETE, description = "Deleted banner", target = "BANNER")
     public void deleteBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));

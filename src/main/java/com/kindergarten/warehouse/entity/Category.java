@@ -18,7 +18,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "categories")
+@Table(name = "categories", indexes = {
+    @Index(name = "idx_category_name", columnList = "name"),
+    @Index(name = "idx_category_is_deleted", columnList = "is_deleted")
+})
 @EqualsAndHashCode(of = "id", callSuper = false)
 public class Category extends BaseEntity {
     @Id

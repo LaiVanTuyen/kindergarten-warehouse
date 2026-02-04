@@ -1,10 +1,14 @@
 package com.kindergarten.warehouse.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -31,13 +35,15 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final LastActiveFilter lastActiveFilter;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LastActiveFilter lastActiveFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LastActiveFilter lastActiveFilter, ObjectMapper objectMapper) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.lastActiveFilter = lastActiveFilter;
+        this.objectMapper = objectMapper;
     }
 
     @Bean
@@ -112,11 +118,21 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
-                            response.getWriter().write("{\"code\":1011,\"message\":\"Unauthorized\",\"result\":null}");
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            
+                            ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
+                            ApiResponse<?> apiResponse = ApiResponse.error(errorCode.getCode(), "Unauthorized");
+                            
+                            response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
-                            response.getWriter().write("{\"code\":1012,\"message\":\"Forbidden\",\"result\":null}");
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            
+                            ErrorCode errorCode = ErrorCode.FORBIDDEN;
+                            ApiResponse<?> apiResponse = ApiResponse.error(errorCode.getCode(), "Forbidden");
+                            
+                            response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
                         }));
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

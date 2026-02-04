@@ -16,7 +16,11 @@ import lombok.EqualsAndHashCode;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "topics")
+@Table(name = "topics", indexes = {
+    @Index(name = "idx_topic_name", columnList = "name"),
+    @Index(name = "idx_topic_is_deleted", columnList = "is_deleted"),
+    @Index(name = "idx_topic_category", columnList = "category_id")
+})
 @EqualsAndHashCode(callSuper = false)
 public class Topic extends BaseEntity {
     @Id

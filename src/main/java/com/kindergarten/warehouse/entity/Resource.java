@@ -15,7 +15,13 @@ import lombok.EqualsAndHashCode;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "resources")
+@Table(name = "resources", indexes = {
+    @Index(name = "idx_resource_title", columnList = "title"),
+    @Index(name = "idx_resource_status", columnList = "status"),
+    @Index(name = "idx_resource_is_deleted", columnList = "is_deleted"),
+    @Index(name = "idx_resource_topic", columnList = "topic_id"),
+    @Index(name = "idx_resource_type", columnList = "resource_type")
+})
 @EqualsAndHashCode(of = "id", callSuper = false)
 public class Resource extends BaseEntity {
     @Id
@@ -40,11 +46,14 @@ public class Resource extends BaseEntity {
     private String fileUrl;
 
     @Column(name = "thumbnail_url", length = 500)
-    private String thumbnailUrl; // [NEW] from requirements
+    private String thumbnailUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resource_type", length = 20, columnDefinition = "VARCHAR(20)")
+    private ResourceType resourceType; // FILE, YOUTUBE
 
     @Column(name = "file_type", length = 20)
-    private String fileType; // Requirements said "map file_type", treating as String for flexible mapping or
-                             // could be Enum
+    private String fileType; // VIDEO, DOCUMENT, PDF...
 
     @Column(name = "file_extension", length = 10)
     private String fileExtension;
@@ -80,7 +89,7 @@ public class Resource extends BaseEntity {
 
     @Builder.Default
     @Column(name = "is_deleted")
-    private Boolean isDeleted = false; // [NEW] Soft Delete
+    private Boolean isDeleted = false;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "resource_age_groups", joinColumns = @JoinColumn(name = "resource_id"), inverseJoinColumns = @JoinColumn(name = "age_group_id"))

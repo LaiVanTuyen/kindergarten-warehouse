@@ -4,16 +4,20 @@ import com.kindergarten.warehouse.entity.AuditLog;
 import com.kindergarten.warehouse.repository.AuditLogRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
@@ -48,17 +52,24 @@ public class AuditLogService {
             }
 
             if (startDate != null && !startDate.isEmpty()) {
-                predicates.add(
-                        cb.greaterThanOrEqualTo(root.get("timestamp"), LocalDateTime.parse(startDate + "T00:00:00")));
+                try {
+                    // Try parsing as LocalDate first (yyyy-MM-dd)
+                    LocalDate start = LocalDate.parse(startDate);
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), start.atStartOfDay()));
+                } catch (DateTimeParseException e) {
+                    log.warn("Invalid startDate format: {}", startDate);
+                    // Optionally throw exception or ignore filter
+                }
             }
 
             if (endDate != null && !endDate.isEmpty()) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), LocalDateTime.parse(endDate + "T23:59:59")));
+                try {
+                    LocalDate end = LocalDate.parse(endDate);
+                    predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), end.atTime(23, 59, 59)));
+                } catch (DateTimeParseException e) {
+                    log.warn("Invalid endDate format: {}", endDate);
+                }
             }
-
-            // Default sort by timestamp desc if not specified,
-            // but Pageable usually handles sort. Providing default fallback in Controller
-            // or Client is better.
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
