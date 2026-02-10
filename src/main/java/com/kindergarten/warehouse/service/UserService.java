@@ -15,6 +15,7 @@ import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.mapper.UserMapper;
 import com.kindergarten.warehouse.repository.UserRepository;
+import com.kindergarten.warehouse.util.AppConstants;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -319,7 +320,7 @@ public class UserService {
         }
 
         String oldAvatarUrl = user.getAvatarUrl();
-        String avatarUrl = minioStorageService.uploadFile(file, "avatars");
+        String avatarUrl = minioStorageService.uploadFile(file, AppConstants.FOLDER_AVATARS);
 
         user.setAvatarUrl(avatarUrl);
         User savedUser = userRepository.save(user);

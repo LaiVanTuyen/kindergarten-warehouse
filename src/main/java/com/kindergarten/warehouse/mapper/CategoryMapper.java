@@ -12,7 +12,7 @@ public class CategoryMapper {
             return null;
         }
 
-        CategoryResponse.CategoryResponseBuilder builder = CategoryResponse.builder()
+        return CategoryResponse.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .slug(category.getSlug())
@@ -21,16 +21,9 @@ public class CategoryMapper {
                 .topicCount(category.getTopicCount())
                 .isActive(category.getIsActive())
                 .createdAt(category.getCreatedAt())
-                .updatedAt(category.getUpdatedAt());
-
-        if (category.getCreator() != null) {
-            builder.createdBy(category.getCreator().getFullName());
-        }
-
-        if (category.getUpdater() != null) {
-            builder.updatedBy(category.getUpdater().getFullName());
-        }
-
-        return builder.build();
+                .updatedAt(category.getUpdatedAt())
+                .createdBy(category.getCreator() != null ? category.getCreator().getFullName() : null)
+                .updatedBy(category.getUpdater() != null ? category.getUpdater().getFullName() : null)
+                .build();
     }
 }

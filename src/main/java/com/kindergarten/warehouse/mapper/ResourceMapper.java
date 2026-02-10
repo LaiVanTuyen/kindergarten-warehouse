@@ -18,6 +18,10 @@ public class ResourceMapper {
     }
 
     public ResourceResponse toResponse(Resource resource, boolean isFavorited) {
+        if (resource == null) {
+            return null;
+        }
+
         return ResourceResponse.builder()
                 .id(resource.getId())
                 .title(resource.getTitle())
@@ -39,7 +43,9 @@ public class ResourceMapper {
                         .collect(Collectors.toList()))
                 .isFavorited(isFavorited)
                 .createdAt(resource.getCreatedAt())
-                .createdBy(resource.getCreator() != null ? resource.getCreator().getUsername() : null)
+                .updatedAt(resource.getUpdatedAt())
+                .createdBy(resource.getCreator() != null ? resource.getCreator().getFullName() : null)
+                .updatedBy(resource.getUpdater() != null ? resource.getUpdater().getFullName() : null)
                 .build();
     }
 }

@@ -12,6 +12,8 @@ import com.kindergarten.warehouse.mapper.ResourceMapper;
 import com.kindergarten.warehouse.repository.*;
 import com.kindergarten.warehouse.service.MinioStorageService;
 import com.kindergarten.warehouse.service.ResourceService;
+import com.kindergarten.warehouse.service.ResourceStatService;
+import com.kindergarten.warehouse.util.AppConstants;
 import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +26,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -48,19 +48,17 @@ public class ResourceServiceImpl implements ResourceService {
     private final AgeGroupRepository ageGroupRepository;
     private final MinioStorageService minioStorageService;
     private final FavoriteRepository favoriteRepository;
-    private final CommentRepository commentRepository;
     private final CacheManager cacheManager;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final ResourceMapper resourceMapper;
+    private final ResourceStatService resourceStatService;
 
     @Override
     @Transactional
     @LogAction(action = AuditAction.CREATE, description = "Uploaded resource", target = "RESOURCE")
     public ResourceResponse uploadResource(ResourceCreationRequest request, String username) {
-        // Validate input: Either file or youtubeLink must be present
         if ((request.getFile() == null || request.getFile().isEmpty()) && 
             (request.getYoutubeLink() == null || request.getYoutubeLink().isEmpty())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Need a specific error code for this
+            throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
         User user = userRepository.findByUsername(username)
@@ -81,7 +79,6 @@ public class ResourceServiceImpl implements ResourceService {
         Long fileSize = 0L;
 
         if (request.getYoutubeLink() != null && !request.getYoutubeLink().isEmpty()) {
-            // Handle YouTube Link
             String youtubeId = extractYoutubeId(request.getYoutubeLink());
             if (youtubeId == null) {
                 throw new IllegalArgumentException("Invalid YouTube Link");
@@ -91,20 +88,19 @@ public class ResourceServiceImpl implements ResourceService {
             fileType = "VIDEO";
             extension = "youtube";
         } else {
-            // Handle File Upload
-            fileUrl = minioStorageService.uploadFile(request.getFile(), "resources/files");
+            String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
+            fileUrl = minioStorageService.uploadFile(request.getFile(), path);
             resourceType = ResourceType.FILE;
             extension = getExtension(request.getFile().getOriginalFilename());
             fileType = determineFileType(extension).name();
             fileSize = request.getFile().getSize();
         }
         
-        // Handle Thumbnail
         String thumbnailUrl = null;
         if (request.getThumbnail() != null && !request.getThumbnail().isEmpty()) {
-            thumbnailUrl = minioStorageService.uploadFile(request.getThumbnail(), "resources/thumbnails");
+            String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_THUMBNAILS;
+            thumbnailUrl = minioStorageService.uploadFile(request.getThumbnail(), path);
         } else if (resourceType == ResourceType.YOUTUBE) {
-            // Auto-fetch YouTube thumbnail if not provided
             String youtubeId = extractYoutubeId(fileUrl);
             thumbnailUrl = "https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg";
         }
@@ -124,7 +120,6 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setCreator(user);
         resource.setAgeGroups(ageGroups);
 
-        // Auto-approve if user is ADMIN
         boolean isAdmin = user.getRoles().stream().anyMatch(role -> role == Role.ADMIN);
         if (isAdmin) {
             resource.setStatus(ResourceStatus.APPROVED);
@@ -210,30 +205,12 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     public void incrementViewCount(String id, String ipAddress) {
-        String key = "view_tracking:" + ipAddress + ":" + id;
-        
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            return;
-        }
-
-        if (!resourceRepository.existsById(id)) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        redisTemplate.opsForValue().increment("kindergarten:views:" + id);
-        redisTemplate.opsForSet().add("kindergarten:dirty_views", id);
-
-        redisTemplate.opsForValue().set(key, String.valueOf(System.currentTimeMillis()), 1, TimeUnit.HOURS);
+        resourceStatService.incrementViewCount(id, ipAddress);
     }
 
     @Override
     public void incrementDownloadCount(String id) {
-        if (!resourceRepository.existsById(id)) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        redisTemplate.opsForValue().increment("kindergarten:downloads:" + id);
-        redisTemplate.opsForSet().add("kindergarten:dirty_downloads", id);
+        resourceStatService.incrementDownloadCount(id);
     }
 
     @Override
@@ -280,7 +257,6 @@ public class ResourceServiceImpl implements ResourceService {
         if (request.getStatus() != null) resource.setStatus(request.getStatus());
         if (request.getFileType() != null) resource.setFileType(request.getFileType());
         
-        // Update YouTube Link
         if (request.getYoutubeLink() != null && !request.getYoutubeLink().isEmpty()) {
              String youtubeId = extractYoutubeId(request.getYoutubeLink());
              if (youtubeId == null) {
@@ -291,7 +267,6 @@ public class ResourceServiceImpl implements ResourceService {
              resource.setFileType("VIDEO");
              resource.setFileExtension("youtube");
              
-             // If no thumbnail provided, update with new YouTube thumbnail
              if (resource.getThumbnailUrl() == null || resource.getThumbnailUrl().isEmpty()) {
                  resource.setThumbnailUrl("https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg");
              }
@@ -323,7 +298,6 @@ public class ResourceServiceImpl implements ResourceService {
             throw new IllegalArgumentException("Thumbnail file is required");
         }
 
-        // Delete old thumbnail if exists and not youtube
         if (resource.getThumbnailUrl() != null && !resource.getThumbnailUrl().isEmpty() && !resource.getThumbnailUrl().contains("youtube.com")) {
             try {
                 minioStorageService.deleteFile(resource.getThumbnailUrl());
@@ -332,7 +306,8 @@ public class ResourceServiceImpl implements ResourceService {
             }
         }
 
-        String newThumbnailUrl = minioStorageService.uploadFile(thumbnail, "resources/thumbnails");
+        String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_THUMBNAILS;
+        String newThumbnailUrl = minioStorageService.uploadFile(thumbnail, path);
         resource.setThumbnailUrl(newThumbnailUrl);
         resourceRepository.save(resource);
         

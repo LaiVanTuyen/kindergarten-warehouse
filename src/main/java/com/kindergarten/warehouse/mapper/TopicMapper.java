@@ -12,29 +12,19 @@ public class TopicMapper {
             return null;
         }
 
-        TopicResponse.TopicResponseBuilder builder = TopicResponse.builder()
+        return TopicResponse.builder()
                 .id(topic.getId())
                 .name(topic.getName())
                 .slug(topic.getSlug())
                 .description(topic.getDescription())
                 .resourceCount(topic.getResourceCount())
                 .isActive(topic.getIsActive())
+                .categoryId(topic.getCategory() != null ? topic.getCategory().getId() : null)
+                .categoryName(topic.getCategory() != null ? topic.getCategory().getName() : null)
                 .createdAt(topic.getCreatedAt())
-                .updatedAt(topic.getUpdatedAt());
-
-        if (topic.getCategory() != null) {
-            builder.categoryId(topic.getCategory().getId())
-                    .categoryName(topic.getCategory().getName());
-        }
-
-        if (topic.getCreator() != null) {
-            builder.createdBy(topic.getCreator().getFullName());
-        }
-
-        if (topic.getUpdater() != null) {
-            builder.updatedBy(topic.getUpdater().getFullName());
-        }
-
-        return builder.build();
+                .updatedAt(topic.getUpdatedAt())
+                .createdBy(topic.getCreator() != null ? topic.getCreator().getFullName() : null)
+                .updatedBy(topic.getUpdater() != null ? topic.getUpdater().getFullName() : null)
+                .build();
     }
 }
