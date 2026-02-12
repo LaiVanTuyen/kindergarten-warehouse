@@ -65,6 +65,9 @@ public class Resource extends BaseEntity {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "duration", length = 20)
+    private String duration; // e.g., "05:30", "12:00"
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false, columnDefinition = "VARCHAR(20)")

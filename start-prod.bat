@@ -1,5 +1,4 @@
 @echo off
-echo Starting Docker Compose with .env.prod...
-docker-compose --env-file .env.prod up -d
-echo Done.
-pause
+echo Starting Kindergarten Warehouse (PROD Profile)...
+echo WARNING: Ensure environment variables are set!
+java -jar target/warehouse-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod

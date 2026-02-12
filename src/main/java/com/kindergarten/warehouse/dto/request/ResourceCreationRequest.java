@@ -25,4 +25,6 @@ public class ResourceCreationRequest {
     private Long topicId;
 
     private List<Long> ageGroupIds;
+
+    private String duration; // Optional: "05:30"
 }

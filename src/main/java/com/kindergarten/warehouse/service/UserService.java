@@ -5,6 +5,7 @@ import com.kindergarten.warehouse.dto.request.AdminUpdateUserRequest;
 import com.kindergarten.warehouse.dto.request.ChangePasswordRequest;
 import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
 import com.kindergarten.warehouse.dto.request.UserCreationRequest;
+import com.kindergarten.warehouse.dto.request.UserFilterRequest;
 import com.kindergarten.warehouse.dto.response.UserResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.entity.AuditAction;
@@ -60,38 +61,82 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UserResponse> getUsers(String status, String role, String keyword, Pageable pageable) {
+    public Page<UserResponse> getUsers(UserFilterRequest filterRequest, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Role Filter
-            if (role != null && !role.isEmpty()) {
-                try {
-                    Role roleEnum = Role.valueOf(role.toUpperCase());
-                    predicates.add(cb.isMember(roleEnum, root.get("roles")));
-                } catch (IllegalArgumentException e) {
-                    // Ignore invalid role
+            // Role Filter (Multi-select)
+            if (filterRequest.getRoles() != null && !filterRequest.getRoles().isEmpty()) {
+                List<Role> roles = filterRequest.getRoles().stream()
+                        .map(roleStr -> {
+                            try {
+                                return Role.valueOf(roleStr.toUpperCase());
+                            } catch (IllegalArgumentException e) {
+                                return null;
+                            }
+                        })
+                        .filter(java.util.Objects::nonNull)
+                        .collect(Collectors.toList());
+                
+                if (!roles.isEmpty()) {
+                    // Use 'isMember' for Collection if filtering by single role, but for multiple roles we need a different approach
+                    // Since roles is a Set<Role> (ElementCollection or ManyToMany), filtering by multiple roles (OR logic) is tricky with CriteriaBuilder
+                    // A common way is to join and use IN
+                    predicates.add(root.join("roles").in(roles));
+                    query.distinct(true); // Important to avoid duplicates when joining
                 }
             }
 
-            // Status Filter
-            if ("DELETED".equalsIgnoreCase(status)) {
-                predicates.add(cb.equal(root.get("isDeleted"), true));
-            } else {
-                predicates.add(cb.equal(root.get("isDeleted"), false));
-                if (status != null && !status.isEmpty()) {
-                    try {
-                        UserStatus userStatus = UserStatus.valueOf(status.toUpperCase());
-                        predicates.add(cb.equal(root.get("status"), userStatus));
-                    } catch (IllegalArgumentException e) {
-                        // Ignore invalid status
+            // Status Filter (Multi-select)
+            if (filterRequest.getStatuses() != null && !filterRequest.getStatuses().isEmpty()) {
+                // Check if "DELETED" is in the list
+                boolean includeDeleted = filterRequest.getStatuses().stream()
+                        .anyMatch(s -> "DELETED".equalsIgnoreCase(s));
+                
+                List<UserStatus> statuses = filterRequest.getStatuses().stream()
+                        .filter(s -> !"DELETED".equalsIgnoreCase(s))
+                        .map(statusStr -> {
+                            try {
+                                return UserStatus.valueOf(statusStr.toUpperCase());
+                            } catch (IllegalArgumentException e) {
+                                return null;
+                            }
+                        })
+                        .filter(java.util.Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                if (includeDeleted) {
+                    // If filtering specifically for DELETED, we look for isDeleted = true
+                    // If mixed (Active + Deleted), logic gets complex. Usually "Deleted" is a separate flag.
+                    // Here assuming if DELETED is requested, we show deleted users.
+                    // If other statuses are also requested, we show (isDeleted=true) OR (isDeleted=false AND status IN (...))
+                    
+                    Predicate isDeleted = cb.equal(root.get("isDeleted"), true);
+                    
+                    if (!statuses.isEmpty()) {
+                        Predicate isNotDeletedAndStatusIn = cb.and(
+                                cb.equal(root.get("isDeleted"), false),
+                                root.get("status").in(statuses)
+                        );
+                        predicates.add(cb.or(isDeleted, isNotDeletedAndStatusIn));
+                    } else {
+                        predicates.add(isDeleted);
+                    }
+                } else {
+                    // Default behavior: Not deleted
+                    predicates.add(cb.equal(root.get("isDeleted"), false));
+                    if (!statuses.isEmpty()) {
+                        predicates.add(root.get("status").in(statuses));
                     }
                 }
+            } else {
+                // Default if no status filter provided: Show only non-deleted
+                predicates.add(cb.equal(root.get("isDeleted"), false));
             }
 
             // Keyword Search
-            if (keyword != null && !keyword.isEmpty()) {
-                String likePattern = "%" + keyword.toLowerCase() + "%";
+            if (filterRequest.getKeyword() != null && !filterRequest.getKeyword().isEmpty()) {
+                String likePattern = "%" + filterRequest.getKeyword().toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("username")), likePattern),
                         cb.like(cb.lower(root.get("email")), likePattern),

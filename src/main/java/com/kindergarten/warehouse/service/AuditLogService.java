@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.service;
 
+import com.kindergarten.warehouse.dto.request.AuditLogFilterRequest;
 import com.kindergarten.warehouse.entity.AuditLog;
 import com.kindergarten.warehouse.repository.AuditLogRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -39,35 +40,41 @@ public class AuditLogService {
         auditLogRepository.save(log);
     }
 
-    public Page<AuditLog> getLogs(String action, String username, String startDate, String endDate, Pageable pageable) {
+    public Page<AuditLog> getLogs(AuditLogFilterRequest request, Pageable pageable) {
         Specification<AuditLog> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (action != null && !action.isEmpty()) {
-                predicates.add(cb.equal(root.get("action"), action));
+            // Action Filter (Multi-select)
+            if (request.getActions() != null && !request.getActions().isEmpty()) {
+                predicates.add(root.get("action").in(request.getActions()));
             }
 
-            if (username != null && !username.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("username")), "%" + username.toLowerCase() + "%"));
+            // Target Filter (Multi-select)
+            if (request.getTargets() != null && !request.getTargets().isEmpty()) {
+                predicates.add(root.get("target").in(request.getTargets()));
             }
 
-            if (startDate != null && !startDate.isEmpty()) {
+            // Username Filter (Partial match)
+            if (request.getUsername() != null && !request.getUsername().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("username")), "%" + request.getUsername().toLowerCase() + "%"));
+            }
+
+            // Date Range Filter
+            if (request.getStartDate() != null && !request.getStartDate().isEmpty()) {
                 try {
-                    // Try parsing as LocalDate first (yyyy-MM-dd)
-                    LocalDate start = LocalDate.parse(startDate);
+                    LocalDate start = LocalDate.parse(request.getStartDate());
                     predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), start.atStartOfDay()));
                 } catch (DateTimeParseException e) {
-                    log.warn("Invalid startDate format: {}", startDate);
-                    // Optionally throw exception or ignore filter
+                    log.warn("Invalid startDate format: {}", request.getStartDate());
                 }
             }
 
-            if (endDate != null && !endDate.isEmpty()) {
+            if (request.getEndDate() != null && !request.getEndDate().isEmpty()) {
                 try {
-                    LocalDate end = LocalDate.parse(endDate);
+                    LocalDate end = LocalDate.parse(request.getEndDate());
                     predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), end.atTime(23, 59, 59)));
                 } catch (DateTimeParseException e) {
-                    log.warn("Invalid endDate format: {}", endDate);
+                    log.warn("Invalid endDate format: {}", request.getEndDate());
                 }
             }
 

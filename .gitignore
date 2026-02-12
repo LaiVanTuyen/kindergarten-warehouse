@@ -35,9 +35,10 @@ build/
 .DS_Store
 
 ### Secrets ###
-.env
-.env.*
-*.env
+#.env
+#.env.*
+#*.env
+#!.env.example
 firebase-service-account.json
 
 ### Logs ###

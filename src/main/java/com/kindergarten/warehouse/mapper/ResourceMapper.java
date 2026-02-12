@@ -34,6 +34,7 @@ public class ResourceMapper {
                 .fileType(resource.getFileType())
                 .fileExtension(resource.getFileExtension())
                 .fileSize(resource.getFileSize())
+                .duration(resource.getDuration()) // Mapped duration
                 .status(resource.getStatus())
                 .downloadCount(resource.getDownloadCount())
                 .averageRating(resource.getAverageRating())

@@ -15,6 +15,7 @@ public class AgeGroupMapper {
         return AgeGroupResponse.builder()
                 .id(ageGroup.getId())
                 .name(ageGroup.getName())
+                .slug(ageGroup.getSlug()) // Added slug mapping
                 .minAge(ageGroup.getMinAge())
                 .maxAge(ageGroup.getMaxAge())
                 .description(ageGroup.getDescription())

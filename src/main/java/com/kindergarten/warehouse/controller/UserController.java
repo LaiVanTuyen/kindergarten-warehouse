@@ -6,6 +6,7 @@ import com.kindergarten.warehouse.dto.request.ConfirmResetPasswordRequest;
 import com.kindergarten.warehouse.dto.request.ChangePasswordRequest;
 import com.kindergarten.warehouse.dto.request.UpdateProfileRequest;
 import com.kindergarten.warehouse.dto.request.UserCreationRequest;
+import com.kindergarten.warehouse.dto.request.UserFilterRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.dto.response.UserResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
@@ -46,9 +47,7 @@ public class UserController {
         @GetMapping
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
-                        @RequestParam(required = false) String status,
-                        @RequestParam(required = false) String role,
-                        @RequestParam(required = false) String keyword,
+                        @ModelAttribute UserFilterRequest filterRequest,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sortBy,
@@ -57,7 +56,7 @@ public class UserController {
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity
-                                .ok(ApiResponse.success(userService.getUsers(status, role, keyword, pageable),
+                                .ok(ApiResponse.success(userService.getUsers(filterRequest, pageable),
                                                 messageService.getMessage("user.list.success")));
         }
 

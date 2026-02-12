@@ -13,6 +13,7 @@ import com.kindergarten.warehouse.repository.*;
 import com.kindergarten.warehouse.service.MinioStorageService;
 import com.kindergarten.warehouse.service.ResourceService;
 import com.kindergarten.warehouse.service.ResourceStatService;
+import com.kindergarten.warehouse.service.YoutubeService;
 import com.kindergarten.warehouse.util.AppConstants;
 import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
@@ -51,6 +52,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final CacheManager cacheManager;
     private final ResourceMapper resourceMapper;
     private final ResourceStatService resourceStatService;
+    private final YoutubeService youtubeService; // Injected
 
     @Override
     @Transactional
@@ -77,9 +79,10 @@ public class ResourceServiceImpl implements ResourceService {
         String fileType;
         String extension = "";
         Long fileSize = 0L;
+        String duration = request.getDuration(); // Default from request
 
         if (request.getYoutubeLink() != null && !request.getYoutubeLink().isEmpty()) {
-            String youtubeId = extractYoutubeId(request.getYoutubeLink());
+            String youtubeId = youtubeService.extractVideoId(request.getYoutubeLink());
             if (youtubeId == null) {
                 throw new IllegalArgumentException("Invalid YouTube Link");
             }
@@ -87,6 +90,11 @@ public class ResourceServiceImpl implements ResourceService {
             resourceType = ResourceType.YOUTUBE;
             fileType = "VIDEO";
             extension = "youtube";
+            
+            // Auto-fetch duration if not provided
+            if (duration == null || duration.isEmpty()) {
+                duration = youtubeService.getVideoDuration(youtubeId);
+            }
         } else {
             String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
             fileUrl = minioStorageService.uploadFile(request.getFile(), path);
@@ -101,7 +109,7 @@ public class ResourceServiceImpl implements ResourceService {
             String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_THUMBNAILS;
             thumbnailUrl = minioStorageService.uploadFile(request.getThumbnail(), path);
         } else if (resourceType == ResourceType.YOUTUBE) {
-            String youtubeId = extractYoutubeId(fileUrl);
+            String youtubeId = youtubeService.extractVideoId(fileUrl);
             thumbnailUrl = "https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg";
         }
 
@@ -116,6 +124,7 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setFileExtension(extension);
         resource.setFileType(fileType);
         resource.setFileSize(fileSize);
+        resource.setDuration(duration); // Set duration
         resource.setCreatedBy(user.getId());
         resource.setCreator(user);
         resource.setAgeGroups(ageGroups);
@@ -139,6 +148,7 @@ public class ResourceServiceImpl implements ResourceService {
         Specification<Resource> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             
+            // Status Filter
             if ("DELETED".equals(filterRequest.getStatus())) {
                 predicates.add(cb.equal(root.get("isDeleted"), true));
             } else {
@@ -148,34 +158,44 @@ public class ResourceServiceImpl implements ResourceService {
                 }
             }
 
-            if (filterRequest.getTopicSlug() != null && !filterRequest.getTopicSlug().isEmpty()) {
-                predicates.add(cb.equal(root.get("topic").get("slug"), filterRequest.getTopicSlug()));
-            } else if (filterRequest.getCategorySlug() != null && !filterRequest.getCategorySlug().isEmpty()) {
-                predicates
-                        .add(cb.equal(root.get("topic").get("category").get("slug"), filterRequest.getCategorySlug()));
+            // Topic Filter (Multi-select)
+            if (filterRequest.getTopicSlugs() != null && !filterRequest.getTopicSlugs().isEmpty()) {
+                predicates.add(root.get("topic").get("slug").in(filterRequest.getTopicSlugs()));
+            } 
+            else if (filterRequest.getCategorySlugs() != null && !filterRequest.getCategorySlugs().isEmpty()) {
+                predicates.add(root.get("topic").get("category").get("slug").in(filterRequest.getCategorySlugs()));
             }
 
+            // Legacy ID filters
             if (filterRequest.getTopicId() != null) {
                 predicates.add(cb.equal(root.get("topic").get("id"), filterRequest.getTopicId()));
             } else if (filterRequest.getCategoryId() != null) {
                 predicates.add(cb.equal(root.get("topic").get("category").get("id"), filterRequest.getCategoryId()));
             }
 
-            if (filterRequest.getAgeGroupId() != null) {
+            // Age Group Filter (Multi-select)
+            if (filterRequest.getAgeSlugs() != null && !filterRequest.getAgeSlugs().isEmpty()) {
+                query.distinct(true);
+                predicates.add(root.join("ageGroups").get("slug").in(filterRequest.getAgeSlugs()));
+            } else if (filterRequest.getAgeGroupId() != null) {
+                query.distinct(true);
                 predicates.add(cb.equal(root.join("ageGroups").get("id"), filterRequest.getAgeGroupId()));
             }
 
-            if (filterRequest.getAgeSlugs() != null && !filterRequest.getAgeSlugs().isEmpty()) {
-                predicates.add(root.join("ageGroups").get("slug").in(filterRequest.getAgeSlugs()));
-            }
-
+            // Keyword Filter
             if (filterRequest.getKeyword() != null && !filterRequest.getKeyword().isEmpty()) {
                 String likePattern = "%" + filterRequest.getKeyword().toLowerCase() + "%";
                 predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
             }
             
+            // Creator Filter
             if (filterRequest.getCreatedBy() != null) {
                 predicates.add(cb.equal(root.get("createdBy"), filterRequest.getCreatedBy()));
+            }
+            
+            // Resource Type Filter (Multi-select)
+            if (filterRequest.getTypes() != null && !filterRequest.getTypes().isEmpty()) {
+                predicates.add(root.get("fileType").in(filterRequest.getTypes()));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -258,7 +278,7 @@ public class ResourceServiceImpl implements ResourceService {
         if (request.getFileType() != null) resource.setFileType(request.getFileType());
         
         if (request.getYoutubeLink() != null && !request.getYoutubeLink().isEmpty()) {
-             String youtubeId = extractYoutubeId(request.getYoutubeLink());
+             String youtubeId = youtubeService.extractVideoId(request.getYoutubeLink());
              if (youtubeId == null) {
                  throw new IllegalArgumentException("Invalid YouTube Link");
              }
@@ -269,6 +289,12 @@ public class ResourceServiceImpl implements ResourceService {
              
              if (resource.getThumbnailUrl() == null || resource.getThumbnailUrl().isEmpty()) {
                  resource.setThumbnailUrl("https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg");
+             }
+             
+             // Auto-fetch duration on update
+             String duration = youtubeService.getVideoDuration(youtubeId);
+             if (duration != null) {
+                 resource.setDuration(duration);
              }
         }
 
@@ -379,13 +405,9 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
     
+    // Moved logic to YoutubeService but kept here for backward compatibility or internal use if needed
+    // Actually, we should use YoutubeService.extractVideoId now
     private String extractYoutubeId(String url) {
-        String pattern = "(?<=watch\\?v=|/videos/|embed\\/|youtu.be\\/|\\/v\\/|\\/e\\/|watch\\?v%3D|watch\\?feature=player_embedded&v=|%2Fvideos%2F|embed%\u200C\u200B2F|youtu.be%2F|%2Fv%2F)[^#\\&\\?\\n]*";
-        Pattern compiledPattern = Pattern.compile(pattern);
-        Matcher matcher = compiledPattern.matcher(url);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        return null;
+        return youtubeService.extractVideoId(url);
     }
 }

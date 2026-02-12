@@ -1,30 +1,30 @@
+# ==========================================
+# PRODUCTION CONFIGURATION
+# ==========================================
+# This file overrides settings in application.yml when active profile is 'prod'
+
 spring:
-  datasource:
-    url: ${DB_URL}?useSSL=true&requireSSL=true&verifyServerCertificate=true
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
-      ssl: true
+  jpa:
+    show-sql: false # Disable SQL logging for performance
+    hibernate:
+      ddl-auto: validate # Never let Hibernate modify schema in Prod. Use Flyway/Liquibase instead.
+    properties:
+      hibernate:
+        format_sql: false
 
-minio:
-  endpoint: ${MINIO_ENDPOINT} # Should be https://...
-  public-endpoint: ${MINIO_PUBLIC_ENDPOINT}
-  access-key: ${MINIO_ACCESS_KEY}
-  secret-key: ${MINIO_SECRET_KEY}
-  bucket-name: ${MINIO_BUCKET}
+  # Mail config is inherited from application.yml (uses env vars)
 
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: 86400000
+  # Servlet config (multipart) is inherited
+
+# MinIO config is inherited from application.yml (uses env vars)
+
+# JWT config is inherited
+
+rollbar:
+  enabled: true
+  environment: production
 
 app:
-  cors:
-    allowed-origins: https://kinder-world.vercel.app
   cookie:
-    secure: true
-    same-site: None
+    secure: true # Must be true for HTTPS
+    same-site: None # Allow cross-site cookies if Frontend is on different domain

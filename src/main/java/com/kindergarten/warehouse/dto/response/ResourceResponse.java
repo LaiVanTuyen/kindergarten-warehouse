@@ -2,10 +2,12 @@ package com.kindergarten.warehouse.dto.response;
 
 import com.kindergarten.warehouse.entity.ResourceStatus;
 import com.kindergarten.warehouse.entity.ResourceType;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @SuperBuilder
@@ -25,6 +27,7 @@ public class ResourceResponse extends BaseResponse {
     private String fileType;
     private String fileExtension;
     private Long fileSize;
+    private String duration; // Added duration field
     private ResourceStatus status;
     private Long downloadCount;
     private Double averageRating;
