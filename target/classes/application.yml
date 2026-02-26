@@ -74,3 +74,5 @@ app:
   cookie:
     secure: ${COOKIE_SECURE:false}
     same-site: ${COOKIE_SAME_SITE:Lax}
+  resource:
+    thumbnail-max-bytes: ${RESOURCE_THUMBNAIL_MAX_BYTES:5242880}

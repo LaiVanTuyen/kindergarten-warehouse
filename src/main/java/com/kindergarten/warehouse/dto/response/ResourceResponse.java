@@ -33,5 +33,7 @@ public class ResourceResponse extends BaseResponse {
     private Double averageRating;
     private TopicResponse topic;
     private List<AgeGroupResponse> ageGroups;
+    private com.kindergarten.warehouse.entity.Visibility visibility;
+    private String rejectionReason;
     private Boolean isFavorited;
 }

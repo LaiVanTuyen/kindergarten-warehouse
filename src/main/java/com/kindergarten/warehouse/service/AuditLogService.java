@@ -45,18 +45,19 @@ public class AuditLogService {
             List<Predicate> predicates = new ArrayList<>();
 
             // Action Filter (Multi-select)
-            if (request.getActions() != null && !request.getActions().isEmpty()) {
-                predicates.add(root.get("action").in(request.getActions()));
+            if (request.getAction() != null && !request.getAction().isEmpty()) {
+                predicates.add(root.get("action").in(request.getAction()));
             }
 
             // Target Filter (Multi-select)
-            if (request.getTargets() != null && !request.getTargets().isEmpty()) {
-                predicates.add(root.get("target").in(request.getTargets()));
+            if (request.getTarget() != null && !request.getTarget().isEmpty()) {
+                predicates.add(root.get("target").in(request.getTarget()));
             }
 
             // Username Filter (Partial match)
             if (request.getUsername() != null && !request.getUsername().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("username")), "%" + request.getUsername().toLowerCase() + "%"));
+                predicates
+                        .add(cb.like(cb.lower(root.get("username")), "%" + request.getUsername().toLowerCase() + "%"));
             }
 
             // Date Range Filter

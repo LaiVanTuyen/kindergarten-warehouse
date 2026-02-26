@@ -11,12 +11,20 @@ import java.util.stream.Collectors;
 public class UserFilterRequest {
     @Setter
     private String keyword;
-    
+
     // Multi-select filters
     private List<String> statuses;
     private List<String> roles;
 
     // --- Custom Setters to handle comma-separated values ---
+
+    public List<String> getStatuses() {
+        return statuses;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
 
     public void setStatuses(List<String> statuses) {
         this.statuses = splitCommaSeparatedList(statuses);

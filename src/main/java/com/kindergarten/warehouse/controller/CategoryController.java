@@ -35,6 +35,11 @@ public class CategoryController {
                         @RequestParam(defaultValue = "id") String sortBy,
                         @RequestParam(defaultValue = "desc") String sortDir) {
 
+                // Fix FE sending 'desc' as sortBy causing PropertyReferenceException
+                if ("desc".equalsIgnoreCase(sortBy) || "asc".equalsIgnoreCase(sortBy)) {
+                        sortBy = "id";
+                }
+
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity

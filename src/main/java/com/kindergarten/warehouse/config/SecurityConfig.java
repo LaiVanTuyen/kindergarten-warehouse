@@ -40,7 +40,8 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LastActiveFilter lastActiveFilter, ObjectMapper objectMapper) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LastActiveFilter lastActiveFilter,
+            ObjectMapper objectMapper) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.lastActiveFilter = lastActiveFilter;
         this.objectMapper = objectMapper;
@@ -119,19 +120,19 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            
+
                             ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
                             ApiResponse<?> apiResponse = ApiResponse.error(errorCode.getCode(), "Unauthorized");
-                            
+
                             response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            
+
                             ErrorCode errorCode = ErrorCode.FORBIDDEN;
                             ApiResponse<?> apiResponse = ApiResponse.error(errorCode.getCode(), "Forbidden");
-                            
+
                             response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
                         }));
 
@@ -162,6 +163,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowCredentials(true);
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Content-Disposition"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

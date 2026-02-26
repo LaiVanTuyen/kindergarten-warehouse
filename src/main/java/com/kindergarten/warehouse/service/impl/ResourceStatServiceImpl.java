@@ -20,7 +20,7 @@ public class ResourceStatServiceImpl implements ResourceStatService {
     @Override
     public void incrementViewCount(String resourceId, String ipAddress) {
         String key = "view_tracking:" + ipAddress + ":" + resourceId;
-        
+
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             return;
         }
@@ -43,5 +43,29 @@ public class ResourceStatServiceImpl implements ResourceStatService {
 
         redisTemplate.opsForValue().increment("kindergarten:downloads:" + resourceId);
         redisTemplate.opsForSet().add("kindergarten:dirty_downloads", resourceId);
+    }
+
+    @Override
+    public long getPendingViewCount(String resourceId) {
+        Object countObj = redisTemplate.opsForValue().get("kindergarten:views:" + resourceId);
+        if (countObj != null) {
+            try {
+                return Long.parseLong(countObj.toString());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0L;
+    }
+
+    @Override
+    public long getPendingDownloadCount(String resourceId) {
+        Object countObj = redisTemplate.opsForValue().get("kindergarten:downloads:" + resourceId);
+        if (countObj != null) {
+            try {
+                return Long.parseLong(countObj.toString());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0L;
     }
 }

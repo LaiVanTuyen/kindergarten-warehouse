@@ -36,6 +36,11 @@ public enum ErrorCode {
     // ========== Resource Errors (60xx) ==========
     RESOURCE_NOT_FOUND(6001, "error.resource.not_found", HttpStatus.NOT_FOUND),
     FILE_UPLOAD_ERROR(6002, "error.file.upload", HttpStatus.BAD_REQUEST),
+    FILE_TYPE_INVALID(6003, "error.file.type.invalid", HttpStatus.BAD_REQUEST),
+    RESOURCE_FORBIDDEN(6004, "error.resource.forbidden", HttpStatus.FORBIDDEN),
+    INVALID_YOUTUBE_LINK(6005, "error.resource.youtube.invalid", HttpStatus.BAD_REQUEST),
+    INVALID_IMAGE_FORMAT(6006, "error.resource.thumbnail.format.invalid", HttpStatus.BAD_REQUEST),
+    THUMBNAIL_TOO_LARGE(6007, "error.resource.thumbnail.too.large", HttpStatus.BAD_REQUEST),
 
     // ========== Age Group Errors (65xx) ==========
     AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),

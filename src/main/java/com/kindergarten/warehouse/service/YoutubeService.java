@@ -34,10 +34,10 @@ public class YoutubeService {
         try {
             String url = String.format(YOUTUBE_API_URL, videoId, apiKey);
             String response = restTemplate.getForObject(url, String.class);
-            
+
             JsonNode root = objectMapper.readTree(response);
             JsonNode items = root.path("items");
-            
+
             if (items.isArray() && items.size() > 0) {
                 String isoDuration = items.get(0).path("contentDetails").path("duration").asText();
                 return convertIsoDuration(isoDuration);
@@ -56,13 +56,13 @@ public class YoutubeService {
             Duration duration = Duration.parse(isoDuration);
             long seconds = duration.getSeconds();
             long absSeconds = Math.abs(seconds);
-            
+
             String positive = String.format(
-                "%02d:%02d:%02d",
-                absSeconds / 3600,
-                (absSeconds % 3600) / 60,
-                absSeconds % 60);
-            
+                    "%02d:%02d:%02d",
+                    absSeconds / 3600,
+                    (absSeconds % 3600) / 60,
+                    absSeconds % 60);
+
             // Remove leading "00:" if less than an hour
             if (positive.startsWith("00:")) {
                 return positive.substring(3);
@@ -82,5 +82,21 @@ public class YoutubeService {
             return matcher.group();
         }
         return null;
+    }
+
+    public boolean isVideoAccessible(String videoId) {
+        try {
+            String url = "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=" + videoId
+                    + "&format=json";
+            org.springframework.http.ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+            return false;
+        } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
+            return false;
+        } catch (Exception e) {
+            log.warn("Failed to check video accessibility for {}: {}", videoId, e.getMessage());
+            throw new RuntimeException("Cannot check accessibility", e);
+        }
     }
 }

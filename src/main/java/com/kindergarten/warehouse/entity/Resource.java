@@ -16,11 +16,11 @@ import lombok.EqualsAndHashCode;
 @AllArgsConstructor
 @Entity
 @Table(name = "resources", indexes = {
-    @Index(name = "idx_resource_title", columnList = "title"),
-    @Index(name = "idx_resource_status", columnList = "status"),
-    @Index(name = "idx_resource_is_deleted", columnList = "is_deleted"),
-    @Index(name = "idx_resource_topic", columnList = "topic_id"),
-    @Index(name = "idx_resource_type", columnList = "resource_type")
+        @Index(name = "idx_resource_title", columnList = "title"),
+        @Index(name = "idx_resource_status", columnList = "status"),
+        @Index(name = "idx_resource_is_deleted", columnList = "is_deleted"),
+        @Index(name = "idx_resource_topic", columnList = "topic_id"),
+        @Index(name = "idx_resource_type", columnList = "resource_type")
 })
 @EqualsAndHashCode(of = "id", callSuper = false)
 public class Resource extends BaseEntity {
@@ -87,15 +87,20 @@ public class Resource extends BaseEntity {
     private Topic topic;
 
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private Visibility visibility = Visibility.PUBLIC;
 
     @Builder.Default
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "resource_age_groups", joinColumns = @JoinColumn(name = "resource_id"), inverseJoinColumns = @JoinColumn(name = "age_group_id"))
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 100)
     private java.util.Set<AgeGroup> ageGroups;
 }

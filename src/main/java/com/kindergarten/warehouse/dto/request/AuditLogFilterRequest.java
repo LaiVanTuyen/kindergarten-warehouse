@@ -11,24 +11,24 @@ import java.util.stream.Collectors;
 public class AuditLogFilterRequest {
     @Setter
     private String username;
-    
+
     @Setter
     private String startDate; // yyyy-MM-dd
     @Setter
-    private String endDate;   // yyyy-MM-dd
+    private String endDate; // yyyy-MM-dd
 
     // Multi-select filters
-    private List<String> actions;
-    private List<String> targets;
+    private List<String> action;
+    private List<String> target;
 
     // --- Custom Setters ---
 
-    public void setActions(List<String> actions) {
-        this.actions = splitCommaSeparatedList(actions);
+    public void setAction(List<String> action) {
+        this.action = splitCommaSeparatedList(action);
     }
 
-    public void setTargets(List<String> targets) {
-        this.targets = splitCommaSeparatedList(targets);
+    public void setTarget(List<String> target) {
+        this.target = splitCommaSeparatedList(target);
     }
 
     private List<String> splitCommaSeparatedList(List<String> input) {

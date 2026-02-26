@@ -17,5 +17,10 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Favorite.Fav
     boolean existsByUserIdAndResourceId(Long userId, String resourceId);
 
     @Query("SELECT f.resourceId FROM Favorite f WHERE f.userId = :userId AND f.resourceId IN :resourceIds")
-    Set<String> findFavoritedResourceIdsByUserIdAndResourceIdIn(@Param("userId") Long userId, @Param("resourceIds") List<String> resourceIds);
+    Set<String> findFavoritedResourceIdsByUserIdAndResourceIdIn(@Param("userId") Long userId,
+            @Param("resourceIds") List<String> resourceIds);
+
+    void deleteByResourceId(String resourceId);
+
+    void deleteByResourceIdIn(List<String> resourceIds);
 }

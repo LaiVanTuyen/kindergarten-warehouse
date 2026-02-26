@@ -174,4 +174,26 @@ public class MinioStorageService {
             throw new RuntimeException("Failed to generate presigned URL", e);
         }
     }
+
+    // ✅ NEW: Get object input stream for download
+    public InputStream getObject(String fileUrl) throws Exception {
+        try {
+            // Extract key from URL: endpoint/bucket/key
+            String prefix = publicEndpoint + "/" + bucketName + "/";
+            String key;
+            if (fileUrl.startsWith(prefix)) {
+                key = fileUrl.substring(prefix.length());
+            } else if (fileUrl.startsWith("http")) {
+                // Handle full URL
+                key = fileUrl.substring(fileUrl.lastIndexOf(bucketName) + bucketName.length() + 1);
+            } else {
+                key = fileUrl;
+            }
+
+            var response = s3Client.getObject(b -> b.bucket(bucketName).key(key));
+            return response;
+        } catch (S3Exception e) {
+            throw new Exception("Failed to get file from MinIO: " + e.getMessage(), e);
+        }
+    }
 }

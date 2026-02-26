@@ -12,5 +12,9 @@ public enum AuditAction {
     APPROVE,
     REJECT,
     RESTORE,
+    APPROVE_BULK,
+    REJECT_BULK,
+    DELETE_BULK,
+    RESTORE_BULK,
     OTHER
 }
