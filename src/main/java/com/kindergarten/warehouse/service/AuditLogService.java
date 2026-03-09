@@ -41,7 +41,37 @@ public class AuditLogService {
     }
 
     public Page<AuditLog> getLogs(AuditLogFilterRequest request, Pageable pageable) {
-        Specification<AuditLog> spec = (root, query, cb) -> {
+        return auditLogRepository.findAll(buildSpecification(request, null), pageable);
+    }
+
+    public void exportLogsToStream(AuditLogFilterRequest request, org.springframework.data.domain.Sort sort,
+            java.io.OutputStream outputStream) {
+
+        // Time-Bounding: Capture a snapshot timestamp to prevent "Pagination Drift"
+        // without holding a long-running DB Connection or blowing up Hibernate L1
+        // Cache.
+        LocalDateTime snapshotTime = LocalDateTime.now();
+
+        int page = 0;
+        int size = 1000;
+        Page<AuditLog> logPage;
+
+        com.kindergarten.warehouse.util.AuditLogCsvExport exporter = new com.kindergarten.warehouse.util.AuditLogCsvExport(
+                outputStream);
+        exporter.writeHeader();
+
+        do {
+            logPage = auditLogRepository.findAll(buildSpecification(request, snapshotTime),
+                    org.springframework.data.domain.PageRequest.of(page, size, sort));
+            exporter.writeRows(logPage.getContent());
+            page++;
+        } while (logPage.hasNext());
+
+        exporter.flush();
+    }
+
+    private Specification<AuditLog> buildSpecification(AuditLogFilterRequest request, LocalDateTime snapshotTime) {
+        return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             // Action Filter (Multi-select)
@@ -57,7 +87,7 @@ public class AuditLogService {
             // Username Filter (Partial match)
             if (request.getUsername() != null && !request.getUsername().isEmpty()) {
                 predicates
-                        .add(cb.like(cb.lower(root.get("username")), "%" + request.getUsername().toLowerCase() + "%"));
+                        .add(cb.like(cb.lower(root.get("username")), request.getUsername().toLowerCase() + "%"));
             }
 
             // Date Range Filter
@@ -79,9 +109,12 @@ public class AuditLogService {
                 }
             }
 
+            // Time-Bounding Snapshot Filter
+            if (snapshotTime != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), snapshotTime));
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-
-        return auditLogRepository.findAll(spec, pageable);
     }
 }

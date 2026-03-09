@@ -22,22 +22,43 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuditLogController {
 
-    private final AuditLogService auditLogService;
-    private final MessageService messageService;
+        private final AuditLogService auditLogService;
+        private final MessageService messageService;
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
-            @ModelAttribute AuditLogFilterRequest filterRequest,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "timestamp") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+        @GetMapping
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
+                        @ModelAttribute AuditLogFilterRequest filterRequest,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
+                        @RequestParam(defaultValue = "timestamp") String sortBy,
+                        @RequestParam(defaultValue = "desc") String sortDir) {
 
-        Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
-        Page<AuditLog> logs = auditLogService.getLogs(filterRequest, pageable);
+                Page<AuditLog> logs = auditLogService.getLogs(filterRequest, pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(logs, "Audit logs retrieved successfully"));
-    }
+                return ResponseEntity.ok(ApiResponse.success(logs, "Audit logs retrieved successfully"));
+        }
+
+        @GetMapping("/export")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> exportAuditLogs(
+                        @ModelAttribute AuditLogFilterRequest filterRequest,
+                        @RequestParam(defaultValue = "timestamp") String sortBy,
+                        @RequestParam(defaultValue = "desc") String sortDir) {
+
+                org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.fromString(sortDir), sortBy);
+
+                org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody stream = out -> {
+                        auditLogService.exportLogsToStream(filterRequest, sort, out);
+                };
+
+                return ResponseEntity.ok()
+                                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                                                "attachment; filename=\"audit_logs.csv\"")
+                                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                                .body(stream);
+        }
 }
