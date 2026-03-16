@@ -1,8 +1,7 @@
 package com.kindergarten.warehouse.config;
 
+import com.kindergarten.warehouse.security.CustomUserDetails;
 import com.kindergarten.warehouse.service.RedisLastActiveService;
-import com.kindergarten.warehouse.entity.User;
-import com.kindergarten.warehouse.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +20,6 @@ import java.io.IOException;
 public class LastActiveFilter extends OncePerRequestFilter {
 
     private final RedisLastActiveService redisLastActiveService;
-    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -32,25 +30,12 @@ public class LastActiveFilter extends OncePerRequestFilter {
 
             if (authentication != null
                     && !(authentication instanceof AnonymousAuthenticationToken)
-                    && authentication.isAuthenticated()) {
+                    && authentication.isAuthenticated()
+                    && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
 
-                String username = authentication.getName();
-                // To optimize, we might want to cache userId in the UserDetails or Token to
-                // avoid DB lookup here.
-                // For now, let's look it up or rely on a cache.
-                // Assuming username is unique.
-                // Optimization: In a real heavy system, extract userId from JWT directly if
-                // possible.
-                // But here, let's use UserRepository (it should be cached by 2nd level cache or
-                // we can trust the Service to handle it)
-
-                // For this implementation, let's just lookup ID quickly.
-                // Or better, let's assume we can get ID from Principal if we cast it.
-                // (Depending on UserDetails implementation)
-
-                userRepository.findByUsername(username).ifPresent(user -> {
-                    redisLastActiveService.updateLastActive(user.getId());
-                });
+                // Lấy userId trực tiếp từ Principal (đã được load bởi JwtAuthenticationFilter)
+                // => Không cần thêm DB query nào ở đây
+                redisLastActiveService.updateLastActive(userDetails.getId());
             }
         } catch (Exception e) {
             // Do not block request if tracking fails

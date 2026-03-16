@@ -33,4 +33,8 @@ public interface UserRepository
         @org.springframework.data.jpa.repository.Modifying
         @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id = :id")
         void updateLastActive(Long id, java.time.LocalDateTime lastActive);
+
+        @org.springframework.data.jpa.repository.Modifying
+        @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id IN :ids")
+        void batchUpdateLastActive(java.util.List<Long> ids, java.time.LocalDateTime lastActive);
 }
