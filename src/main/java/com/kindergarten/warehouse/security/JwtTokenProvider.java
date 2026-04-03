@@ -44,6 +44,15 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
+    public Date getExpirationDate(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getExpiration();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -59,6 +68,8 @@ public class JwtTokenProvider {
             // Unsupported JWT token
         } catch (IllegalArgumentException ex) {
             // JWT claims string is empty
+        } catch (io.jsonwebtoken.security.SignatureException ex) {
+            // JWT Signature validation failed
         }
         return false;
     }

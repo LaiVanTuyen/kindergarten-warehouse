@@ -1,13 +1,19 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.dto.LoginDto;
-import com.kindergarten.warehouse.dto.RegisterDto;
+import com.kindergarten.warehouse.dto.request.LoginDto;
+import com.kindergarten.warehouse.dto.request.RegisterDto;
+import com.kindergarten.warehouse.dto.response.AuthResponseDto;
 import com.kindergarten.warehouse.entity.Role;
 import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.entity.UserStatus;
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.mapper.UserMapper;
 import com.kindergarten.warehouse.repository.UserRepository;
 import com.kindergarten.warehouse.security.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,7 +21,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
@@ -23,53 +34,69 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MessageSource messageSource;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final UserMapper userMapper;
+    private final AuditLogService auditLogService;
 
-    public AuthService(AuthenticationManager authenticationManager,
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider,
-            MessageSource messageSource) {
-        this.authenticationManager = authenticationManager;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.messageSource = messageSource;
-    }
-
-    public com.kindergarten.warehouse.dto.AuthResponseDto login(LoginDto loginDto) {
+    public AuthResponseDto login(LoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String token = jwtTokenProvider.generateToken(authentication);
 
-        User user = userRepository.findByUsername(loginDto.getUsername()).orElseThrow();
+        User user = userRepository.findByEmail(loginDto.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        return new com.kindergarten.warehouse.dto.AuthResponseDto(
-                token,
-                "Bearer",
-                user.getId(),
-                user.getUsername(),
-                user.getFullName(),
-                user.getRole().name());
+        // Audit Log
+        String ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
+        String userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
+        auditLogService.saveLog("LOGIN", user.getUsername(), "AuthService", "User logged in successfully", ipAddress,
+                userAgent);
+
+        return new AuthResponseDto(userMapper.toResponse(user), token, null);
     }
 
-    public String register(RegisterDto registerDto) {
+    public AuthResponseDto register(RegisterDto registerDto) {
         if (userRepository.existsByUsername(registerDto.getUsername())) {
-            throw new RuntimeException(
-                    messageSource.getMessage("auth.username.taken", null, LocaleContextHolder.getLocale()));
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
+        if (userRepository.existsByEmail(registerDto.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
         User user = new User();
         user.setUsername(registerDto.getUsername());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
+        user.setEmail(registerDto.getEmail());
         user.setFullName(registerDto.getFullName());
-        user.setRole(registerDto.getRole() != null ? registerDto.getRole() : Role.USER);
-        user.setIsActive(true);
+        user.setRoles(Collections.singleton(Role.USER));
+        user.setStatus(UserStatus.ACTIVE);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        return messageSource.getMessage("auth.user.registered", null, LocaleContextHolder.getLocale());
+        // Auto-login: Generate token
+        Authentication authentication = new UsernamePasswordAuthenticationToken(savedUser.getUsername(), null, null);
+        String token = jwtTokenProvider.generateToken(authentication);
+
+        // Audit Log
+        String ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
+        String userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
+        auditLogService.saveLog("CREATE", savedUser.getUsername(), "AuthService", "User registered successfully",
+                ipAddress, userAgent);
+
+        return new AuthResponseDto(userMapper.toResponse(savedUser), token, null);
+    }
+
+    public void logout(String token) {
+        if (token == null)
+            return;
+        Date expirationDate = jwtTokenProvider.getExpirationDate(token);
+        long ttl = expirationDate.getTime() - new Date().getTime();
+        if (ttl > 0) {
+            redisTemplate.opsForValue().set("kindergarten:blacklist:" + token, "blacklisted", ttl,
+                    TimeUnit.MILLISECONDS);
+        }
     }
 }

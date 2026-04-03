@@ -1,0 +1,36 @@
+# ==========================================
+# PRODUCTION CONFIGURATION
+# ==========================================
+# This file overrides settings in application.yml when active profile is 'prod'
+
+spring:
+  jpa:
+    show-sql: false # Disable SQL logging for performance
+    hibernate:
+      ddl-auto: validate # Never let Hibernate modify schema in Prod. Use Flyway/Liquibase instead.
+    properties:
+      hibernate:
+        format_sql: false
+
+  # Mail config is inherited from application.yml (uses env vars)
+
+  # Servlet config (multipart) is inherited
+
+# MinIO config is inherited from application.yml (uses env vars)
+
+# JWT config is inherited
+
+rollbar:
+  enabled: true
+  environment: production
+
+app:
+  cookie:
+    secure: true # Must be true for HTTPS
+    same-site: None # Allow cross-site cookies if Frontend is on different domain
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

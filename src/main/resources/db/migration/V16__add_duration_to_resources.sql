@@ -1,0 +1,2 @@
+ALTER TABLE resources
+ADD COLUMN duration VARCHAR(20) DEFAULT NULL;

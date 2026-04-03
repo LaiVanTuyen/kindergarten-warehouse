@@ -17,30 +17,42 @@ import java.util.Set;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
-    private final MessageSource messageSource;
+        private final UserRepository userRepository;
+        private final MessageSource messageSource;
 
-    public CustomUserDetailsService(UserRepository userRepository, MessageSource messageSource) {
-        this.userRepository = userRepository;
-        this.messageSource = messageSource;
-    }
+        public CustomUserDetailsService(UserRepository userRepository, MessageSource messageSource) {
+                this.userRepository = userRepository;
+                this.messageSource = messageSource;
+        }
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException(messageSource
-                        .getMessage("error.user.not_found.username", new Object[] { username },
-                                LocaleContextHolder.getLocale())));
+        @Override
+        @org.springframework.cache.annotation.Cacheable(value = "users", key = "#usernameOrEmail")
+        public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+                // Try finding by email first
+                User user = userRepository.findByEmail(usernameOrEmail)
+                                .orElse(null);
 
-        Set<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(user.getRole().name()));
+                // If not found by email, try finding by username
+                if (user == null) {
+                        user = userRepository.findByUsernameAndIsDeletedFalse(usernameOrEmail)
+                                        .orElseThrow(() -> new UsernameNotFoundException(messageSource
+                                                        .getMessage("error.user.not_found.username",
+                                                                        new Object[] { usernameOrEmail },
+                                                                        LocaleContextHolder.getLocale())));
+                }
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                user.getIsActive(), // Enabled
-                true, // Account Non Expired
-                true, // Credentials Non Expired
-                true, // Account Non Locked
-                authorities);
-    }
+                Set<String> roles = user.getRoles().stream()
+                                .map(Enum::name)
+                                .collect(java.util.stream.Collectors.toSet());
+
+                return CustomUserDetails.builder()
+                                .id(user.getId())
+                                .username(user.getUsername())
+                                .password(user.getPassword())
+                                .email(user.getEmail())
+                                .fullName(user.getFullName())
+                                .enabled(user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                .roles(roles)
+                                .build();
+        }
 }

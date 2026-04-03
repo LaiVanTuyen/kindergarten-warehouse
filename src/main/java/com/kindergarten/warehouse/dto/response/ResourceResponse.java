@@ -1,0 +1,39 @@
+package com.kindergarten.warehouse.dto.response;
+
+import com.kindergarten.warehouse.entity.ResourceStatus;
+import com.kindergarten.warehouse.entity.ResourceType;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+
+import java.util.List;
+
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class ResourceResponse extends BaseResponse {
+    private String id;
+    private String title;
+    private String slug;
+    private String description;
+    private Long viewsCount;
+    private String fileUrl;
+    private String thumbnailUrl;
+    private ResourceType resourceType;
+    private String fileType;
+    private String fileExtension;
+    private Long fileSize;
+    private String duration; // Added duration field
+    private ResourceStatus status;
+    private Long downloadCount;
+    private Double averageRating;
+    private TopicResponse topic;
+    private List<AgeGroupResponse> ageGroups;
+    private com.kindergarten.warehouse.entity.Visibility visibility;
+    private String rejectionReason;
+    private Boolean isFavorited;
+}

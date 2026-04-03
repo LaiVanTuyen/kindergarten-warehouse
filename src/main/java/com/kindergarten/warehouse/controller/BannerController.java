@@ -1,7 +1,16 @@
 package com.kindergarten.warehouse.controller;
 
-import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.dto.request.BannerRequest;
+import com.kindergarten.warehouse.dto.response.ApiResponse;
+import com.kindergarten.warehouse.dto.response.BannerResponse;
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.service.BannerService;
+import com.kindergarten.warehouse.service.MessageService;
+import com.kindergarten.warehouse.util.PageableUtils;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,45 +22,79 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/banners")
+@RequiredArgsConstructor
 public class BannerController {
 
-    private final BannerService bannerService;
+        private final BannerService bannerService;
+        private final MessageService messageService;
 
-    public BannerController(BannerService bannerService) {
-        this.bannerService = bannerService;
-    }
+        @GetMapping
+        public ResponseEntity<ApiResponse<List<BannerResponse>>> getActiveBanners(
+                        @RequestParam(value = "platform", required = false) String platform) {
+                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(platform),
+                                messageService.getMessage("banner.list.success")));
+        }
 
-    @GetMapping
-    public ResponseEntity<List<Banner>> getActiveBanners() {
-        return ResponseEntity.ok(bannerService.getActiveBanners());
-    }
+        @GetMapping("/all")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<Page<BannerResponse>>> getAllBanners(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
+                        @RequestParam(defaultValue = "displayOrder") String sortBy,
+                        @RequestParam(defaultValue = "asc") String sortDir) {
 
-    @GetMapping("/all")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<Banner>> getAllBanners() {
-        return ResponseEntity.ok(bannerService.getAllBanners());
-    }
+                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Banner> createBanner(
-            @RequestParam("image") MultipartFile image,
-            @RequestParam(value = "link", required = false) String link,
-            @RequestParam(value = "order", defaultValue = "0") Integer order) {
+                return ResponseEntity.ok(
+                                ApiResponse.success(bannerService.getAllBanners(pageable),
+                                                messageService.getMessage("banner.list.success")));
+        }
 
-        return new ResponseEntity<>(bannerService.createBanner(image, link, order), HttpStatus.CREATED);
-    }
+        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<BannerResponse>> createBanner(
+                        @RequestPart("image") MultipartFile image,
+                        @ModelAttribute @Valid BannerRequest request) {
 
-    @PutMapping("/{id}/toggle")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Banner> toggleBanner(@PathVariable Long id) {
-        return ResponseEntity.ok(bannerService.toggleBanner(id));
-    }
+                return new ResponseEntity<>(
+                                ApiResponse.success(
+                                                bannerService.createBanner(request, image),
+                                                messageService.getMessage("banner.create.success")),
+                                HttpStatus.CREATED);
+        }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Void> deleteBanner(@PathVariable Long id) {
-        bannerService.deleteBanner(id);
-        return ResponseEntity.noContent().build();
-    }
+        @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<BannerResponse>> updateBanner(
+                        @PathVariable Long id,
+                        @RequestPart(value = "image", required = false) MultipartFile image,
+                        @ModelAttribute @Valid BannerRequest request) {
+                UpdateResult<BannerResponse> updateResult = bannerService.updateBanner(id, request, image);
+                return ResponseEntity.ok(
+                                ApiResponse.success(
+                                                updateResult.getResult(),
+                                                messageService.getMessage(updateResult.getMessageKey())));
+        }
+
+        @PatchMapping("/reorder")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<Void>> reorderBanners(@RequestBody List<Long> orderedIds) {
+                bannerService.reorderBanners(orderedIds);
+                return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("banner.update.success")));
+        }
+
+        @PutMapping("/{id}/toggle")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<BannerResponse>> toggleBanner(@PathVariable Long id) {
+                UpdateResult<BannerResponse> updateResult = bannerService.toggleBanner(id);
+                return ResponseEntity.ok(ApiResponse.success(updateResult.getResult(),
+                                messageService.getMessage(updateResult.getMessageKey())));
+        }
+
+        @DeleteMapping("/{id}")
+        @PreAuthorize("hasAuthority('ADMIN')")
+        public ResponseEntity<ApiResponse<Void>> deleteBanner(@PathVariable Long id) {
+                bannerService.deleteBanner(id);
+                return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("banner.delete.success")));
+        }
 }

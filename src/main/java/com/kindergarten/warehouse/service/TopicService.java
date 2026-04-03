@@ -1,14 +1,20 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.entity.Topic;
+import com.kindergarten.warehouse.dto.request.TopicRequest;
+import com.kindergarten.warehouse.dto.response.TopicResponse;
 import java.util.List;
 
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+
 public interface TopicService {
-    List<Topic> getAllTopics();
+        org.springframework.data.domain.Page<TopicResponse> getAllTopics(Long categoryId, boolean deleted,
+                        String keyword, org.springframework.data.domain.Pageable pageable);
 
-    Topic createTopic(Topic topic, Long categoryId);
+        TopicResponse createTopic(TopicRequest topicRequest, Long categoryId);
 
-    Topic updateTopic(Long id, Topic topicDetails);
+        UpdateResult<TopicResponse> updateTopic(Long id, TopicRequest topicRequest);
 
-    void deleteTopic(Long id);
+        void deleteTopic(Long id, boolean hard);
+
+        TopicResponse restoreTopic(Long id);
 }

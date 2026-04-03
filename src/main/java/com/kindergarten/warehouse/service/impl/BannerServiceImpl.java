@@ -1,77 +1,158 @@
 package com.kindergarten.warehouse.service.impl;
 
+import com.kindergarten.warehouse.aspect.LogAction;
+import com.kindergarten.warehouse.dto.request.BannerRequest;
+import com.kindergarten.warehouse.dto.response.BannerResponse;
+import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
+import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.mapper.BannerMapper;
 import com.kindergarten.warehouse.repository.BannerRepository;
 import com.kindergarten.warehouse.service.BannerService;
-import com.kindergarten.warehouse.service.FirebaseService;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
+import com.kindergarten.warehouse.service.MinioStorageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
-    private final FirebaseService firebaseService;
-    private final MessageSource messageSource;
+    private final MinioStorageService minioStorageService;
+    private final BannerMapper bannerMapper;
 
-    public BannerServiceImpl(BannerRepository bannerRepository, FirebaseService firebaseService,
-            MessageSource messageSource) {
-        this.bannerRepository = bannerRepository;
-        this.firebaseService = firebaseService;
-        this.messageSource = messageSource;
+    @Override
+    @Transactional(readOnly = true)
+    public List<BannerResponse> getActiveBanners(String platform) {
+        return bannerRepository.findActiveBanners(platform, LocalDateTime.now()).stream()
+                .map(bannerMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Banner> getActiveBanners() {
-        return bannerRepository.findByIsActiveTrueOrderByOrderAsc();
+    @Transactional(readOnly = true)
+    public Page<BannerResponse> getAllBanners(Pageable pageable) {
+        return bannerRepository.findAllByIsDeletedFalse(pageable)
+                .map(bannerMapper::toResponse);
     }
 
     @Override
-    public List<Banner> getAllBanners() {
-        return bannerRepository.findAll();
+    @LogAction(action = AuditAction.CREATE, description = "Created banner", target = "BANNER")
+    public BannerResponse createBanner(BannerRequest request, MultipartFile image) {
+        // Validate date range
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getStartDate().isAfter(request.getEndDate())) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        String imageUrl = minioStorageService.uploadFile(image, "banners");
+
+        Banner banner = new Banner();
+        banner.setTitle(request.getTitle());
+        banner.setSubtitle(request.getSubtitle());
+        banner.setImageUrl(imageUrl);
+        banner.setBgFrom(request.getBgFrom());
+        banner.setBgTo(request.getBgTo());
+        banner.setPlatform(request.getPlatform());
+        banner.setLink(request.getLink());
+        banner.setStartDate(request.getStartDate());
+        banner.setEndDate(request.getEndDate());
+        banner.setDisplayOrder(request.getDisplayOrder());
+        banner.setIsActive(true);
+        banner.setIsDeleted(false);
+
+        return bannerMapper.toResponse(bannerRepository.save(banner));
     }
 
     @Override
-    public Banner createBanner(MultipartFile image, String link, Integer order) {
-        try {
-            String imageUrl = firebaseService.uploadFile(image);
+    @LogAction(action = AuditAction.UPDATE, description = "Updated banner", target = "BANNER")
+    public UpdateResult<BannerResponse> updateBanner(Long id, BannerRequest request, MultipartFile image) {
+        Banner banner = bannerRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
-            Banner banner = new Banner();
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getStartDate().isAfter(request.getEndDate())) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        if (image != null && !image.isEmpty()) {
+            if (banner.getImageUrl() != null && !banner.getImageUrl().isEmpty()) {
+                try {
+                    minioStorageService.deleteFile(banner.getImageUrl());
+                } catch (Exception e) {
+                    // Log warning
+                }
+            }
+            String imageUrl = minioStorageService.uploadFile(image, "banners");
             banner.setImageUrl(imageUrl);
-            banner.setLink(link);
-            banner.setOrder(order);
-            banner.setIsActive(true);
+        }
 
-            return bannerRepository.save(banner);
-        } catch (IOException e) {
-            throw new RuntimeException(
-                    messageSource.getMessage("error.firebase.init", null, LocaleContextHolder.getLocale()), e);
+        banner.setTitle(request.getTitle());
+        banner.setSubtitle(request.getSubtitle());
+        banner.setBgFrom(request.getBgFrom());
+        banner.setBgTo(request.getBgTo());
+        banner.setPlatform(request.getPlatform());
+        banner.setLink(request.getLink());
+        banner.setStartDate(request.getStartDate());
+        banner.setEndDate(request.getEndDate());
+        if (request.getDisplayOrder() != null) {
+            banner.setDisplayOrder(request.getDisplayOrder());
+        }
+
+        return new UpdateResult<>(
+                bannerMapper.toResponse(bannerRepository.save(banner)),
+                "banner.update.success");
+    }
+
+    @Override
+    @LogAction(action = AuditAction.UPDATE, description = "Reordered banners", target = "BANNER_REORDER")
+    public void reorderBanners(List<Long> orderedIds) {
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Long id = orderedIds.get(i);
+            Banner banner = bannerRepository.findById(id).orElse(null);
+            if (banner != null) {
+                banner.setDisplayOrder(i + 1);
+                bannerRepository.save(banner);
+            }
         }
     }
 
     @Override
-    public Banner toggleBanner(Long id) {
+    @LogAction(action = AuditAction.UPDATE, description = "Toggled banner status", target = "BANNER_TOGGLE")
+    public UpdateResult<BannerResponse> toggleBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.banner.not_found", null, LocaleContextHolder.getLocale())));
-        banner.setIsActive(!banner.getIsActive());
-        return bannerRepository.save(banner);
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
+
+        boolean newStatus = !banner.getIsActive();
+        banner.setIsActive(newStatus);
+
+        String messageKey = newStatus ? "banner.activated" : "banner.deactivated";
+
+        return new UpdateResult<>(
+                bannerMapper.toResponse(bannerRepository.save(banner)),
+                messageKey);
     }
 
     @Override
+    @LogAction(action = AuditAction.DELETE, description = "Deleted banner", target = "BANNER")
     public void deleteBanner(Long id) {
         Banner banner = bannerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        messageSource.getMessage("error.banner.not_found", null, LocaleContextHolder.getLocale())));
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
-        // Optionally delete image from Firebase
-        firebaseService.deleteFile(banner.getImageUrl());
-
-        bannerRepository.deleteById(id);
+        // Soft delete: keep image, just mark as deleted
+        banner.setIsDeleted(true);
+        banner.setIsActive(false); // Also deactivate it
+        bannerRepository.save(banner);
     }
 }
