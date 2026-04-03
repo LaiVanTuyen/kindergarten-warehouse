@@ -40,12 +40,12 @@ services:
     command: server /data --console-address ":9001"
     restart: always
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-# MINIO_BROWSER_REDIRECT_URL: https://${DOMAIN_NAME}/minio/
+      MINIO_BROWSER_REDIRECT_URL: https://${DOMAIN_NAME}/minio/
     volumes:
       - minio_data:/data
     networks:
@@ -57,7 +57,9 @@ services:
       retries: 3
 
   app:
-    build: .
+    # --- THAY ĐỔI TÊN IMAGE DƯỚI ĐÂY ---
+    # VD: ghcr.io/nguyenvana/kindergarten-warehouse:latest
+    image: ghcr.io/YOUR_GITHUB_USERNAME/kindergarten-warehouse:latest
     container_name: warehouse_app
     restart: always
     ports:
@@ -65,7 +67,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
-      # Pass env vars directly to match application-prod.yml
       MYSQL_HOST: mysql
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -79,16 +80,14 @@ services:
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOWED_ORIGINS: "https://${DOMAIN_NAME},https://admin.${DOMAIN_NAME}"
       DOMAIN_NAME: ${DOMAIN_NAME}
-      # Mail
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      # Rollbar
       ROLLBAR_ACCESS_TOKEN: ${ROLLBAR_ACCESS_TOKEN:-}
-      ROLLBAR_ENABLED: ${ROLLBAR_ENABLED:-false}
+      ROLLBAR_ENABLED: ${ROLLBAR_ENABLED:-true}
       ROLLBAR_ENV: ${ROLLBAR_ENV:-production}
     depends_on:
       mysql:

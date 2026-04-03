@@ -1,3 +1,0 @@
-@echo off
-echo Starting Kindergarten Warehouse (DEV Profile)...
-mvn spring-boot:run -Dspring-boot.run.profiles=dev

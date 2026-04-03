@@ -116,6 +116,11 @@
             <artifactId>rollbar-spring-boot3-webmvc</artifactId>
             <version>1.10.0</version>
         </dependency>
+        <!-- Spring Boot Actuator for Health Checks -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
 	</dependencies>
 
 	<build>

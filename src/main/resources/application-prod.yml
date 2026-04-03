@@ -28,3 +28,9 @@ app:
   cookie:
     secure: true # Must be true for HTTPS
     same-site: None # Allow cross-site cookies if Frontend is on different domain
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
