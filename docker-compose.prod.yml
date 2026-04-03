@@ -59,7 +59,7 @@ services:
   app:
     # --- THAY ĐỔI TÊN IMAGE DƯỚI ĐÂY ---
     # VD: ghcr.io/nguyenvana/kindergarten-warehouse:latest
-    image: ghcr.io/YOUR_GITHUB_USERNAME/kindergarten-warehouse:latest
+    image: ghcr.io/laivantuyen/kindergarten-warehouse:latest
     container_name: warehouse_app
     restart: always
     ports:
