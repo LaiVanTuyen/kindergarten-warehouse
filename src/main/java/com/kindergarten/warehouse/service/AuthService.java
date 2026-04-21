@@ -209,6 +209,13 @@ public class AuthService {
         }
         User user = opt.get();
 
+        // Chỉ ACTIVE user được reset. BLOCKED / INACTIVE / PENDING phải liên hệ admin
+        // hoặc verify email trước — không cho phép reset vì nguy cơ attacker chiếm
+        // email người dùng BLOCKED rồi ngồi chờ admin unblock.
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            return;
+        }
+
         String otp = otpService.generateOtp(Purpose.PASSWORD_RESET, user.getEmail());
         runAfterCommit(() -> emailService.sendOtpForPasswordReset(user.getEmail(), otp));
     }

@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -103,6 +104,16 @@ public class User extends BaseEntity {
     @Column(name = "token_version", nullable = false)
     @Builder.Default
     private Long tokenVersion = 0L;
+
+    /**
+     * JPA optimistic locking: Hibernate tự tăng mỗi lần update và ném
+     * {@link jakarta.persistence.OptimisticLockException} nếu 2 transaction
+     * cùng sửa 1 row.
+     */
+    @Version
+    @Column(nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;

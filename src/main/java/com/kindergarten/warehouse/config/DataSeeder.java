@@ -70,7 +70,16 @@ public class DataSeeder implements CommandLineRunner {
                 assertAdminPasswordSafeForEnv();
 
                 // 1. Admin
-                if (!userRepository.existsByUsername(adminUsername)) {
+                // Ưu tiên tìm theo username trước (kể cả bị soft-delete) để tránh tạo trùng.
+                // Username hiện tại có thể có suffix "_deleted_xxx" nếu bị xóa mềm.
+                java.util.Optional<com.kindergarten.warehouse.entity.User> existing =
+                                userRepository.findByUsername(adminUsername);
+                if (existing.isEmpty()) {
+                        // Thử lại theo email — admin có thể đã bị xóa mềm, username có suffix
+                        existing = userRepository.findByEmail(adminEmail);
+                }
+
+                if (existing.isEmpty()) {
                         com.kindergarten.warehouse.entity.User admin = com.kindergarten.warehouse.entity.User.builder()
                                         .username(adminUsername)
                                         .email(adminEmail)
@@ -84,8 +93,39 @@ public class DataSeeder implements CommandLineRunner {
                                         .build();
                         userRepository.save(admin);
                         log.info("[DataSeeder] Seeded user: {}", adminUsername);
+                } else if (Boolean.TRUE.equals(existing.get().getIsDeleted())
+                                || existing.get().getStatus() != com.kindergarten.warehouse.entity.UserStatus.ACTIVE) {
+                        // Admin tồn tại nhưng không usable → khôi phục về trạng thái hoạt động.
+                        // Tránh tình huống app không có admin nào active (deadlock quản trị).
+                        com.kindergarten.warehouse.entity.User admin = existing.get();
+                        if (admin.getOriginalUsername() != null) {
+                                admin.setUsername(admin.getOriginalUsername());
+                                admin.setOriginalUsername(null);
+                        }
+                        if (admin.getOriginalEmail() != null) {
+                                admin.setEmail(admin.getOriginalEmail());
+                                admin.setOriginalEmail(null);
+                        }
+                        admin.setIsDeleted(false);
+                        admin.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
+                        admin.setBlockedReason(null);
+                        admin.setBlockedAt(null);
+                        admin.setEmailVerified(true);
+                        // Đảm bảo có role ADMIN
+                        if (admin.getRoles() == null
+                                        || !admin.getRoles().contains(com.kindergarten.warehouse.entity.Role.ADMIN)) {
+                                java.util.Set<com.kindergarten.warehouse.entity.Role> roles =
+                                                admin.getRoles() != null
+                                                                ? new java.util.HashSet<>(admin.getRoles())
+                                                                : new java.util.HashSet<>();
+                                roles.add(com.kindergarten.warehouse.entity.Role.ADMIN);
+                                admin.setRoles(roles);
+                        }
+                        userRepository.save(admin);
+                        log.warn("[DataSeeder] Restored admin account '{}' to ACTIVE (was deleted/blocked).",
+                                        admin.getUsername());
                 } else {
-                        log.info("[DataSeeder] User '{}' already exists.", adminUsername);
+                        log.info("[DataSeeder] Admin '{}' already active.", existing.get().getUsername());
                 }
 
                 // 2. Teacher demo — chỉ seed ở môi trường dev/local

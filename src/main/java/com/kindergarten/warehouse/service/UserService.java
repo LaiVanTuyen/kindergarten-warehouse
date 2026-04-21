@@ -223,12 +223,15 @@ public class UserService {
 
         if (request.getRoles() != null && !request.getRoles().isEmpty()) {
             Set<Role> newRoles = parseRolesOrDefault(request.getRoles());
-            // Nếu đang hạ admin cuối cùng thì chặn
-            if (user.hasRole(Role.ADMIN) && !newRoles.contains(Role.ADMIN)) {
-                guardNotLastActiveAdmin(user);
+            // Chỉ xử lý nếu roles thực sự khác — tránh kick user ra khi admin submit
+            // lại cùng role cũ (e.g. dùng form update với toàn bộ field).
+            if (!newRoles.equals(user.getRoles())) {
+                if (user.hasRole(Role.ADMIN) && !newRoles.contains(Role.ADMIN)) {
+                    guardNotLastActiveAdmin(user);
+                }
+                user.setRoles(newRoles);
+                user.incrementTokenVersion(); // role thay đổi → JWT cũ phải được reload
             }
-            user.setRoles(newRoles);
-            user.incrementTokenVersion(); // role thay đổi → JWT cũ phải được reload
         }
 
         User saved = userRepository.save(user);
@@ -448,10 +451,16 @@ public class UserService {
         }
     }
 
+    /**
+     * Nếu target là admin, verify còn ít nhất 1 admin active KHÁC ngoài target.
+     * Dùng {@code countActiveUsersByRoleExcluding} để tránh race khi admin tự block/xóa mình
+     * — câu đếm không tính luôn user đang bị modify, cho kết quả chính xác hơn
+     * {@code count - 1} (vốn có lỗi signed arithmetic nếu count=0).
+     */
     private void guardNotLastActiveAdmin(User target) {
         if (!target.hasRole(Role.ADMIN)) return;
-        long activeAdmins = userRepository.countActiveUsersByRole(Role.ADMIN);
-        if (activeAdmins <= 1) {
+        long otherActiveAdmins = userRepository.countActiveUsersByRoleExcluding(Role.ADMIN, target.getId());
+        if (otherActiveAdmins < 1) {
             throw new AppException(ErrorCode.LAST_ADMIN_PROTECTED);
         }
     }

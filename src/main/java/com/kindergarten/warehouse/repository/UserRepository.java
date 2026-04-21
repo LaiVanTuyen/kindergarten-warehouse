@@ -52,6 +52,21 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
             """)
     long countActiveUsersByRole(@Param("role") Role role);
 
+    /**
+     * Đếm các user ACTIVE khác (ngoại trừ {@code excludeId}) có role tương ứng.
+     * Dùng để check "còn admin nào khác ngoài tôi/người đang bị modify không".
+     * Đây là cách đúng cho last-admin guard: {@code count==0} nghĩa là target là admin cuối cùng.
+     */
+    @Query("""
+            SELECT COUNT(DISTINCT u)
+            FROM User u JOIN u.roles r
+            WHERE r = :role
+              AND u.id <> :excludeId
+              AND u.isDeleted = false
+              AND u.status = com.kindergarten.warehouse.entity.UserStatus.ACTIVE
+            """)
+    long countActiveUsersByRoleExcluding(@Param("role") Role role, @Param("excludeId") Long excludeId);
+
     @Modifying
     @Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id IN :ids")
     void batchUpdateLastActive(@Param("ids") List<Long> ids, @Param("lastActive") LocalDateTime lastActive);

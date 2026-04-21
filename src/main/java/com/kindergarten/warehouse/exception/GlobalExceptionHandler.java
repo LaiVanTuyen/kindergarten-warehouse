@@ -138,6 +138,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Hibernate/JPA báo 2 transaction đồng thời sửa cùng 1 row (nhờ @Version trên User).
+     * Trả 409 để FE retry — thường là admin race.
+     */
+    @ExceptionHandler({
+            org.springframework.dao.OptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(Exception ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.DUPLICATE_ENTRY; // dùng tạm; FE nhận 409 + retry
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(),
+                        messageService.getMessage("error.concurrent.modification")),
+                HttpStatus.CONFLICT);
+    }
+
+    /**
      * Handle database constraint violations (duplicate keys, etc.)
      */
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
