@@ -1,6 +1,7 @@
 package com.kindergarten.warehouse.security;
 
 import com.kindergarten.warehouse.service.TokenRevocationService;
+import com.kindergarten.warehouse.service.TokenRevocationService.State;
 import com.kindergarten.warehouse.util.AppConstants;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,7 +9,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,7 +27,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final TokenRevocationService tokenRevocationService;
 
     @Override
@@ -38,15 +37,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-
-            if (Boolean.TRUE.equals(redisTemplate.hasKey(AppConstants.REDIS_JWT_BLACKLIST + token))) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
-
             Long userId = jwtTokenProvider.getUserId(token);
             Long tokenVersion = jwtTokenProvider.getTokenVersion(token);
-            if (userId != null && !tokenRevocationService.isTokenStillValid(userId, tokenVersion)) {
+
+            // 1 Redis roundtrip (pipelined): EXISTS blacklist + GET tokenVersion
+            State state = tokenRevocationService.checkTokenState(token, userId, tokenVersion);
+            if (state != State.VALID) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
