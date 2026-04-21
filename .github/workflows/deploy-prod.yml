@@ -1,0 +1,42 @@
+name: Deploy to Production
+
+# ======================================================================
+# TEMPLATE — bật sau khi đã cấu hình GitHub Secrets theo bảng bên dưới.
+#
+# GitHub repo → Settings → Secrets and variables → Actions → New secret:
+#   SSH_HOST            IP/domain của VPS
+#   SSH_PORT            port SSH (thường 22)
+#   SSH_USER            user để SSH (vd: deploy)
+#   SSH_PRIVATE_KEY     private key (nội dung file ~/.ssh/id_ed25519)
+#   DEPLOY_PATH         path repo trên server (vd: /srv/kindergarten-warehouse)
+#
+# Các biến secret của app (JWT, mật khẩu, v.v.) KHÔNG nên quản lý ở đây.
+# Chúng sống ở /srv/kindergarten-warehouse/.env.prod trên server
+# (chmod 600, owner deploy). Workflow này chỉ git pull + restart container.
+# ======================================================================
+
+on:
+  workflow_dispatch:        # Deploy thủ công qua UI
+  push:
+    branches: [ "main" ]    # Hoặc branch bạn muốn auto-deploy
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            ./scripts/deploy.sh
