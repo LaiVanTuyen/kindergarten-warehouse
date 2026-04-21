@@ -18,11 +18,21 @@ public enum ErrorCode {
     UNAUTHORIZED(1009, "error.unauthorized", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(1012, "error.forbidden", HttpStatus.FORBIDDEN),
     INVALID_PASSWORD(1013, "auth.password.invalid", HttpStatus.BAD_REQUEST),
+    INVALID_OTP(1014, "auth.otp.invalid", HttpStatus.BAD_REQUEST),
+    OTP_ATTEMPT_EXCEEDED(1015, "auth.otp.attempt_exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    LOGIN_ATTEMPT_EXCEEDED(1016, "auth.login.attempt_exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    EMAIL_NOT_VERIFIED(1017, "auth.email.not_verified", HttpStatus.FORBIDDEN),
+    ACCOUNT_BLOCKED(1018, "auth.account.blocked", HttpStatus.FORBIDDEN),
+    ACCOUNT_DELETED(1019, "auth.account.deleted", HttpStatus.FORBIDDEN),
+    ACCOUNT_PENDING(1020, "auth.account.pending", HttpStatus.FORBIDDEN),
 
     // ========== User Errors (20xx) ==========
     USER_EXISTED(2001, "auth.username.taken", HttpStatus.CONFLICT),
     USER_NOT_FOUND(2003, "error.user.not_found", HttpStatus.NOT_FOUND),
     EMAIL_EXISTED(2004, "auth.email.taken", HttpStatus.CONFLICT),
+    CANNOT_MODIFY_SELF(2005, "error.user.cannot_modify_self", HttpStatus.BAD_REQUEST),
+    LAST_ADMIN_PROTECTED(2006, "error.user.last_admin", HttpStatus.BAD_REQUEST),
+    INVALID_ROLE(2007, "error.user.invalid_role", HttpStatus.BAD_REQUEST),
 
     // ========== Category Errors (30xx) ==========
     CATEGORY_NOT_FOUND(3001, "error.category.not_found", HttpStatus.NOT_FOUND),
@@ -41,6 +51,7 @@ public enum ErrorCode {
     INVALID_YOUTUBE_LINK(6005, "error.resource.youtube.invalid", HttpStatus.BAD_REQUEST),
     INVALID_IMAGE_FORMAT(6006, "error.resource.thumbnail.format.invalid", HttpStatus.BAD_REQUEST),
     THUMBNAIL_TOO_LARGE(6007, "error.resource.thumbnail.too.large", HttpStatus.BAD_REQUEST),
+    AVATAR_TOO_LARGE(6008, "error.user.avatar.too_large", HttpStatus.BAD_REQUEST),
 
     // ========== Age Group Errors (65xx) ==========
     AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),

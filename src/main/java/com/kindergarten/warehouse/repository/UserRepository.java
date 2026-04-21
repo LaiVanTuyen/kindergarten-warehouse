@@ -1,40 +1,58 @@
 package com.kindergarten.warehouse.repository;
 
+import com.kindergarten.warehouse.entity.Role;
 import com.kindergarten.warehouse.entity.User;
+import com.kindergarten.warehouse.entity.UserStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository
-                extends JpaRepository<User, Long>,
-                org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
-        Optional<User> findByUsername(String username);
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
-        Optional<User> findByUsernameAndIsDeletedFalse(String username);
+    Optional<User> findByUsername(String username);
 
-        Boolean existsByUsername(String username);
+    Optional<User> findByEmail(String email);
 
-        Boolean existsByEmail(String email);
+    Optional<User> findByUsernameAndIsDeletedFalse(String username);
 
-        org.springframework.data.domain.Page<User> findByIsDeletedFalse(
-                        org.springframework.data.domain.Pageable pageable);
+    Optional<User> findByEmailAndIsDeletedFalse(String email);
 
-        org.springframework.data.domain.Page<User> findByIsDeletedTrue(
-                        org.springframework.data.domain.Pageable pageable);
+    @Query("SELECT u FROM User u WHERE u.isDeleted = false AND (u.username = :identifier OR u.email = :identifier)")
+    Optional<User> findActiveByUsernameOrEmail(@Param("identifier") String identifier);
 
-        org.springframework.data.domain.Page<User> findByIsDeletedFalseAndStatus(
-                        com.kindergarten.warehouse.entity.UserStatus status,
-                        org.springframework.data.domain.Pageable pageable);
+    boolean existsByUsername(String username);
 
-        Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
 
-        @org.springframework.data.jpa.repository.Modifying
-        @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id = :id")
-        void updateLastActive(Long id, java.time.LocalDateTime lastActive);
+    Page<User> findByIsDeletedFalse(Pageable pageable);
 
-        @org.springframework.data.jpa.repository.Modifying
-        @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id IN :ids")
-        void batchUpdateLastActive(java.util.List<Long> ids, java.time.LocalDateTime lastActive);
+    Page<User> findByIsDeletedTrue(Pageable pageable);
+
+    Page<User> findByIsDeletedFalseAndStatus(UserStatus status, Pageable pageable);
+
+    /**
+     * Đếm số admin đang active (không bị xóa, không bị khóa) — dùng cho last-admin guard.
+     */
+    @Query("""
+            SELECT COUNT(DISTINCT u)
+            FROM User u JOIN u.roles r
+            WHERE r = :role
+              AND u.isDeleted = false
+              AND u.status = com.kindergarten.warehouse.entity.UserStatus.ACTIVE
+            """)
+    long countActiveUsersByRole(@Param("role") Role role);
+
+    @Modifying
+    @Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id IN :ids")
+    void batchUpdateLastActive(@Param("ids") List<Long> ids, @Param("lastActive") LocalDateTime lastActive);
 }

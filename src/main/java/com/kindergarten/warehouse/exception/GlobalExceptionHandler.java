@@ -101,9 +101,12 @@ public class GlobalExceptionHandler {
                 ? messageService.getMessage(errorCode.getMessage(), ex.getParams())
                 : messageService.getMessage(errorCode.getMessage());
 
-        return new ResponseEntity<>(
-                ApiResponse.error(errorCode.getCode(), message),
-                errorCode.getHttpStatusCode());
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(errorCode.getHttpStatusCode());
+        if (ex.getRetryAfterSeconds() > 0) {
+            builder.header(org.springframework.http.HttpHeaders.RETRY_AFTER,
+                    String.valueOf(ex.getRetryAfterSeconds()));
+        }
+        return builder.body(ApiResponse.error(errorCode.getCode(), message));
     }
 
     /**

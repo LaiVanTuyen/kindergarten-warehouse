@@ -11,6 +11,7 @@ import com.kindergarten.warehouse.service.MinioStorageService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,17 +25,20 @@ import java.util.List;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
+        private static final String DEFAULT_ADMIN_PASSWORD = "admin123";
+
         private final CategoryRepository categoryRepository;
         private final TopicRepository topicRepository;
         private final BannerRepository bannerRepository;
         private final UserRepository userRepository;
         private final MinioStorageService minioStorageService;
         private final PasswordEncoder passwordEncoder;
+        private final Environment environment;
 
         @org.springframework.beans.factory.annotation.Value("${app.admin.username:admin}")
         private String adminUsername;
 
-        @org.springframework.beans.factory.annotation.Value("${app.admin.password:admin123}")
+        @org.springframework.beans.factory.annotation.Value("${app.admin.password:" + DEFAULT_ADMIN_PASSWORD + "}")
         private String adminPassword;
 
         @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@kindergarten.com}")
@@ -43,13 +47,15 @@ public class DataSeeder implements CommandLineRunner {
         public DataSeeder(CategoryRepository categoryRepository, TopicRepository topicRepository,
                         BannerRepository bannerRepository, UserRepository userRepository,
                         MinioStorageService minioStorageService,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        Environment environment) {
                 this.categoryRepository = categoryRepository;
                 this.topicRepository = topicRepository;
                 this.bannerRepository = bannerRepository;
                 this.userRepository = userRepository;
                 this.minioStorageService = minioStorageService;
                 this.passwordEncoder = passwordEncoder;
+                this.environment = environment;
         }
 
         @Override
@@ -61,6 +67,7 @@ public class DataSeeder implements CommandLineRunner {
 
         private void seedUsers() {
                 log.info("[DataSeeder] Checking Users...");
+                assertAdminPasswordSafeForEnv();
 
                 // 1. Admin
                 if (!userRepository.existsByUsername(adminUsername)) {
@@ -70,6 +77,7 @@ public class DataSeeder implements CommandLineRunner {
                                         .password(passwordEncoder.encode(adminPassword))
                                         .fullName("Super Admin")
                                         .status(com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                        .emailVerified(true)
                                         .isDeleted(false)
                                         .roles(java.util.Set.of(com.kindergarten.warehouse.entity.Role.ADMIN,
                                                         com.kindergarten.warehouse.entity.Role.TEACHER))
@@ -80,9 +88,8 @@ public class DataSeeder implements CommandLineRunner {
                         log.info("[DataSeeder] User '{}' already exists.", adminUsername);
                 }
 
-                // 2. Teacher (Demo user, keeping hardcoded for dev/demo or make configurable
-                // too if needed)
-                if (!userRepository.existsByUsername("teacher_hoa")) {
+                // 2. Teacher demo — chỉ seed ở môi trường dev/local
+                if (isDevLikeEnv() && !userRepository.existsByUsername("teacher_hoa")) {
                         com.kindergarten.warehouse.entity.User teacher = com.kindergarten.warehouse.entity.User
                                         .builder()
                                         .username("teacher_hoa")
@@ -90,12 +97,39 @@ public class DataSeeder implements CommandLineRunner {
                                         .password(passwordEncoder.encode("teacher123"))
                                         .fullName("Cô Giáo Hoa")
                                         .status(com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                        .emailVerified(true)
                                         .isDeleted(false)
                                         .roles(java.util.Set.of(com.kindergarten.warehouse.entity.Role.TEACHER))
                                         .build();
                         userRepository.save(teacher);
                         log.info("[DataSeeder] Seeded user: teacher_hoa");
                 }
+        }
+
+        /**
+         * Không cho phép boot với mật khẩu admin mặc định ở môi trường prod.
+         * Thiếu cấu hình → crash sớm để tránh deploy ra prod với credentials yếu.
+         */
+        private void assertAdminPasswordSafeForEnv() {
+                if (DEFAULT_ADMIN_PASSWORD.equals(adminPassword) && !isDevLikeEnv()) {
+                        throw new IllegalStateException(
+                                "Default admin password detected in non-dev profile. "
+                                + "Please set app.admin.password (APP_ADMIN_PASSWORD env) to a strong value.");
+                }
+                if (DEFAULT_ADMIN_PASSWORD.equals(adminPassword)) {
+                        log.warn("[DataSeeder] Using default admin password — change it before deploying to production!");
+                }
+        }
+
+        private boolean isDevLikeEnv() {
+                String[] profiles = environment.getActiveProfiles();
+                if (profiles.length == 0) return true;
+                for (String p : profiles) {
+                        if ("dev".equalsIgnoreCase(p) || "local".equalsIgnoreCase(p) || "test".equalsIgnoreCase(p)) {
+                                return true;
+                        }
+                }
+                return false;
         }
 
         private void seedCategories() {

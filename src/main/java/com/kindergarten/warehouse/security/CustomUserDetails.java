@@ -4,20 +4,25 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CustomUserDetails implements UserDetails {
+public class CustomUserDetails implements UserDetails, Serializable {
 
     private Long id;
     private String username;
@@ -26,13 +31,15 @@ public class CustomUserDetails implements UserDetails {
     private String fullName;
     private Set<String> roles;
     private boolean enabled;
+    private boolean emailVerified;
+    private Long tokenVersion;
 
     @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
-                .collect(java.util.stream.Collectors.toSet());
+        return roles == null
+                ? java.util.Collections.emptySet()
+                : roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
     }
 
     @Override

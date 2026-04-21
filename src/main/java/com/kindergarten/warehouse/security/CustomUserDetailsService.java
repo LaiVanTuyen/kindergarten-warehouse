@@ -1,58 +1,56 @@
 package com.kindergarten.warehouse.security;
 
+import com.kindergarten.warehouse.entity.Role;
 import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-        private final UserRepository userRepository;
-        private final MessageSource messageSource;
+    private final UserRepository userRepository;
+    private final MessageSource messageSource;
 
-        public CustomUserDetailsService(UserRepository userRepository, MessageSource messageSource) {
-                this.userRepository = userRepository;
-                this.messageSource = messageSource;
-        }
+    /**
+     * Load user by username hoặc email. Chỉ trả về user chưa bị xóa mềm.
+     * Trạng thái user (ACTIVE/BLOCKED/PENDING/INACTIVE) được ánh xạ qua flag
+     * {@code enabled} để Spring Security xử lý, nhưng business code nên check
+     * status rõ ràng tại AuthService để trả ra error code cụ thể.
+     */
+    @Override
+    @Cacheable(value = "users", key = "#usernameOrEmail")
+    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+        User user = userRepository.findActiveByUsernameOrEmail(usernameOrEmail)
+                .orElseThrow(() -> new UsernameNotFoundException(messageSource.getMessage(
+                        "error.user.not_found.username",
+                        new Object[] { usernameOrEmail },
+                        LocaleContextHolder.getLocale())));
 
-        @Override
-        @org.springframework.cache.annotation.Cacheable(value = "users", key = "#usernameOrEmail")
-        public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
-                // Try finding by email first
-                User user = userRepository.findByEmail(usernameOrEmail)
-                                .orElse(null);
+        Set<String> roles = user.getRoles() == null
+                ? Set.of()
+                : user.getRoles().stream().map(Role::name).collect(Collectors.toSet());
 
-                // If not found by email, try finding by username
-                if (user == null) {
-                        user = userRepository.findByUsernameAndIsDeletedFalse(usernameOrEmail)
-                                        .orElseThrow(() -> new UsernameNotFoundException(messageSource
-                                                        .getMessage("error.user.not_found.username",
-                                                                        new Object[] { usernameOrEmail },
-                                                                        LocaleContextHolder.getLocale())));
-                }
-
-                Set<String> roles = user.getRoles().stream()
-                                .map(Enum::name)
-                                .collect(java.util.stream.Collectors.toSet());
-
-                return CustomUserDetails.builder()
-                                .id(user.getId())
-                                .username(user.getUsername())
-                                .password(user.getPassword())
-                                .email(user.getEmail())
-                                .fullName(user.getFullName())
-                                .enabled(user.getStatus() == com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
-                                .roles(roles)
-                                .build();
-        }
+        return CustomUserDetails.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .enabled(user.isLoginAllowed())
+                .emailVerified(Boolean.TRUE.equals(user.getEmailVerified()))
+                .tokenVersion(user.getTokenVersion() == null ? 0L : user.getTokenVersion())
+                .roles(roles)
+                .build();
+    }
 }

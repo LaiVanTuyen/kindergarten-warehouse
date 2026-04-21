@@ -72,14 +72,12 @@ public class SecurityConfig {
 
                     csrf.csrfTokenRepository(csrfTokenRepository)
                             .csrfTokenRequestHandler(requestHandler)
-                            .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register",
-                                    "/api/v1/auth/logout", "/error");
+                            .ignoringRequestMatchers("/api/v1/auth/**", "/error");
                 })
                 .authorizeHttpRequests(auth -> auth
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/logout", "/error")
-                        .permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/topics/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/age-groups/**").permitAll()
@@ -87,6 +85,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/resources/*/view").permitAll()
                         // Authenticated User Endpoints (Profile)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/users/profile").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/users/change-password").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/avatar").authenticated()
