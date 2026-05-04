@@ -109,9 +109,8 @@ public class BannerServiceImpl implements BannerService {
         banner.setLink(request.getLink());
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
-        if (request.getDisplayOrder() != null) {
-            banner.setDisplayOrder(request.getDisplayOrder());
-        }
+        // NOTE: displayOrder is intentionally NOT updated here.
+        // Display order must only be changed via the PATCH /banners/reorder endpoint.
 
         return new UpdateResult<>(
                 bannerMapper.toResponse(bannerRepository.save(banner)),
