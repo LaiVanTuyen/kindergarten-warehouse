@@ -42,8 +42,8 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BannerResponse> getAllBanners(Pageable pageable) {
-        return bannerRepository.findAllByIsDeletedFalse(pageable)
+    public Page<BannerResponse> getAllBanners(String platform, Pageable pageable) {
+        return bannerRepository.findAllByIsDeletedFalseAndPlatform(platform, pageable)
                 .map(bannerMapper::toResponse);
     }
 
@@ -58,6 +58,9 @@ public class BannerServiceImpl implements BannerService {
 
         String imageUrl = minioStorageService.uploadFile(image, "banners");
 
+        // Shift existing banners display order by 1 for the same platform
+        bannerRepository.incrementDisplayOrderForPlatform(request.getPlatform());
+
         Banner banner = new Banner();
         banner.setTitle(request.getTitle());
         banner.setSubtitle(request.getSubtitle());
@@ -68,7 +71,7 @@ public class BannerServiceImpl implements BannerService {
         banner.setLink(request.getLink());
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
-        banner.setDisplayOrder(request.getDisplayOrder());
+        banner.setDisplayOrder(1);
         banner.setIsActive(true);
         banner.setIsDeleted(false);
 

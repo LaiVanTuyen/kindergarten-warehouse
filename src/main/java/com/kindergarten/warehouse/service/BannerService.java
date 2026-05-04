@@ -12,7 +12,7 @@ import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 public interface BannerService {
     List<BannerResponse> getActiveBanners(String platform);
 
-    Page<BannerResponse> getAllBanners(Pageable pageable);
+    Page<BannerResponse> getAllBanners(String platform, Pageable pageable);
 
     BannerResponse createBanner(BannerRequest request, MultipartFile image);
 
