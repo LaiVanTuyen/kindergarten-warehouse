@@ -42,6 +42,17 @@ public interface ResourceRepository extends JpaRepository<Resource, String>,
                         "WHERE r.slug = :slug")
         java.util.Optional<Resource> findBySlug(@org.springframework.data.repository.query.Param("slug") String slug);
 
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r " +
+                        "JOIN FETCH r.topic t " +
+                        "LEFT JOIN FETCH t.category " +
+                        "LEFT JOIN FETCH t.creator " +
+                        "LEFT JOIN FETCH t.updater " +
+                        "LEFT JOIN FETCH r.creator " +
+                        "LEFT JOIN FETCH r.updater " +
+                        "LEFT JOIN FETCH r.ageGroups " +
+                        "WHERE r.id = :id")
+        java.util.Optional<Resource> findByIdWithDetails(@org.springframework.data.repository.query.Param("id") String id);
+
         @org.springframework.data.jpa.repository.Modifying
         @org.springframework.transaction.annotation.Transactional
         @org.springframework.data.jpa.repository.Query("UPDATE Resource r SET r.viewsCount = r.viewsCount + :count WHERE r.id = :id")
