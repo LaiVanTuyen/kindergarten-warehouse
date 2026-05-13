@@ -6,6 +6,7 @@ import com.kindergarten.warehouse.service.CommentService;
 import com.kindergarten.warehouse.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +29,7 @@ public class CommentController {
             @RequestParam(defaultValue = "5") int rating,
             Principal principal) {
         
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
                 commentService.createComment(resourceId, principal.getName(), content, rating),
                 messageService.getMessage("comment.create.success")));
     }
