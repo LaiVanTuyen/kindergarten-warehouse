@@ -31,10 +31,16 @@ public interface ResourceRepository extends JpaRepository<Resource, String>,
         @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r WHERE r.isDeleted = false AND r.topic.isDeleted = false AND r.topic.category.isDeleted = false")
         Page<Resource> findByIsDeletedFalse(Pageable pageable);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "topic.category",
-                        "topic.creator", "topic.updater", "creator", "updater",
-                        "ageGroups" })
-        java.util.Optional<Resource> findBySlug(String slug);
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r " +
+                        "JOIN FETCH r.topic t " +
+                        "LEFT JOIN FETCH t.category " +
+                        "LEFT JOIN FETCH t.creator " +
+                        "LEFT JOIN FETCH t.updater " +
+                        "LEFT JOIN FETCH r.creator " +
+                        "LEFT JOIN FETCH r.updater " +
+                        "LEFT JOIN FETCH r.ageGroups " +
+                        "WHERE r.slug = :slug")
+        java.util.Optional<Resource> findBySlug(@org.springframework.data.repository.query.Param("slug") String slug);
 
         @org.springframework.data.jpa.repository.Modifying
         @org.springframework.transaction.annotation.Transactional
