@@ -44,7 +44,7 @@ public class YoutubeService {
                 String isoDuration = items.get(0).path("contentDetails").path("duration").asText();
                 return convertIsoDuration(isoDuration);
             }
-        } catch (Exception e) {
+        } catch (org.springframework.web.client.RestClientException | com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Failed to fetch YouTube duration for video {}: {}", videoId, e.getMessage());
         }
         return null;
@@ -70,7 +70,7 @@ public class YoutubeService {
                 return positive.substring(3);
             }
             return positive;
-        } catch (Exception e) {
+        } catch (java.time.format.DateTimeParseException e) {
             log.warn("Failed to parse duration: {}", isoDuration);
             return null;
         }

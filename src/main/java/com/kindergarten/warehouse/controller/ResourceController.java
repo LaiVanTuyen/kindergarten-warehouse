@@ -119,6 +119,8 @@ public class ResourceController {
                         log.warn("Cannot download resource {}: {}", id, e.getMessage());
                         return ResponseEntity.badRequest()
                                         .body(ApiResponse.error(ErrorCode.INVALID_REQUEST.getCode(), e.getMessage()));
+                } catch (com.kindergarten.warehouse.exception.AppException e) {
+                        throw e;
                 } catch (Exception e) {
                         log.error("Error downloading resource {}: {}", id, e.getMessage(), e);
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
