@@ -693,6 +693,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResourceResponse getResourceBySlug(String slug) {
         Resource resource = resourceRepository.findBySlug(slug)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
