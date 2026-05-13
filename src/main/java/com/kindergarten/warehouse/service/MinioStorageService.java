@@ -1,7 +1,10 @@
 package com.kindergarten.warehouse.service;
 
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +24,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MinioStorageService {
 
@@ -42,10 +46,10 @@ public class MinioStorageService {
                 try {
                     s3Client.createBucket(b -> b.bucket(bucketName));
                 } catch (S3Exception createEx) {
-                    throw new RuntimeException("Failed to create MinIO bucket: " + bucketName, createEx);
+                    throw new AppException(ErrorCode.STORAGE_ERROR, createEx);
                 }
             } else {
-                throw new RuntimeException("Failed to connect to MinIO bucket: " + bucketName, e);
+                throw new AppException(ErrorCode.STORAGE_ERROR, e);
             }
         }
 
@@ -89,9 +93,8 @@ public class MinioStorageService {
             s3Client.putBucketPolicy(policyRequest);
 
         } catch (S3Exception e) {
-            // Log warning but don't fail startup if policy update fails (might already
-            // exist or permission issue)
-            System.err.println("Warning: Failed to set MinIO bucket policy: " + e.getMessage());
+            // Log warning but don't fail startup if policy update fails
+            log.warn("Failed to set MinIO bucket policy: {}", e.getMessage());
         }
     }
 
@@ -99,7 +102,7 @@ public class MinioStorageService {
         try {
             return uploadFile(file.getInputStream(), folderName, file.getOriginalFilename(), file.getContentType());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to get input stream from file", e);
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 
@@ -130,7 +133,7 @@ public class MinioStorageService {
             return String.format("%s/%s/%s", publicEndpoint, bucketName, fileName);
 
         } catch (IOException | S3Exception e) {
-            throw new RuntimeException("Failed to upload file to MinIO", e);
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 
@@ -148,7 +151,7 @@ public class MinioStorageService {
                 // Maybe it's already a key?
             }
         } catch (S3Exception e) {
-            throw new RuntimeException("Failed to delete file from MinIO", e);
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 
@@ -171,7 +174,7 @@ public class MinioStorageService {
 
             return presignedRequest.url().toString();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate presigned URL", e);
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 

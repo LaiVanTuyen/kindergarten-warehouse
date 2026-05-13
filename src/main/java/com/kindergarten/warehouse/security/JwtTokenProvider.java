@@ -25,6 +25,9 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
+    @Value("${jwt.issuer:kindergarten-warehouse-api}")
+    private String jwtIssuer;
+
     private Key key;
 
     private Key getKey() {
@@ -44,6 +47,7 @@ public class JwtTokenProvider {
                 .claim(AppConstants.JWT_CLAIM_TOKEN_VERSION, userDetails.getTokenVersion())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
+                .setIssuer(jwtIssuer)
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -51,6 +55,7 @@ public class JwtTokenProvider {
     public Claims parseClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
+                .requireIssuer(jwtIssuer)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

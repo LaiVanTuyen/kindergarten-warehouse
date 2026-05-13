@@ -19,9 +19,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfFilter;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -61,19 +58,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> {
-                    CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-                    csrfTokenRepository.setCookiePath("/");
-
-                    // Use standard RequestHandler to support raw Angular tokens (disabling XOR
-                    // BREACH protection default)
-                    org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler requestHandler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
-                    requestHandler.setCsrfRequestAttributeName(null);
-
-                    csrf.csrfTokenRepository(csrfTokenRepository)
-                            .csrfTokenRequestHandler(requestHandler)
-                            .ignoringRequestMatchers("/api/v1/auth/**", "/error");
-                })
+                // API dùng Stateless JWT (Authorization: Bearer ...) — CSRF không áp dụng.
+                // Session không tồn tại nên CSRF token không thể được verify đúng cách.
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -137,17 +124,6 @@ public class SecurityConfig {
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(lastActiveFilter, JwtAuthenticationFilter.class);
-
-        // Filter to ensure CSRF Token is generated and sent (Lazy by default in Spring
-        // Security 6)
-        http.addFilterAfter((request, response, chain) -> {
-            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-            if (csrfToken != null) {
-                // Explicitly access the token to force generation/persistence
-                csrfToken.getToken();
-            }
-            chain.doFilter(request, response);
-        }, CsrfFilter.class);
 
         return http.build();
     }

@@ -63,6 +63,8 @@ public enum ErrorCode {
 
     // ========== System Errors (80xx) ==========
     FIREBASE_INIT_ERROR(8001, "error.firebase.init", HttpStatus.INTERNAL_SERVER_ERROR),
+    STORAGE_ERROR(8002, "error.storage", HttpStatus.INTERNAL_SERVER_ERROR),
+    EXTERNAL_SERVICE_ERROR(8003, "error.external.service", HttpStatus.INTERNAL_SERVER_ERROR),
     ;
 
     private final int code;

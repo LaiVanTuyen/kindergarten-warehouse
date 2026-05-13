@@ -60,6 +60,7 @@ minio:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
+  issuer: ${JWT_ISSUER:kindergarten-warehouse-api}
 
 # Rollbar Configuration
 rollbar:
