@@ -32,6 +32,7 @@ spring:
           writetimeout: 5000
   
   jpa:
+    open-in-view: false # [SBP-05.01] Disable OSIV: session closes after service method, preventing lazy loading in controller/mapper layer
     hibernate:
       ddl-auto: update # Ở local nên để update để tự tạo bảng, Prod thì để validate/none
     show-sql: true
