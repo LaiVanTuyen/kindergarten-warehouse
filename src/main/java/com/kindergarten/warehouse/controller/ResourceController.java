@@ -39,11 +39,10 @@ public class ResourceController {
                         @Valid @ModelAttribute ResourceCreationRequest request,
                         Principal principal) {
 
-                return new ResponseEntity<>(
+                return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.success(
                                                 resourceService.uploadResource(request, principal.getName()),
-                                                messageService.getMessage("resource.upload.success")),
-                                HttpStatus.CREATED);
+                                                messageService.getMessage("resource.upload.success")));
         }
 
         @GetMapping

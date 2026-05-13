@@ -52,10 +52,9 @@ public class CategoryController {
         public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
                         @RequestPart(value = "icon", required = false) MultipartFile icon,
                         @ModelAttribute @Valid CategoryRequest categoryRequest) {
-                return new ResponseEntity<>(
+                return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.success(categoryService.createCategory(categoryRequest, icon),
-                                                messageService.getMessage("category.create.success")),
-                                HttpStatus.CREATED);
+                                                messageService.getMessage("category.create.success")));
         }
 
         @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)

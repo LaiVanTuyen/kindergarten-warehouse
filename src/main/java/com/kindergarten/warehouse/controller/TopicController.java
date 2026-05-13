@@ -46,11 +46,10 @@ public class TopicController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<TopicResponse>> createTopic(
                         @RequestBody @Valid TopicRequest topicRequest) {
-                return new ResponseEntity<>(
+                return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.success(
                                                 topicService.createTopic(topicRequest, topicRequest.getCategoryId()),
-                                                messageService.getMessage("topic.create.success")),
-                                HttpStatus.CREATED);
+                                                messageService.getMessage("topic.create.success")));
         }
 
         @PutMapping("/{id}")

@@ -56,11 +56,10 @@ public class BannerController {
                         @RequestPart("image") MultipartFile image,
                         @ModelAttribute @Valid BannerRequest request) {
 
-                return new ResponseEntity<>(
+                return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.success(
                                                 bannerService.createBanner(request, image),
-                                                messageService.getMessage("banner.create.success")),
-                                HttpStatus.CREATED);
+                                                messageService.getMessage("banner.create.success")));
         }
 
         @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
