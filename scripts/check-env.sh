@@ -30,10 +30,10 @@ if command -v stat >/dev/null 2>&1; then
     # macOS vs Linux stat có cú pháp khác — thử cả hai
     perm=$(stat -c "%a" "$ENV_FILE" 2>/dev/null || stat -f "%Lp" "$ENV_FILE" 2>/dev/null || echo "")
     if [[ -n "$perm" ]]; then
-        if [[ "$perm" -gt 600 ]]; then
+        if [[ "$perm" =~ ^[0-7]{3,4}$ ]] && (( (8#$perm & 8#077) != 0 )); then
             err "Permission $perm là quá rộng. Chạy: chmod 600 $ENV_FILE"
         else
-            ok "Permission $perm OK (≤ 600)"
+            ok "Permission $perm OK (không có quyền cho group/other)"
         fi
     fi
 fi
