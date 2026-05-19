@@ -38,6 +38,7 @@ public class BannerController {
         @GetMapping("/all")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<BannerResponse>>> getAllBanners(
+                        @RequestParam(value = "platform", required = false) String platform,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "displayOrder") String sortBy,
@@ -46,7 +47,7 @@ public class BannerController {
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity.ok(
-                                ApiResponse.success(bannerService.getAllBanners(pageable),
+                                ApiResponse.success(bannerService.getAllBanners(platform, pageable),
                                                 messageService.getMessage("banner.list.success")));
         }
 

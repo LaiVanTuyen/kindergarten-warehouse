@@ -1,13 +1,7 @@
 package com.kindergarten.warehouse.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 
 @Getter
 @Setter
@@ -88,7 +82,7 @@ public class Resource extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(length = 20, nullable = false)
+    @Column(length = 20, nullable = false, columnDefinition = "VARCHAR(20)")
     private Visibility visibility = Visibility.PUBLIC;
 
     @Builder.Default
