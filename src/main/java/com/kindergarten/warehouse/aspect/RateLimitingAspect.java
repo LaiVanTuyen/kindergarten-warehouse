@@ -1,6 +1,9 @@
 package com.kindergarten.warehouse.aspect;
 
+import com.kindergarten.warehouse.exception.AppException;
+import com.kindergarten.warehouse.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -13,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 @Aspect
 @Component
+@Slf4j
 public class RateLimitingAspect {
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -31,7 +35,8 @@ public class RateLimitingAspect {
         String key = "kindergarten:rate_limit:" + ipAddress + ":" + resourceId;
 
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            throw new RuntimeException("Rate limit exceeded. Try again later.");
+            log.debug("View rate limit exceeded for IP={} resource={}", ipAddress, resourceId);
+            throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED, 60);
         }
 
         redisTemplate.opsForValue().set(key, "1", 60, TimeUnit.SECONDS); // 1 minute TTL

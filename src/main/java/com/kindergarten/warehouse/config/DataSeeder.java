@@ -11,6 +11,7 @@ import com.kindergarten.warehouse.service.MinioStorageService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,17 +25,20 @@ import java.util.List;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
+        private static final String DEFAULT_ADMIN_PASSWORD = "admin123";
+
         private final CategoryRepository categoryRepository;
         private final TopicRepository topicRepository;
         private final BannerRepository bannerRepository;
         private final UserRepository userRepository;
         private final MinioStorageService minioStorageService;
         private final PasswordEncoder passwordEncoder;
+        private final Environment environment;
 
         @org.springframework.beans.factory.annotation.Value("${app.admin.username:admin}")
         private String adminUsername;
 
-        @org.springframework.beans.factory.annotation.Value("${app.admin.password:admin123}")
+        @org.springframework.beans.factory.annotation.Value("${app.admin.password:" + DEFAULT_ADMIN_PASSWORD + "}")
         private String adminPassword;
 
         @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@kindergarten.com}")
@@ -43,13 +47,15 @@ public class DataSeeder implements CommandLineRunner {
         public DataSeeder(CategoryRepository categoryRepository, TopicRepository topicRepository,
                         BannerRepository bannerRepository, UserRepository userRepository,
                         MinioStorageService minioStorageService,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        Environment environment) {
                 this.categoryRepository = categoryRepository;
                 this.topicRepository = topicRepository;
                 this.bannerRepository = bannerRepository;
                 this.userRepository = userRepository;
                 this.minioStorageService = minioStorageService;
                 this.passwordEncoder = passwordEncoder;
+                this.environment = environment;
         }
 
         @Override
@@ -61,28 +67,69 @@ public class DataSeeder implements CommandLineRunner {
 
         private void seedUsers() {
                 log.info("[DataSeeder] Checking Users...");
+                assertAdminPasswordSafeForEnv();
 
                 // 1. Admin
-                if (!userRepository.existsByUsername(adminUsername)) {
+                // Ưu tiên tìm theo username trước (kể cả bị soft-delete) để tránh tạo trùng.
+                // Username hiện tại có thể có suffix "_deleted_xxx" nếu bị xóa mềm.
+                java.util.Optional<com.kindergarten.warehouse.entity.User> existing =
+                                userRepository.findByUsername(adminUsername);
+                if (existing.isEmpty()) {
+                        // Thử lại theo email — admin có thể đã bị xóa mềm, username có suffix
+                        existing = userRepository.findByEmail(adminEmail);
+                }
+
+                if (existing.isEmpty()) {
                         com.kindergarten.warehouse.entity.User admin = com.kindergarten.warehouse.entity.User.builder()
                                         .username(adminUsername)
                                         .email(adminEmail)
                                         .password(passwordEncoder.encode(adminPassword))
                                         .fullName("Super Admin")
                                         .status(com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                        .emailVerified(true)
                                         .isDeleted(false)
                                         .roles(java.util.Set.of(com.kindergarten.warehouse.entity.Role.ADMIN,
                                                         com.kindergarten.warehouse.entity.Role.TEACHER))
                                         .build();
                         userRepository.save(admin);
                         log.info("[DataSeeder] Seeded user: {}", adminUsername);
+                } else if (Boolean.TRUE.equals(existing.get().getIsDeleted())
+                                || existing.get().getStatus() != com.kindergarten.warehouse.entity.UserStatus.ACTIVE) {
+                        // Admin tồn tại nhưng không usable → khôi phục về trạng thái hoạt động.
+                        // Tránh tình huống app không có admin nào active (deadlock quản trị).
+                        com.kindergarten.warehouse.entity.User admin = existing.get();
+                        if (admin.getOriginalUsername() != null) {
+                                admin.setUsername(admin.getOriginalUsername());
+                                admin.setOriginalUsername(null);
+                        }
+                        if (admin.getOriginalEmail() != null) {
+                                admin.setEmail(admin.getOriginalEmail());
+                                admin.setOriginalEmail(null);
+                        }
+                        admin.setIsDeleted(false);
+                        admin.setStatus(com.kindergarten.warehouse.entity.UserStatus.ACTIVE);
+                        admin.setBlockedReason(null);
+                        admin.setBlockedAt(null);
+                        admin.setEmailVerified(true);
+                        // Đảm bảo có role ADMIN
+                        if (admin.getRoles() == null
+                                        || !admin.getRoles().contains(com.kindergarten.warehouse.entity.Role.ADMIN)) {
+                                java.util.Set<com.kindergarten.warehouse.entity.Role> roles =
+                                                admin.getRoles() != null
+                                                                ? new java.util.HashSet<>(admin.getRoles())
+                                                                : new java.util.HashSet<>();
+                                roles.add(com.kindergarten.warehouse.entity.Role.ADMIN);
+                                admin.setRoles(roles);
+                        }
+                        userRepository.save(admin);
+                        log.warn("[DataSeeder] Restored admin account '{}' to ACTIVE (was deleted/blocked).",
+                                        admin.getUsername());
                 } else {
-                        log.info("[DataSeeder] User '{}' already exists.", adminUsername);
+                        log.info("[DataSeeder] Admin '{}' already active.", existing.get().getUsername());
                 }
 
-                // 2. Teacher (Demo user, keeping hardcoded for dev/demo or make configurable
-                // too if needed)
-                if (!userRepository.existsByUsername("teacher_hoa")) {
+                // 2. Teacher demo — chỉ seed ở môi trường dev/local
+                if (isDevLikeEnv() && !userRepository.existsByUsername("teacher_hoa")) {
                         com.kindergarten.warehouse.entity.User teacher = com.kindergarten.warehouse.entity.User
                                         .builder()
                                         .username("teacher_hoa")
@@ -90,12 +137,39 @@ public class DataSeeder implements CommandLineRunner {
                                         .password(passwordEncoder.encode("teacher123"))
                                         .fullName("Cô Giáo Hoa")
                                         .status(com.kindergarten.warehouse.entity.UserStatus.ACTIVE)
+                                        .emailVerified(true)
                                         .isDeleted(false)
                                         .roles(java.util.Set.of(com.kindergarten.warehouse.entity.Role.TEACHER))
                                         .build();
                         userRepository.save(teacher);
                         log.info("[DataSeeder] Seeded user: teacher_hoa");
                 }
+        }
+
+        /**
+         * Không cho phép boot với mật khẩu admin mặc định ở môi trường prod.
+         * Thiếu cấu hình → crash sớm để tránh deploy ra prod với credentials yếu.
+         */
+        private void assertAdminPasswordSafeForEnv() {
+                if (DEFAULT_ADMIN_PASSWORD.equals(adminPassword) && !isDevLikeEnv()) {
+                        throw new IllegalStateException(
+                                "Default admin password detected in non-dev profile. "
+                                + "Please set app.admin.password (APP_ADMIN_PASSWORD env) to a strong value.");
+                }
+                if (DEFAULT_ADMIN_PASSWORD.equals(adminPassword)) {
+                        log.warn("[DataSeeder] Using default admin password — change it before deploying to production!");
+                }
+        }
+
+        private boolean isDevLikeEnv() {
+                String[] profiles = environment.getActiveProfiles();
+                if (profiles.length == 0) return true;
+                for (String p : profiles) {
+                        if ("dev".equalsIgnoreCase(p) || "local".equalsIgnoreCase(p) || "test".equalsIgnoreCase(p)) {
+                                return true;
+                        }
+                }
+                return false;
         }
 
         private void seedCategories() {

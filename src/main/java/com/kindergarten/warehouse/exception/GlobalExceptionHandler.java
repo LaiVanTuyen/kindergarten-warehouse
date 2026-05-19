@@ -101,9 +101,12 @@ public class GlobalExceptionHandler {
                 ? messageService.getMessage(errorCode.getMessage(), ex.getParams())
                 : messageService.getMessage(errorCode.getMessage());
 
-        return new ResponseEntity<>(
-                ApiResponse.error(errorCode.getCode(), message),
-                errorCode.getHttpStatusCode());
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(errorCode.getHttpStatusCode());
+        if (ex.getRetryAfterSeconds() > 0) {
+            builder.header(org.springframework.http.HttpHeaders.RETRY_AFTER,
+                    String.valueOf(ex.getRetryAfterSeconds()));
+        }
+        return builder.body(ApiResponse.error(errorCode.getCode(), message));
     }
 
     /**
@@ -132,6 +135,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
                 errorCode.getHttpStatusCode());
+    }
+
+    /**
+     * Hibernate/JPA báo 2 transaction đồng thời sửa cùng 1 row (nhờ @Version trên User).
+     * Trả 409 để FE retry — thường là admin race.
+     */
+    @ExceptionHandler({
+            org.springframework.dao.OptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(Exception ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.CONCURRENT_MODIFICATION;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                HttpStatus.CONFLICT);
     }
 
     /**

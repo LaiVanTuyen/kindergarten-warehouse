@@ -22,13 +22,14 @@ public class UserMapper {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .avatarUrl(user.getAvatarUrl())
-                // Map Set<Role> to Set<String>
-                .roles(user.getRoles().stream()
-                        .map(Enum::name)
-                        .collect(Collectors.toSet()))
-                // Map UserStatus to String
-                .status(user.getStatus().name())
+                .roles(user.getRoles() == null
+                        ? java.util.Set.of()
+                        : user.getRoles().stream().map(Enum::name).collect(Collectors.toSet()))
+                .status(user.getStatus() == null ? null : user.getStatus().name())
                 .isDeleted(user.getIsDeleted())
+                .emailVerified(user.getEmailVerified())
+                .blockedReason(user.getBlockedReason())
+                .blockedAt(user.getBlockedAt())
                 .phoneNumber(user.getPhoneNumber())
                 .createdAt(user.getCreatedAt())
                 .bio(user.getBio())

@@ -435,7 +435,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Transactional
     @LogAction(action = AuditAction.UPDATE, description = "Updated resource", target = "RESOURCE_UPDATE")
     public ResourceResponse updateResource(String id, ResourceUpdateRequest request, String username) {
-        Resource resource = resourceRepository.findById(id)
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         User user = getUserOrThrow(username);
@@ -593,7 +593,7 @@ public class ResourceServiceImpl implements ResourceService {
     @LogAction(action = AuditAction.UPDATE, description = "Updated resource visibility", target = "RESOURCE_VISIBILITY")
     public ResourceResponse updateVisibility(String id,
             com.kindergarten.warehouse.dto.request.VisibilityUpdateRequest request, String username) {
-        Resource resource = resourceRepository.findById(id)
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         User user = getUserOrThrow(username);
@@ -693,6 +693,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResourceResponse getResourceBySlug(String slug) {
         Resource resource = resourceRepository.findBySlug(slug)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -903,7 +904,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional
     public ResourceResponse approveResource(String id, String username) {
-        Resource resource = resourceRepository.findById(id)
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         User user = getUserOrThrow(username);
@@ -925,7 +926,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional
     public ResourceResponse rejectResource(String id, String reason, String username) {
-        Resource resource = resourceRepository.findById(id)
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         User user = getUserOrThrow(username);

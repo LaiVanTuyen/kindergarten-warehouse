@@ -57,7 +57,7 @@ public class AuditLogAspect {
                     String rawJson = objectMapper.writeValueAsString(args);
                     argsJson = maskSensitiveData(rawJson);
                 }
-            } catch (Exception e) {
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
                 // Fallback for circular references or serialization errors
                 log.warn("Could not serialize arguments for audit log: {}", e.getMessage());
                 argsJson = "[Serialization Error - Check Logs]";
@@ -71,13 +71,14 @@ public class AuditLogAspect {
                 ipAddress = com.kindergarten.warehouse.util.RequestUtils.getClientIpAddress();
                 userAgent = com.kindergarten.warehouse.util.RequestUtils.getUserAgent();
             } catch (Exception e) {
+                // logging failure must not break business flow.
                 log.warn("Could not retrieve request details: {}", e.getMessage());
             }
 
             auditLogService.saveLog(action.name(), username, target, detail, ipAddress, userAgent);
 
         } catch (Exception e) {
-            // Ensure logging failure doesn't break business logic
+            // logging failure must not break business flow.
             log.error("Failed to save audit log", e);
         }
     }
@@ -93,6 +94,7 @@ public class AuditLogAspect {
                 return authentication.getName();
             }
         } catch (Exception e) {
+            // logging failure must not break business flow.
             log.debug("Could not retrieve current user: {}", e.getMessage());
         }
         return "ANONYMOUS";

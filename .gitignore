@@ -31,14 +31,17 @@ build/
 ### VS Code ###
 .vscode/
 
+### Claude Code ###
+.claude/
+
 ### Mac OS ###
 .DS_Store
 
 ### Secrets ###
-#.env
-#.env.*
-#*.env
-#!.env.example
+.env
+.env.*
+*.env
+!.env.example
 firebase-service-account.json
 
 ### Logs ###
