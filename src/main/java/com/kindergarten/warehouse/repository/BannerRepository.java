@@ -26,6 +26,11 @@ public interface BannerRepository extends JpaRepository<Banner, Long> {
             "ORDER BY b.displayOrder ASC")
     List<Banner> findActiveBanners(@Param("platform") String platform, @Param("now") LocalDateTime now);
 
+    @Query("SELECT b FROM Banner b WHERE b.isDeleted = false AND (:platform IS NULL OR b.platform = :platform)")
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-    Page<Banner> findAllByIsDeletedFalse(Pageable pageable);
+    Page<Banner> findAllByIsDeletedFalseAndPlatform(@Param("platform") String platform, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Banner b SET b.displayOrder = b.displayOrder + 1 WHERE b.isDeleted = false AND (b.platform = :platform OR (:platform IS NULL AND b.platform IS NULL))")
+    void incrementDisplayOrderForPlatform(@Param("platform") String platform);
 }
