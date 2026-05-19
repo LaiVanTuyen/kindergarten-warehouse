@@ -19,6 +19,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -58,9 +60,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // API dùng Stateless JWT (Authorization: Bearer ...) — CSRF không áp dụng.
-                // Session không tồn tại nên CSRF token không thể được verify đúng cách.
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(
+                                new AntPathRequestMatcher("/v3/api-docs/**"),
+                                new AntPathRequestMatcher("/swagger-ui/**"),
+                                new AntPathRequestMatcher("/swagger-ui.html"),
+                                new AntPathRequestMatcher("/error"),
+                                new AntPathRequestMatcher("/api/v1/auth/**")))
                 .authorizeHttpRequests(auth -> auth
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

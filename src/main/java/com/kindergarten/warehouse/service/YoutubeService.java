@@ -2,8 +2,6 @@ package com.kindergarten.warehouse.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kindergarten.warehouse.exception.AppException;
-import com.kindergarten.warehouse.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -98,8 +96,8 @@ public class YoutubeService {
             return false;
         } catch (Exception e) {
             log.warn("Failed to check video accessibility for {}: {}", videoId, e.getMessage());
-            // Degradate gracefully: treat as inaccessible rather than crashing the request
-            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR, e);
+            // Degrade gracefully: treat as inaccessible rather than crashing the request
+            return false;
         }
     }
 }

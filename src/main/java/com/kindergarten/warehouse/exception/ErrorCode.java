@@ -61,6 +61,7 @@ public enum ErrorCode {
     DUPLICATE_SLUG(7001, "error.duplicate.slug", HttpStatus.CONFLICT),
     DUPLICATE_NAME(7002, "error.duplicate.name", HttpStatus.CONFLICT),
     DUPLICATE_ENTRY(7003, "error.duplicate.entry", HttpStatus.CONFLICT),
+    CONCURRENT_MODIFICATION(7004, "error.concurrent.modification", HttpStatus.CONFLICT),
 
     // ========== System Errors (80xx) ==========
     FIREBASE_INIT_ERROR(8001, "error.firebase.init", HttpStatus.INTERNAL_SERVER_ERROR),

@@ -147,10 +147,9 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(Exception ex) {
         log.warn("Optimistic lock conflict: {}", ex.getMessage());
-        ErrorCode errorCode = ErrorCode.DUPLICATE_ENTRY; // dùng tạm; FE nhận 409 + retry
+        ErrorCode errorCode = ErrorCode.CONCURRENT_MODIFICATION;
         return new ResponseEntity<>(
-                ApiResponse.error(errorCode.getCode(),
-                        messageService.getMessage("error.concurrent.modification")),
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
                 HttpStatus.CONFLICT);
     }
 
