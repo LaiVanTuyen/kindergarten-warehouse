@@ -172,7 +172,7 @@ public class AuthService {
     @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_OTP));
 
         otpService.verifyOtp(Purpose.EMAIL_VERIFY, user.getEmail(), request.getOtp());
 
