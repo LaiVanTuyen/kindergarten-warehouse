@@ -36,7 +36,7 @@ public class RateLimitingAspect {
 
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             log.debug("View rate limit exceeded for IP={} resource={}", ipAddress, resourceId);
-            throw new AppException(ErrorCode.LOGIN_ATTEMPT_EXCEEDED);
+            throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED, 60);
         }
 
         redisTemplate.opsForValue().set(key, "1", 60, TimeUnit.SECONDS); // 1 minute TTL

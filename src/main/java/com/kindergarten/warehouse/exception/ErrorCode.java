@@ -52,6 +52,7 @@ public enum ErrorCode {
     INVALID_IMAGE_FORMAT(6006, "error.resource.thumbnail.format.invalid", HttpStatus.BAD_REQUEST),
     THUMBNAIL_TOO_LARGE(6007, "error.resource.thumbnail.too.large", HttpStatus.BAD_REQUEST),
     AVATAR_TOO_LARGE(6008, "error.user.avatar.too_large", HttpStatus.BAD_REQUEST),
+    RESOURCE_VIEW_RATE_LIMIT_EXCEEDED(6009, "error.resource.view.rate_limit_exceeded", HttpStatus.TOO_MANY_REQUESTS),
 
     // ========== Age Group Errors (65xx) ==========
     AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),
