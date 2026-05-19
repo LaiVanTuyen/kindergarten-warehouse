@@ -132,7 +132,7 @@ public class UserController {
     @PutMapping("/{id}/block")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> toggleBlockUser(@PathVariable Long id,
-                                                                     @RequestBody(required = false) BlockUserRequest request) {
+                                                                     @Valid @RequestBody(required = false) BlockUserRequest request) {
         UpdateResult<UserResponse> updateResult = userService.toggleBlockUser(id, request);
         return ResponseEntity.ok(ApiResponse.success(
                 updateResult.getResult(),
