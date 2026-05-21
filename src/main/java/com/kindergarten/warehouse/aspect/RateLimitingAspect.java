@@ -2,6 +2,7 @@ package com.kindergarten.warehouse.aspect;
 
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
+import com.kindergarten.warehouse.util.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,12 +13,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 @Aspect
 @Component
 @Slf4j
 public class RateLimitingAspect {
+
+    private static final Duration VIEW_RATE_LIMIT = Duration.ofSeconds(60);
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -25,22 +28,37 @@ public class RateLimitingAspect {
         this.redisTemplate = redisTemplate;
     }
 
-    @Around("execution(* com.kindergarten.warehouse.controller.ResourceController.viewResource(..))")
+    @Around("execution(* com.kindergarten.warehouse.controller.ResourceController.incrementViewCount(..))")
     public Object rateLimit(ProceedingJoinPoint joinPoint) throws Throwable {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
                 .getRequest();
-        String ipAddress = request.getRemoteAddr();
-        String resourceId = request.getRequestURI().split("/")[4]; // Assuming /api/v1/resources/{id}/view
+        String ipAddress = RequestUtils.getClientIpAddress();
+        String resourceId = extractResourceId(request.getRequestURI());
+
+        if (resourceId == null) {
+            return joinPoint.proceed();
+        }
 
         String key = "kindergarten:rate_limit:" + ipAddress + ":" + resourceId;
 
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, "1", VIEW_RATE_LIMIT);
+        if (!Boolean.TRUE.equals(acquired)) {
             log.debug("View rate limit exceeded for IP={} resource={}", ipAddress, resourceId);
-            throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED, 60);
+            throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED,
+                    VIEW_RATE_LIMIT.toSeconds());
         }
 
-        redisTemplate.opsForValue().set(key, "1", 60, TimeUnit.SECONDS); // 1 minute TTL
-
         return joinPoint.proceed();
+    }
+
+    private String extractResourceId(String uri) {
+        if (uri == null) return null;
+        String[] parts = uri.split("/");
+        for (int i = 0; i < parts.length - 1; i++) {
+            if ("resources".equals(parts[i]) && i + 1 < parts.length) {
+                return parts[i + 1];
+            }
+        }
+        return null;
     }
 }

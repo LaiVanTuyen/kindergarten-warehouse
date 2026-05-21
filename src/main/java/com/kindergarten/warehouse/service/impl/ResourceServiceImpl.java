@@ -238,20 +238,25 @@ public class ResourceServiceImpl implements ResourceService {
             User currentUser) {
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
 
+        List<String> resourceIds = resourcePage.getContent().stream()
+                .map(Resource::getId)
+                .collect(Collectors.toList());
+
         Set<String> favoritedResourceIds = Collections.emptySet();
-        if (currentUser != null) {
-            List<String> resourceIds = resourcePage.getContent().stream()
-                    .map(Resource::getId)
-                    .collect(Collectors.toList());
-            if (!resourceIds.isEmpty()) {
-                favoritedResourceIds = favoriteRepository
-                        .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
-            }
+        if (currentUser != null && !resourceIds.isEmpty()) {
+            favoritedResourceIds = favoriteRepository
+                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
         }
 
+        Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
+        Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
+
         final Set<String> finalFavoritedIds = favoritedResourceIds;
-        return resourcePage
-                .map(resource -> resourceMapper.toResponse(resource, finalFavoritedIds.contains(resource.getId())));
+        return resourcePage.map(resource -> {
+            long pv = pendingViews.getOrDefault(resource.getId(), 0L);
+            long pd = pendingDownloads.getOrDefault(resource.getId(), 0L);
+            return resourceMapper.toResponse(resource, finalFavoritedIds.contains(resource.getId()), pv, pd);
+        });
     }
 
     @Override
@@ -446,10 +451,21 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        if (request.getTitle() != null)
+        // Snapshot pre-edit state to compute the diff for the audit log.
+        String prevTitle = resource.getTitle();
+        String prevDescription = resource.getDescription();
+        String prevFileUrl = resource.getFileUrl();
+        Long prevTopicId = resource.getTopic() != null ? resource.getTopic().getId() : null;
+        List<String> changedFields = new ArrayList<>();
+
+        if (request.getTitle() != null) {
+            if (!java.util.Objects.equals(prevTitle, request.getTitle())) changedFields.add("title");
             resource.setTitle(request.getTitle());
-        if (request.getDescription() != null)
+        }
+        if (request.getDescription() != null) {
+            if (!java.util.Objects.equals(prevDescription, request.getDescription())) changedFields.add("description");
             resource.setDescription(request.getDescription());
+        }
         if (isAdmin(user)) {
             // ADMIN WORKFLOW: Allow Admin to change status directly from the form.
             // If they don't provide a status, it stays whatever it was originally.
@@ -559,15 +575,27 @@ public class ResourceServiceImpl implements ResourceService {
         if (request.getTopicId() != null) {
             Topic topic = topicRepository.findById(request.getTopicId())
                     .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
+            if (!java.util.Objects.equals(prevTopicId, topic.getId())) changedFields.add("topic");
             resource.setTopic(topic);
         }
 
         if (request.getAgeGroupIds() != null && !request.getAgeGroupIds().isEmpty()) {
             Set<AgeGroup> ageGroups = new HashSet<>(ageGroupRepository.findAllById(request.getAgeGroupIds()));
             resource.setAgeGroups(ageGroups);
+            changedFields.add("ageGroups");
+        }
+
+        if (!java.util.Objects.equals(prevFileUrl, resource.getFileUrl())) {
+            changedFields.add("file");
         }
 
         Resource savedResource = resourceRepository.save(resource);
+
+        if (!isAdmin(user) && !changedFields.isEmpty()) {
+            manuallyLogAudit("RESUBMIT_PENDING", username, "RESOURCE_STATUS",
+                    String.format("Uploader edited – fields changed: %s – auto-resubmit for review",
+                            changedFields));
+        }
 
         // Check if the current user has favorited this resource
         boolean isFavorited = false;
@@ -1007,27 +1035,34 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
+        List<String> requestedIds = request.getResourceIds();
+        List<Resource> loaded = resourceRepository.findAllById(requestedIds);
+        Map<String, Resource> byId = loaded.stream()
+                .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));
+
+        List<Resource> toSave = new ArrayList<>();
         List<String> failedIds = new ArrayList<>();
+        List<String> auditDetails = new ArrayList<>();
         int successCount = 0;
 
-        for (String id : request.getResourceIds()) {
-            try {
-                Resource resource = resourceRepository.findById(id)
-                        .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-
-                if (resource.getStatus() != ResourceStatus.APPROVED) {
-                    resource.setStatus(ResourceStatus.APPROVED);
-                    resource.setRejectionReason(null);
-                    resourceRepository.save(resource);
-
-                    String detail = String.format("Bulk Approved document: %s", resource.getTitle());
-                    manuallyLogAudit("APPROVE_BULK", username, "RESOURCE_STATUS", detail);
-                }
-                successCount++;
-            } catch (Exception e) {
-                log.error("Bulk Approve failed for resource ID {}: {}", id, e.getMessage());
+        for (String id : requestedIds) {
+            Resource resource = byId.get(id);
+            if (resource == null) {
                 failedIds.add(id);
+                continue;
             }
+            if (resource.getStatus() != ResourceStatus.APPROVED) {
+                resource.setStatus(ResourceStatus.APPROVED);
+                resource.setRejectionReason(null);
+                toSave.add(resource);
+                auditDetails.add(String.format("Bulk Approved document: %s", resource.getTitle()));
+            }
+            successCount++;
+        }
+
+        if (!toSave.isEmpty()) {
+            resourceRepository.saveAll(toSave);
+            auditDetails.forEach(d -> manuallyLogAudit("APPROVE_BULK", username, "RESOURCE_STATUS", d));
         }
 
         return BulkOperationResponse.builder()
@@ -1049,46 +1084,70 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
+        List<String> requestedIds = request.getResourceIds();
+        List<Resource> loaded = resourceRepository.findAllById(requestedIds);
+        Map<String, Resource> byId = loaded.stream()
+                .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));
+
+        // Bug fix: createdBy is a userId (Long), not a username. Batch-load uploaders by id
+        // to avoid N+1 lookups and to actually find the user (the old code called
+        // findByUsername with a numeric string and always returned empty).
+        List<Long> uploaderIds = loaded.stream()
+                .map(Resource::getCreatedBy)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> uploadersById = uploaderIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(uploaderIds).stream()
+                        .collect(Collectors.toMap(User::getId, java.util.function.Function.identity()));
+
+        List<Resource> toSave = new ArrayList<>();
         List<String> failedIds = new ArrayList<>();
+        List<String> auditDetails = new ArrayList<>();
+        List<ResourceRejectedEvent> pendingEvents = new ArrayList<>();
         int successCount = 0;
 
-        for (String id : request.getResourceIds()) {
-            try {
-                Resource resource = resourceRepository.findById(id)
-                        .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-
-                if (resource.getStatus() != ResourceStatus.REJECTED) {
-                    resource.setStatus(ResourceStatus.REJECTED);
-                    resource.setRejectionReason(request.getReason());
-                    resourceRepository.save(resource);
-
-                    String detail = String.format("Bulk Rejected document: %s | Reason: %s", resource.getTitle(),
-                            request.getReason());
-                    manuallyLogAudit("REJECT_BULK", username, "RESOURCE_STATUS", detail);
-
-                    // Publish Event for Uploader notification
-                    try {
-                        User uploader = userRepository.findByUsername(String.valueOf(resource.getCreatedBy()))
-                                .orElse(null);
-                        if (uploader != null) {
-                            ResourceRejectedEvent event = ResourceRejectedEvent.builder()
-                                    .uploaderId(String.valueOf(uploader.getId()))
-                                    .uploaderEmail(uploader.getEmail())
-                                    .uploaderName(uploader.getFullName())
-                                    .documentTitle(resource.getTitle())
-                                    .reason(request.getReason())
-                                    .build();
-                            eventPublisher.publishEvent(event);
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to publish rejection event during bulk operation for resource {}: {}", id,
-                                e.getMessage());
-                    }
-                }
-                successCount++;
-            } catch (Exception e) {
-                log.error("Bulk Reject failed for resource ID {}: {}", id, e.getMessage());
+        for (String id : requestedIds) {
+            Resource resource = byId.get(id);
+            if (resource == null) {
                 failedIds.add(id);
+                continue;
+            }
+
+            if (resource.getStatus() != ResourceStatus.REJECTED) {
+                resource.setStatus(ResourceStatus.REJECTED);
+                resource.setRejectionReason(request.getReason());
+                toSave.add(resource);
+
+                auditDetails.add(String.format("Bulk Rejected document: %s | Reason: %s",
+                        resource.getTitle(), request.getReason()));
+
+                User uploader = uploadersById.get(resource.getCreatedBy());
+                if (uploader != null) {
+                    pendingEvents.add(ResourceRejectedEvent.builder()
+                            .uploaderId(String.valueOf(uploader.getId()))
+                            .uploaderEmail(uploader.getEmail())
+                            .uploaderName(uploader.getFullName() != null ? uploader.getFullName() : uploader.getUsername())
+                            .documentTitle(resource.getTitle())
+                            .reason(request.getReason())
+                            .build());
+                }
+            }
+            successCount++;
+        }
+
+        if (!toSave.isEmpty()) {
+            resourceRepository.saveAll(toSave);
+            // Audit + event publish only after a successful save so we don't log work
+            // that ended up rolled back.
+            auditDetails.forEach(d -> manuallyLogAudit("REJECT_BULK", username, "RESOURCE_STATUS", d));
+            for (ResourceRejectedEvent event : pendingEvents) {
+                try {
+                    eventPublisher.publishEvent(event);
+                } catch (Exception e) {
+                    log.warn("Failed to publish rejection event during bulk operation: {}", e.getMessage());
+                }
             }
         }
 

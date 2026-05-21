@@ -25,7 +25,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
 
-    @Async
+    @Async("auditExecutor")
     public void saveLog(String action, String username, String target, String detail, String ipAddress,
             String userAgent) {
         AuditLog log = AuditLog.builder()

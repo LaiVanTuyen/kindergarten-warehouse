@@ -2,9 +2,9 @@ package com.kindergarten.warehouse.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,16 +14,25 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class YoutubeService {
 
     @Value("${youtube.api.key:}")
     private String apiKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Pattern VIDEO_ID_PATTERN = Pattern.compile(
+            "(?<=watch\\?v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v%3D|watch\\?feature=player_embedded&v=|%2Fvideos%2F|embed%2F|youtu\\.be%2F|%2Fv%2F)[^#&?\\n]*");
 
     private static final String YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=%s&key=%s";
+
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public YoutubeService() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(2).toMillis());
+        factory.setReadTimeout((int) Duration.ofSeconds(3).toMillis());
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     public String getVideoDuration(String videoId) {
         if (apiKey == null || apiKey.isEmpty()) {
@@ -48,14 +57,10 @@ public class YoutubeService {
         return null;
     }
 
-    /**
-     * Converts ISO 8601 duration (e.g., PT5M30S) to "05:30" or "01:15:20"
-     */
     private String convertIsoDuration(String isoDuration) {
         try {
             Duration duration = Duration.parse(isoDuration);
-            long seconds = duration.getSeconds();
-            long absSeconds = Math.abs(seconds);
+            long absSeconds = Math.abs(duration.getSeconds());
 
             String positive = String.format(
                     "%02d:%02d:%02d",
@@ -63,7 +68,6 @@ public class YoutubeService {
                     (absSeconds % 3600) / 60,
                     absSeconds % 60);
 
-            // Remove leading "00:" if less than an hour
             if (positive.startsWith("00:")) {
                 return positive.substring(3);
             }
@@ -75,13 +79,9 @@ public class YoutubeService {
     }
 
     public String extractVideoId(String url) {
-        String pattern = "(?<=watch\\?v=|/videos/|embed\\/|youtu.be\\/|\\/v\\/|\\/e\\/|watch\\?v%3D|watch\\?feature=player_embedded&v=|%2Fvideos%2F|embed%\u200C\u200B2F|youtu.be%2F|%2Fv%2F)[^#\\&\\?\\n]*";
-        Pattern compiledPattern = Pattern.compile(pattern);
-        Matcher matcher = compiledPattern.matcher(url);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        return null;
+        if (url == null) return null;
+        Matcher matcher = VIDEO_ID_PATTERN.matcher(url);
+        return matcher.find() ? matcher.group() : null;
     }
 
     public boolean isVideoAccessible(String videoId) {
@@ -90,13 +90,11 @@ public class YoutubeService {
                     + "&format=json";
             org.springframework.http.ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             return response.getStatusCode().is2xxSuccessful();
-        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
-            return false;
-        } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound
+                | org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
             return false;
         } catch (Exception e) {
             log.warn("Failed to check video accessibility for {}: {}", videoId, e.getMessage());
-            // Degrade gracefully: treat as inaccessible rather than crashing the request
             return false;
         }
     }

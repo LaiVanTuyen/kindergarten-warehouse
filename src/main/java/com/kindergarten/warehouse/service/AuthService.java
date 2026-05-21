@@ -171,10 +171,12 @@ public class AuthService {
 
     @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
+        // OTP-first: verify the OTP before any DB lookup so a non-existent email
+        // gets the same response shape and timing as a wrong OTP — defeats enumeration.
+        otpService.verifyOtp(Purpose.EMAIL_VERIFY, request.getEmail(), request.getOtp());
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_OTP));
-
-        otpService.verifyOtp(Purpose.EMAIL_VERIFY, user.getEmail(), request.getOtp());
 
         user.setEmailVerified(true);
         if (user.getStatus() == UserStatus.PENDING) {
@@ -222,10 +224,12 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        // OTP-first: same rationale as verifyEmail — uniform INVALID_OTP for unknown
+        // email or wrong OTP, so a caller can't distinguish the two.
+        otpService.verifyOtp(Purpose.PASSWORD_RESET, request.getEmail(), request.getOtp());
+
         User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_OTP));
-
-        otpService.verifyOtp(Purpose.PASSWORD_RESET, user.getEmail(), request.getOtp());
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.incrementTokenVersion();

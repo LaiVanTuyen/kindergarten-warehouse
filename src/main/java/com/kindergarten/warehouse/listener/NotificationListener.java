@@ -23,7 +23,7 @@ public class NotificationListener {
     // but standard practice is to inject a specific sender address if needed.
     // For now, we will rely on default spring boot starter mail autoconfiguration.
 
-    @Async
+    @Async("emailExecutor")
     @EventListener
     public void handleResourceRejectedEvent(ResourceRejectedEvent event) {
         log.info("🔔 [ASYNC] Handling ResourceRejectedEvent for document: {}, uploader email: {}",

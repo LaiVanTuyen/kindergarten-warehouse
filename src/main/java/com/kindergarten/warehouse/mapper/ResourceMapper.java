@@ -2,6 +2,9 @@ package com.kindergarten.warehouse.mapper;
 
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import com.kindergarten.warehouse.entity.Resource;
+import com.kindergarten.warehouse.entity.ResourceType;
+import com.kindergarten.warehouse.service.ResourceStatService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
@@ -11,10 +14,10 @@ public class ResourceMapper {
 
     private final TopicMapper topicMapper;
     private final AgeGroupMapper ageGroupMapper;
-    private final com.kindergarten.warehouse.service.ResourceStatService resourceStatService;
+    private final ResourceStatService resourceStatService;
 
     public ResourceMapper(TopicMapper topicMapper, AgeGroupMapper ageGroupMapper,
-            @org.springframework.context.annotation.Lazy com.kindergarten.warehouse.service.ResourceStatService resourceStatService) {
+            @Lazy ResourceStatService resourceStatService) {
         this.topicMapper = topicMapper;
         this.ageGroupMapper = ageGroupMapper;
         this.resourceStatService = resourceStatService;
@@ -24,7 +27,6 @@ public class ResourceMapper {
         if (resource == null) {
             return null;
         }
-
         long pendingViews = 0;
         long pendingDownloads = 0;
         try {
@@ -32,6 +34,20 @@ public class ResourceMapper {
             pendingDownloads = resourceStatService.getPendingDownloadCount(resource.getId());
         } catch (Exception ignored) {
         }
+        return toResponse(resource, isFavorited, pendingViews, pendingDownloads);
+    }
+
+    public ResourceResponse toResponse(Resource resource, boolean isFavorited,
+            long pendingViews, long pendingDownloads) {
+        if (resource == null) {
+            return null;
+        }
+
+        // FILE resources are stored privately in MinIO; clients must download
+        // through the app-authenticated endpoint. YOUTUBE links remain external.
+        String exposedFileUrl = resource.getResourceType() == ResourceType.FILE
+                ? "/api/v1/resources/" + resource.getId() + "/file"
+                : resource.getFileUrl();
 
         return ResourceResponse.builder()
                 .id(resource.getId())
@@ -39,13 +55,13 @@ public class ResourceMapper {
                 .slug(resource.getSlug())
                 .description(resource.getDescription())
                 .viewsCount(resource.getViewsCount() + pendingViews)
-                .fileUrl(resource.getFileUrl())
+                .fileUrl(exposedFileUrl)
                 .thumbnailUrl(resource.getThumbnailUrl())
                 .resourceType(resource.getResourceType())
                 .fileType(resource.getFileType())
                 .fileExtension(resource.getFileExtension())
                 .fileSize(resource.getFileSize())
-                .duration(resource.getDuration()) // Mapped duration
+                .duration(resource.getDuration())
                 .status(resource.getStatus())
                 .downloadCount(resource.getDownloadCount() + pendingDownloads)
                 .averageRating(resource.getAverageRating())

@@ -34,6 +34,7 @@ public class DataSeeder implements CommandLineRunner {
         private final MinioStorageService minioStorageService;
         private final PasswordEncoder passwordEncoder;
         private final Environment environment;
+        private final org.springframework.transaction.support.TransactionTemplate txTemplate;
 
         @org.springframework.beans.factory.annotation.Value("${app.admin.username:admin}")
         private String adminUsername;
@@ -48,7 +49,8 @@ public class DataSeeder implements CommandLineRunner {
                         BannerRepository bannerRepository, UserRepository userRepository,
                         MinioStorageService minioStorageService,
                         PasswordEncoder passwordEncoder,
-                        Environment environment) {
+                        Environment environment,
+                        org.springframework.transaction.PlatformTransactionManager txManager) {
                 this.categoryRepository = categoryRepository;
                 this.topicRepository = topicRepository;
                 this.bannerRepository = bannerRepository;
@@ -56,6 +58,7 @@ public class DataSeeder implements CommandLineRunner {
                 this.minioStorageService = minioStorageService;
                 this.passwordEncoder = passwordEncoder;
                 this.environment = environment;
+                this.txTemplate = new org.springframework.transaction.support.TransactionTemplate(txManager);
         }
 
         @Override
@@ -68,7 +71,10 @@ public class DataSeeder implements CommandLineRunner {
         private void seedUsers() {
                 log.info("[DataSeeder] Checking Users...");
                 assertAdminPasswordSafeForEnv();
+                txTemplate.executeWithoutResult(status -> seedUsersTx());
+        }
 
+        private void seedUsersTx() {
                 // 1. Admin
                 // Ưu tiên tìm theo username trước (kể cả bị soft-delete) để tránh tạo trùng.
                 // Username hiện tại có thể có suffix "_deleted_xxx" nếu bị xóa mềm.
@@ -373,12 +379,12 @@ public class DataSeeder implements CommandLineRunner {
                 }
 
                 try (InputStream inputStream = resource.getInputStream()) {
-                        // Upload to MinIO bucket
                         String contentType = "image/png";
                         if (filename.endsWith("jpg") || filename.endsWith("jpeg"))
                                 contentType = "image/jpeg";
 
-                        return minioStorageService.uploadFile(inputStream, folder, filename, contentType);
+                        long contentLength = resource.contentLength();
+                        return minioStorageService.uploadFile(inputStream, folder, filename, contentType, contentLength);
                 } catch (Exception e) {
                         throw new RuntimeException("Upload failed", e);
                 }
