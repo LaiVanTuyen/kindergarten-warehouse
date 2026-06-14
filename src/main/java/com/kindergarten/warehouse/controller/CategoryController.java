@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.BulkLongIdsRequest;
 import com.kindergarten.warehouse.dto.request.CategoryRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.dto.response.CategoryResponse;
@@ -87,12 +88,12 @@ public class CategoryController {
                                 .ok(ApiResponse.success(null, messageService.getMessage("category.delete.success")));
         }
 
-        @DeleteMapping("/bulk")
+        @PostMapping("/bulk-delete")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Void>> deleteCategories(
-                        @RequestBody @jakarta.validation.constraints.Size(min = 1, max = 1000, message = "{validation.size}") java.util.List<Long> ids,
+                        @Valid @RequestBody BulkLongIdsRequest request,
                         @RequestParam(defaultValue = "false") boolean hard) {
-                categoryService.deleteCategories(ids, hard);
+                categoryService.deleteCategories(request.getIds(), hard);
                 return ResponseEntity.ok(ApiResponse.success(null,
                                 messageService.getMessage("category.delete.bulk.success")));
         }
@@ -107,8 +108,8 @@ public class CategoryController {
         @PatchMapping("/bulk-restore")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Void>> restoreCategories(
-                        @RequestBody @jakarta.validation.constraints.Size(min = 1, max = 1000, message = "{validation.size}") java.util.List<Long> ids) {
-                categoryService.restoreCategories(ids);
+                        @Valid @RequestBody BulkLongIdsRequest request) {
+                categoryService.restoreCategories(request.getIds());
                 return ResponseEntity.ok(ApiResponse.success(null,
                                 messageService.getMessage("category.restore.bulk.success")));
         }

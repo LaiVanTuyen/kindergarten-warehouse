@@ -1,7 +1,9 @@
 package com.kindergarten.warehouse.dto.request;
 
+import com.kindergarten.warehouse.util.ValidationPatterns;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -18,5 +20,6 @@ public class ResetPasswordRequest {
 
     @NotBlank(message = "{validation.required}")
     @Size(min = 8, max = 100, message = "{validation.size}")
+    @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.password.weak}")
     private String newPassword;
 }

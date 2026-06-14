@@ -98,11 +98,12 @@ public class EmailService {
             log.warn("SMTP not configured. Skipping {} email to {}", purpose, maskEmail(to));
             return;
         }
-        // Dev-only: in ra code để debug cục bộ
+        // Dev-only: in ra code ở mức info để QA/FE test luồng OTP khi chưa cấu hình SMTP.
+        // Chỉ chạy khi profile dev/local + SMTP trống → không leak ở prod.
         if (devCode != null) {
-            log.debug("[DEV-EMAIL][{}] to={} code={}", purpose, to, devCode);
+            log.info("[DEV-EMAIL][{}] to={} code={}", purpose, to, devCode);
         } else {
-            log.debug("[DEV-EMAIL][{}] to={}", purpose, to);
+            log.info("[DEV-EMAIL][{}] to={}", purpose, to);
         }
     }
 

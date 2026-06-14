@@ -83,7 +83,7 @@ public class BannerController {
                 return ResponseEntity.ok(ApiResponse.success(null, messageService.getMessage("banner.update.success")));
         }
 
-        @PutMapping("/{id}/toggle")
+        @PatchMapping("/{id}/toggle")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<BannerResponse>> toggleBanner(@PathVariable Long id) {
                 UpdateResult<BannerResponse> updateResult = bannerService.toggleBanner(id);

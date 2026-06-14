@@ -178,6 +178,34 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Sai HTTP method tới một route (vd gọi PUT vào endpoint giờ là PATCH).
+     * Trả 405 gọn thay vì rơi vào catch-all 500.
+     */
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        log.warn("Method not supported: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                errorCode.getHttpStatusCode());
+    }
+
+    /**
+     * Content-Type không hỗ trợ (vd gửi JSON vào endpoint chỉ nhận multipart).
+     * Trả 415 thay vì 500/9999.
+     */
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(
+            org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        log.warn("Media type not supported: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                errorCode.getHttpStatusCode());
+    }
+
+    /**
      * Handle illegal argument exceptions
      */
     @ExceptionHandler(IllegalArgumentException.class)

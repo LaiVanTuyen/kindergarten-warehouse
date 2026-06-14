@@ -18,6 +18,7 @@ import com.kindergarten.warehouse.service.ResourceService;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import com.kindergarten.warehouse.service.YoutubeService;
 import com.kindergarten.warehouse.util.AppConstants;
+import com.kindergarten.warehouse.util.PageableUtils;
 import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -111,7 +110,6 @@ public class ResourceServiceImpl implements ResourceService {
             fileType = "VIDEO";
             extension = "youtube";
 
-            // ✅ CRITICAL FIX #2: YouTube API error handling with try-catch
             if (duration == null || duration.isEmpty()) {
                 try {
                     duration = youtubeService.getVideoDuration(youtubeId);
@@ -262,7 +260,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> portalSpec = (root, query, cb) -> {
@@ -271,9 +269,9 @@ public class ResourceServiceImpl implements ResourceService {
             predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
             predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -292,7 +290,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> adminSpec = (root, query, cb) -> {
@@ -325,7 +323,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size,
             String username) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         User currentUser = getUserOrThrow(username);
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
@@ -528,15 +526,12 @@ public class ResourceServiceImpl implements ResourceService {
             resource.setFileType("VIDEO");
             resource.setFileExtension("youtube");
 
-            // ✅ CRITICAL FIX #5: Always update thumbnail when YouTube link changes
-            // (Unless it's a custom uploaded thumbnail, but if they change the link, we
-            // should reset to the new video's thumbnail)
+            // Keep a custom thumbnail; otherwise refresh the YouTube thumbnail.
             if (resource.getThumbnailUrl() == null || resource.getThumbnailUrl().isEmpty()
                     || resource.getThumbnailUrl().contains("youtube.com")) {
                 resource.setThumbnailUrl("https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg");
             }
 
-            // ✅ CRITICAL FIX #2: Auto-fetch duration on update with error handling
             try {
                 String duration = youtubeService.getVideoDuration(youtubeId);
                 if (duration != null && duration.length() <= 20) {
@@ -663,7 +658,6 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        // ✅ IMPORTANT FIX #4: Validate image format
         String contentType = thumbnail.getContentType();
         if (!isValidImageFormat(contentType)) {
             throw new AppException(ErrorCode.INVALID_IMAGE_FORMAT);
@@ -697,6 +691,11 @@ public class ResourceServiceImpl implements ResourceService {
     public boolean toggleFavorite(String resourceId, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // BE-3: kiểm tra resource tồn tại trước -> trả 404 thay vì 409 do FK khi insert favorite.
+        if (!resourceRepository.existsById(resourceId)) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
 
         Optional<Favorite> favorite = favoriteRepository.findByUserIdAndResourceId(user.getId(), resourceId);
 
@@ -745,9 +744,9 @@ public class ResourceServiceImpl implements ResourceService {
             if (resource.getVisibility() != Visibility.PUBLIC
                     || resource.getStatus() != ResourceStatus.APPROVED
                     || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getIsActive())
+                    || resource.getTopic().getVisibility() != Visibility.PUBLIC
                     || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
+                    || resource.getTopic().getCategory().getVisibility() != Visibility.PUBLIC) {
                 throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
             }
         }
@@ -832,7 +831,6 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
 
-    // ✅ IMPORTANT FIX #4: Helper method for thumbnail format validation
     private boolean isValidImageFormat(String contentType) {
         if (contentType == null)
             return false;
@@ -843,10 +841,11 @@ public class ResourceServiceImpl implements ResourceService {
                 lowerCaseType.equals("image/webp");
     }
 
-    // ✅ CRITICAL FIX #1: Get file info for download
     @Override
     public com.kindergarten.warehouse.dto.response.FileDownloadInfo getResourceFileInfo(String id) throws Exception {
-        Resource resource = resourceRepository.findById(id)
+        // Dùng fetch-join để topic/category được load sẵn: method không chạy trong
+        // transaction + OSIV tắt nên truy cập lazy proxy sẽ ném LazyInitializationException.
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         // Check if deleted
@@ -855,23 +854,25 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean privileged = false;
+        User currentUser = null;
         if (authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
-            User currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-            if (currentUser != null) {
-                privileged = isPrivileged(currentUser);
-            }
+            currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
         }
 
-        if (!privileged) {
-            if (resource.getVisibility() != Visibility.PUBLIC
-                    || resource.getStatus() != ResourceStatus.APPROVED
-                    || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getIsActive())
-                    || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
-                throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+        boolean publiclyAccessible = resource.getVisibility() == Visibility.PUBLIC
+                && resource.getStatus() == ResourceStatus.APPROVED
+                && !Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
+                && resource.getTopic().getVisibility() == Visibility.PUBLIC
+                && !Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
+                && resource.getTopic().getCategory().getVisibility() == Visibility.PUBLIC;
+
+        if (!publiclyAccessible) {
+            // SEC-4: file chưa public (PENDING/PRIVATE/đã ẩn) chỉ owner hoặc ADMIN được tải.
+            boolean allowed = currentUser != null
+                    && (isAdmin(currentUser) || resource.getCreatedBy().equals(currentUser.getId()));
+            if (!allowed) {
+                throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
             }
         }
 
@@ -997,7 +998,7 @@ public class ResourceServiceImpl implements ResourceService {
                             .reason(reason)
                             .build();
 
-                    log.info("📢 Publishing ResourceRejectedEvent for resource ID: {}", id);
+                    log.info("Publishing ResourceRejectedEvent for resource ID: {}", id);
                     eventPublisher.publishEvent(event);
                 });
             }
@@ -1035,7 +1036,7 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
-        List<String> requestedIds = request.getResourceIds();
+        List<String> requestedIds = request.getIds();
         List<Resource> loaded = resourceRepository.findAllById(requestedIds);
         Map<String, Resource> byId = loaded.stream()
                 .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));
@@ -1084,7 +1085,7 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
-        List<String> requestedIds = request.getResourceIds();
+        List<String> requestedIds = request.getIds();
         List<Resource> loaded = resourceRepository.findAllById(requestedIds);
         Map<String, Resource> byId = loaded.stream()
                 .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));

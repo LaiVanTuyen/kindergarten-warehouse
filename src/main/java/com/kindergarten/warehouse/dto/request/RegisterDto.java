@@ -12,7 +12,8 @@ public class RegisterDto {
     private String username;
 
     @jakarta.validation.constraints.NotBlank(message = "{validation.required}")
-    @jakarta.validation.constraints.Size(min = 6, message = "{validation.size}")
+    @jakarta.validation.constraints.Size(min = 8, max = 100, message = "{validation.size}")
+    @jakarta.validation.constraints.Pattern(regexp = com.kindergarten.warehouse.util.ValidationPatterns.PASSWORD, message = "{validation.password.weak}")
     private String password;
 
     @jakarta.validation.constraints.NotBlank(message = "{validation.required}")

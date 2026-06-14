@@ -22,6 +22,10 @@ public class RateLimitingAspect {
 
     private static final Duration VIEW_RATE_LIMIT = Duration.ofSeconds(60);
 
+    // SEC-4: giới hạn tải file theo IP+resource (chống lạm dụng băng thông).
+    private static final Duration DOWNLOAD_RATE_WINDOW = Duration.ofSeconds(60);
+    private static final long DOWNLOAD_MAX_PER_WINDOW = 30;
+
     private final RedisTemplate<String, Object> redisTemplate;
 
     public RateLimitingAspect(RedisTemplate<String, Object> redisTemplate) {
@@ -46,6 +50,31 @@ public class RateLimitingAspect {
             log.debug("View rate limit exceeded for IP={} resource={}", ipAddress, resourceId);
             throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED,
                     VIEW_RATE_LIMIT.toSeconds());
+        }
+
+        return joinPoint.proceed();
+    }
+
+    @Around("execution(* com.kindergarten.warehouse.controller.ResourceController.downloadResource(..))")
+    public Object rateLimitDownload(ProceedingJoinPoint joinPoint) throws Throwable {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                .getRequest();
+        String ipAddress = RequestUtils.getClientIpAddress();
+        String resourceId = extractResourceId(request.getRequestURI());
+
+        if (resourceId == null) {
+            return joinPoint.proceed();
+        }
+
+        String key = "kindergarten:dl_rate_limit:" + ipAddress + ":" + resourceId;
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count != null && count == 1L) {
+            redisTemplate.expire(key, DOWNLOAD_RATE_WINDOW);
+        }
+        if (count != null && count > DOWNLOAD_MAX_PER_WINDOW) {
+            log.debug("Download rate limit exceeded for IP={} resource={}", ipAddress, resourceId);
+            throw AppException.withRetryAfter(ErrorCode.RESOURCE_VIEW_RATE_LIMIT_EXCEEDED,
+                    DOWNLOAD_RATE_WINDOW.toSeconds());
         }
 
         return joinPoint.proceed();

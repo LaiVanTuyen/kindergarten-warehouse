@@ -217,7 +217,8 @@ public class MinioStorageService {
 
             return s3Client.getObject(b -> b.bucket(bucketName).key(key));
         } catch (S3Exception e) {
-            throw new Exception("Failed to get file from MinIO: " + e.getMessage(), e);
+            log.error("Failed to get file from MinIO (key derived from {}): {}", fileUrl, e.getMessage());
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 }

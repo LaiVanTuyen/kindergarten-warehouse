@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.BulkResourceRequest;
 import com.kindergarten.warehouse.dto.request.ResourceCreationRequest;
 import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.request.ResourceUpdateRequest;
@@ -13,13 +14,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.Map;
@@ -79,7 +85,7 @@ public class ResourceController {
                                 HttpStatus.OK);
         }
 
-        @PutMapping("/{id}/view")
+        @PostMapping("/{id}/view")
         public ResponseEntity<ApiResponse<Void>> incrementViewCount(
                         @PathVariable String id,
                         HttpServletRequest request) {
@@ -97,36 +103,29 @@ public class ResourceController {
                                                 messageService.getMessage("resource.view.increment.success")));
         }
 
-        // ✅ CRITICAL FIX #1: Add file download endpoint
         @GetMapping("/{id}/file")
-        public ResponseEntity<?> downloadResource(@PathVariable String id) {
-                try {
-                        // Get file stream
-                        var fileInfo = resourceService.getResourceFileInfo(id);
-                        String cleanFileName = fileInfo.getFileName();
-                        String encodedFileName = java.net.URLEncoder
-                                        .encode(cleanFileName, java.nio.charset.StandardCharsets.UTF_8)
-                                        .replace("+", "%20");
+        public ResponseEntity<StreamingResponseBody> downloadResource(@PathVariable String id) throws Exception {
+                // Return type phải là ResponseEntity<StreamingResponseBody> (không phải <?>),
+                // nếu không Spring không route vào StreamingResponseBodyReturnValueHandler ->
+                // cố serialize lambda bằng message converter -> HttpMessageNotWritableException.
+                // Lỗi (không tìm thấy / forbidden / youtube / storage) ném AppException ->
+                // GlobalExceptionHandler trả JSON ApiResponse (theo contract).
+                var fileInfo = resourceService.getResourceFileInfo(id);
+                ContentDisposition contentDisposition = ContentDisposition.attachment()
+                                .filename(fileInfo.getFileName(), StandardCharsets.UTF_8)
+                                .build();
 
-                        return ResponseEntity.ok()
-                                        .header("Content-Disposition",
-                                                        "attachment; filename=\"" + cleanFileName
-                                                                        + "\"; filename*=UTF-8''" + encodedFileName)
-                                        .header("Content-Type", fileInfo.getContentType())
-                                        .body(fileInfo.getInputStream());
+                StreamingResponseBody stream = outputStream -> {
+                        try (InputStream inputStream = fileInfo.getInputStream()) {
+                                inputStream.transferTo(outputStream);
+                        }
+                };
 
-                } catch (IllegalArgumentException e) {
-                        log.warn("Cannot download resource {}: {}", id, e.getMessage());
-                        return ResponseEntity.badRequest()
-                                        .body(ApiResponse.error(ErrorCode.INVALID_REQUEST.getCode(), e.getMessage()));
-                } catch (com.kindergarten.warehouse.exception.AppException e) {
-                        throw e;
-                } catch (Exception e) {
-                        log.error("Error downloading resource {}: {}", id, e.getMessage(), e);
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(ApiResponse.error(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode(),
-                                                        "Failed to download file"));
-                }
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                                .contentType(MediaType.parseMediaType(fileInfo.getContentType()))
+                                .contentLength(fileInfo.getFileSize())
+                                .body(stream);
         }
 
         @DeleteMapping("/{id}")
@@ -138,18 +137,18 @@ public class ResourceController {
                                 .ok(ApiResponse.success(null, messageService.getMessage("resource.delete.success")));
         }
 
-        @DeleteMapping("/bulk")
+        @PostMapping("/bulk-delete")
         @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
         public ResponseEntity<ApiResponse<Void>> deleteResources(
-                        @RequestBody @jakarta.validation.constraints.Size(min = 1, max = 1000, message = "{validation.size}") java.util.List<String> ids,
+                        @Valid @RequestBody BulkResourceRequest request,
                         Principal principal,
                         @RequestParam(defaultValue = "false") boolean hard) {
-                resourceService.deleteResources(ids, principal.getName(), hard);
+                resourceService.deleteResources(request.getIds(), principal.getName(), hard);
                 return ResponseEntity.ok(ApiResponse.success(null,
                                 messageService.getMessage("resource.delete.bulk.success")));
         }
 
-        @PutMapping("/{id}/restore")
+        @PatchMapping("/{id}/restore")
         @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
         public ResponseEntity<ApiResponse<Void>> restoreResource(@PathVariable String id, Principal principal) {
                 resourceService.restoreResource(id, principal.getName());
@@ -160,9 +159,9 @@ public class ResourceController {
         @PatchMapping("/bulk-restore")
         @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
         public ResponseEntity<ApiResponse<Void>> restoreResources(
-                        @RequestBody @jakarta.validation.constraints.Size(min = 1, max = 1000, message = "{validation.size}") java.util.List<String> ids,
+                        @Valid @RequestBody BulkResourceRequest request,
                         Principal principal) {
-                resourceService.restoreResources(ids, principal.getName());
+                resourceService.restoreResources(request.getIds(), principal.getName());
                 return ResponseEntity.ok(ApiResponse.success(null,
                                 messageService.getMessage("resource.restore.bulk.success")));
         }

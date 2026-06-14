@@ -10,19 +10,16 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Body bulk dùng chung cho resource (approve/reject/delete/restore) — field `ids`
- * theo API_CONTRACT_V1 §2.5. `reason` chỉ dùng cho bulk-reject.
+ * Body bulk dùng chung cho các entity có khóa Long (category/topic) — field `ids`
+ * theo API_CONTRACT_V1 §2.5.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BulkResourceRequest {
+public class BulkLongIdsRequest {
 
     @NotEmpty(message = "{validation.required}")
     @Size(min = 1, max = 1000, message = "{validation.size}")
-    private List<String> ids;
-
-    // Optional: Used specifically for Bulk Reject
-    private String reason;
+    private List<Long> ids;
 }

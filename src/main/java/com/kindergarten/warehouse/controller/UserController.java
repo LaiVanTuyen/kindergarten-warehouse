@@ -25,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -121,7 +122,7 @@ public class UserController {
                 messageService.getMessage("user.delete.success")));
     }
 
-    @PutMapping("/{id}/restore")
+    @PatchMapping("/{id}/restore")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> restoreUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(
@@ -129,7 +130,7 @@ public class UserController {
                 messageService.getMessage("user.restore.success")));
     }
 
-    @PutMapping("/{id}/block")
+    @PatchMapping("/{id}/block")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> toggleBlockUser(@PathVariable Long id,
                                                                      @Valid @RequestBody(required = false) BlockUserRequest request) {
