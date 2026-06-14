@@ -108,10 +108,10 @@ public class CommentServiceImpl implements CommentService {
                 || resource.getVisibility() != Visibility.PUBLIC
                 || resource.getTopic() == null
                 || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                || Boolean.FALSE.equals(resource.getTopic().getIsActive())
+                || resource.getTopic().getVisibility() != Visibility.PUBLIC
                 || resource.getTopic().getCategory() == null
                 || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
+                || resource.getTopic().getCategory().getVisibility() != Visibility.PUBLIC) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
     }

@@ -6,6 +6,7 @@ import com.kindergarten.warehouse.dto.response.CategoryResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Category;
+import com.kindergarten.warehouse.entity.Visibility;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.mapper.CategoryMapper;
@@ -72,8 +73,8 @@ public class CategoryServiceImpl implements CategoryService {
         category.setName(categoryRequest.getName());
         category.setSlug(categoryRequest.getSlug());
         category.setDescription(categoryRequest.getDescription());
-        if (categoryRequest.getIsActive() != null) {
-            category.setIsActive(categoryRequest.getIsActive());
+        if (categoryRequest.getVisibility() != null) {
+            category.setVisibility(categoryRequest.getVisibility());
         }
 
         if (icon != null && !icon.isEmpty()) {
@@ -100,21 +101,20 @@ public class CategoryServiceImpl implements CategoryService {
             throw new AppException(ErrorCode.DUPLICATE_NAME);
         }
 
-        // Determine message key based on status change
+        // Determine message key based on visibility change
         String messageKey = "category.update.success";
-        if (categoryRequest.getIsActive() != null && !categoryRequest.getIsActive().equals(category.getIsActive())) {
-            if (categoryRequest.getIsActive()) {
-                messageKey = "category.activated";
-            } else {
-                messageKey = "category.deactivated";
-            }
+        if (categoryRequest.getVisibility() != null
+                && categoryRequest.getVisibility() != category.getVisibility()) {
+            messageKey = categoryRequest.getVisibility() == Visibility.PUBLIC
+                    ? "category.activated"
+                    : "category.deactivated";
         }
 
         category.setName(categoryRequest.getName());
         category.setSlug(categoryRequest.getSlug());
         category.setDescription(categoryRequest.getDescription());
-        if (categoryRequest.getIsActive() != null) {
-            category.setIsActive(categoryRequest.getIsActive());
+        if (categoryRequest.getVisibility() != null) {
+            category.setVisibility(categoryRequest.getVisibility());
         }
 
         if (icon != null && !icon.isEmpty()) {

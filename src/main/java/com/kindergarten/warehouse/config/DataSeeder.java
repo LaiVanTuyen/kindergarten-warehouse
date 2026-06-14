@@ -347,7 +347,7 @@ public class DataSeeder implements CommandLineRunner {
                                                 .bgFrom(seed.bgFrom)
                                                 .bgTo(seed.bgTo)
                                                 .link(seed.targetLink)
-                                                .isActive(true)
+                                                .visibility(com.kindergarten.warehouse.entity.Visibility.PUBLIC)
                                                 .displayOrder(seed.displayOrder)
                                                 .startDate(seed.startDate)
                                                 .endDate(seed.endDate)

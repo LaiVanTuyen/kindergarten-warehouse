@@ -18,7 +18,7 @@ public interface BannerRepository extends JpaRepository<Banner, Long> {
     @Query("SELECT b FROM Banner b " +
             "LEFT JOIN FETCH b.creator " +
             "LEFT JOIN FETCH b.updater " +
-            "WHERE b.isActive = true " +
+            "WHERE b.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
             "AND b.isDeleted = false " +
             "AND (:platform IS NULL OR b.platform = :platform) " +
             "AND (b.startDate IS NULL OR b.startDate <= :now) " +

@@ -11,9 +11,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long>,
     java.util.List<Category> findAllByIsDeletedFalse();
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-    java.util.List<Category> findAllByIsDeletedFalseAndIsActiveTrue();
-
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
     java.util.List<Category> findAllByIsDeletedTrue();
 
     @Override

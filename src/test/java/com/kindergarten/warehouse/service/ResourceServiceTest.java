@@ -70,11 +70,11 @@ class ResourceServiceTest {
 
         Category mockCategory = new Category();
         mockCategory.setIsDeleted(false);
-        mockCategory.setIsActive(true);
+        mockCategory.setVisibility(com.kindergarten.warehouse.entity.Visibility.PUBLIC);
 
         Topic mockTopic = new Topic();
         mockTopic.setIsDeleted(false);
-        mockTopic.setIsActive(true);
+        mockTopic.setVisibility(com.kindergarten.warehouse.entity.Visibility.PUBLIC);
         mockTopic.setCategory(mockCategory);
 
         testResource = new Resource();

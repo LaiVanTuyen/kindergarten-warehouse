@@ -53,11 +53,11 @@ class CommentServiceTest {
 
         Category category = new Category();
         category.setIsDeleted(false);
-        category.setIsActive(true);
+        category.setVisibility(Visibility.PUBLIC);
 
         Topic topic = new Topic();
         topic.setIsDeleted(false);
-        topic.setIsActive(true);
+        topic.setVisibility(Visibility.PUBLIC);
         topic.setCategory(category);
 
         publicResource = new Resource();

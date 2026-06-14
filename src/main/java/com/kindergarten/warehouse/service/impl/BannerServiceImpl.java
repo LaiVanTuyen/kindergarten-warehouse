@@ -6,6 +6,7 @@ import com.kindergarten.warehouse.dto.response.BannerResponse;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Banner;
+import com.kindergarten.warehouse.entity.Visibility;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.mapper.BannerMapper;
@@ -72,7 +73,7 @@ public class BannerServiceImpl implements BannerService {
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
         banner.setDisplayOrder(1);
-        banner.setIsActive(true);
+        banner.setVisibility(Visibility.PUBLIC);
         banner.setIsDeleted(false);
 
         return bannerMapper.toResponse(bannerRepository.save(banner));
@@ -136,8 +137,8 @@ public class BannerServiceImpl implements BannerService {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
-        boolean newStatus = !banner.getIsActive();
-        banner.setIsActive(newStatus);
+        boolean newStatus = banner.getVisibility() != Visibility.PUBLIC;
+        banner.setVisibility(newStatus ? Visibility.PUBLIC : Visibility.PRIVATE);
 
         String messageKey = newStatus ? "banner.activated" : "banner.deactivated";
 
@@ -154,7 +155,7 @@ public class BannerServiceImpl implements BannerService {
 
         // Soft delete: keep image, just mark as deleted
         banner.setIsDeleted(true);
-        banner.setIsActive(false); // Also deactivate it
+        banner.setVisibility(Visibility.PRIVATE); // Also deactivate it
         bannerRepository.save(banner);
     }
 }

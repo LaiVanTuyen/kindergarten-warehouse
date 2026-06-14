@@ -266,9 +266,9 @@ public class ResourceServiceImpl implements ResourceService {
             predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
             predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -724,9 +724,9 @@ public class ResourceServiceImpl implements ResourceService {
             predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
             predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
             predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -795,10 +795,10 @@ public class ResourceServiceImpl implements ResourceService {
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
         Category category = topic.getCategory();
         if (Boolean.TRUE.equals(topic.getIsDeleted())
-                || Boolean.FALSE.equals(topic.getIsActive())
+                || topic.getVisibility() != Visibility.PUBLIC
                 || category == null
                 || Boolean.TRUE.equals(category.getIsDeleted())
-                || Boolean.FALSE.equals(category.getIsActive())) {
+                || category.getVisibility() != Visibility.PUBLIC) {
             throw new AppException(ErrorCode.TOPIC_NOT_FOUND);
         }
         return topic;
@@ -822,10 +822,10 @@ public class ResourceServiceImpl implements ResourceService {
                 || Boolean.TRUE.equals(resource.getIsDeleted())
                 || resource.getTopic() == null
                 || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                || Boolean.FALSE.equals(resource.getTopic().getIsActive())
+                || resource.getTopic().getVisibility() != Visibility.PUBLIC
                 || resource.getTopic().getCategory() == null
                 || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
+                || resource.getTopic().getCategory().getVisibility() != Visibility.PUBLIC) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
     }

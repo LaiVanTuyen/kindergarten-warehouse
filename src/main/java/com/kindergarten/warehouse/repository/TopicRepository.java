@@ -19,20 +19,12 @@ public interface TopicRepository extends JpaRepository<Topic, Long>, JpaSpecific
     List<Topic> findByCategoryIdAndIsDeletedFalse(@Param("categoryId") Long categoryId);
 
     @EntityGraph(attributePaths = { "creator", "updater" })
-    @Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
-    List<Topic> findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(@Param("categoryId") Long categoryId);
-
-    @EntityGraph(attributePaths = { "creator", "updater" })
     @Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = true")
     List<Topic> findByCategoryIdAndIsDeletedTrue(@Param("categoryId") Long categoryId);
 
     @EntityGraph(attributePaths = { "creator", "updater" })
     @Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.category.isDeleted = false")
     List<Topic> findAllByIsDeletedFalse();
-
-    @EntityGraph(attributePaths = { "creator", "updater" })
-    @Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
-    List<Topic> findAllByIsDeletedFalseAndIsActiveTrue();
 
     @EntityGraph(attributePaths = { "creator", "updater" })
     @Query("SELECT t FROM Topic t WHERE t.isDeleted = true")

@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.dto.response;
 
+import com.kindergarten.warehouse.entity.Visibility;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,5 +20,5 @@ public class TopicResponse extends BaseResponse {
     private Long categoryId;
     private String categoryName;
     private Long resourceCount;
-    private Boolean isActive;
+    private Visibility visibility;
 }

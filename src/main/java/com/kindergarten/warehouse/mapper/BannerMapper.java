@@ -23,7 +23,7 @@ public class BannerMapper {
                 .link(banner.getLink())
                 .startDate(banner.getStartDate())
                 .endDate(banner.getEndDate())
-                .isActive(banner.getIsActive())
+                .visibility(banner.getVisibility())
                 .displayOrder(banner.getDisplayOrder())
                 .createdAt(banner.getCreatedAt())
                 .updatedAt(banner.getUpdatedAt())
