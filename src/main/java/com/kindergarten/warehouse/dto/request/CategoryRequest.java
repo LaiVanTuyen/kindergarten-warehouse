@@ -1,7 +1,7 @@
 package com.kindergarten.warehouse.dto.request;
 
+import com.kindergarten.warehouse.entity.Visibility;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 
 public class CategoryRequest {
     @NotBlank(message = "{validation.required}")
@@ -12,14 +12,14 @@ public class CategoryRequest {
 
     private String description;
 
-    private Boolean isActive;
+    private Visibility visibility;
 
-    public Boolean getIsActive() {
-        return isActive;
+    public Visibility getVisibility() {
+        return visibility;
     }
 
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
     }
 
     public String getName() {

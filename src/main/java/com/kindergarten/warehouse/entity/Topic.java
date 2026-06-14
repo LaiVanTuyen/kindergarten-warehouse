@@ -50,7 +50,8 @@ public class Topic extends BaseEntity {
     private Boolean isDeleted = false;
 
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false, columnDefinition = "VARCHAR(20)")
+    private Visibility visibility = Visibility.PUBLIC;
 
 }

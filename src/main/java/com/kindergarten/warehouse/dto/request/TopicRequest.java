@@ -1,7 +1,7 @@
 package com.kindergarten.warehouse.dto.request;
 
+import com.kindergarten.warehouse.entity.Visibility;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,6 +15,6 @@ public class TopicRequest {
 
     private Long categoryId;
 
-    private Boolean isActive;
+    private Visibility visibility;
 
 }

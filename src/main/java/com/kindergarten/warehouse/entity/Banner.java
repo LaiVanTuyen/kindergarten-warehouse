@@ -38,8 +38,9 @@ public class Banner extends BaseEntity {
     private String link;
 
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false, columnDefinition = "VARCHAR(20)")
+    private Visibility visibility = Visibility.PUBLIC;
 
     @Column(name = "display_order")
     @Builder.Default
@@ -119,12 +120,12 @@ public class Banner extends BaseEntity {
         this.link = link;
     }
 
-    public Boolean getIsActive() {
-        return isActive;
+    public Visibility getVisibility() {
+        return visibility;
     }
 
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
     }
 
     public Integer getDisplayOrder() {

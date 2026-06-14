@@ -19,7 +19,7 @@ public class CategoryMapper {
                 .icon(category.getIcon())
                 .description(category.getDescription())
                 .topicCount(category.getTopicCount())
-                .isActive(category.getIsActive())
+                .visibility(category.getVisibility())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .createdBy(category.getCreator() != null ? category.getCreator().getFullName() : null)

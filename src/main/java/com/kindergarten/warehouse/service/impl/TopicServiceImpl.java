@@ -7,6 +7,7 @@ import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Category;
 import com.kindergarten.warehouse.entity.Topic;
+import com.kindergarten.warehouse.entity.Visibility;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.mapper.TopicMapper;
@@ -75,8 +76,8 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = new Topic();
         topic.setName(topicRequest.getName());
         topic.setDescription(topicRequest.getDescription());
-        if (topicRequest.getIsActive() != null) {
-            topic.setIsActive(topicRequest.getIsActive());
+        if (topicRequest.getVisibility() != null) {
+            topic.setVisibility(topicRequest.getVisibility());
         }
         topic.setCategory(category);
 
@@ -95,20 +96,19 @@ public class TopicServiceImpl implements TopicService {
             throw new AppException(ErrorCode.DUPLICATE_NAME);
         }
 
-        // Determine message key based on status change
+        // Determine message key based on visibility change
         String messageKey = "topic.update.success";
-        if (topicRequest.getIsActive() != null && !topicRequest.getIsActive().equals(topic.getIsActive())) {
-            if (topicRequest.getIsActive()) {
-                messageKey = "topic.activated";
-            } else {
-                messageKey = "topic.deactivated";
-            }
+        if (topicRequest.getVisibility() != null
+                && topicRequest.getVisibility() != topic.getVisibility()) {
+            messageKey = topicRequest.getVisibility() == Visibility.PUBLIC
+                    ? "topic.activated"
+                    : "topic.deactivated";
         }
 
         topic.setName(topicRequest.getName());
         topic.setDescription(topicRequest.getDescription());
-        if (topicRequest.getIsActive() != null) {
-            topic.setIsActive(topicRequest.getIsActive());
+        if (topicRequest.getVisibility() != null) {
+            topic.setVisibility(topicRequest.getVisibility());
         }
 
         return new UpdateResult<>(

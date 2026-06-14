@@ -18,7 +18,7 @@ public class TopicMapper {
                 .slug(topic.getSlug())
                 .description(topic.getDescription())
                 .resourceCount(topic.getResourceCount())
-                .isActive(topic.getIsActive())
+                .visibility(topic.getVisibility())
                 .categoryId(topic.getCategory() != null ? topic.getCategory().getId() : null)
                 .categoryName(topic.getCategory() != null ? topic.getCategory().getName() : null)
                 .createdAt(topic.getCreatedAt())
