@@ -2,7 +2,7 @@ package com.kindergarten.warehouse.controller;
 
 import com.kindergarten.warehouse.dto.request.AuditLogFilterRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
-import com.kindergarten.warehouse.entity.AuditLog;
+import com.kindergarten.warehouse.dto.response.AuditLogResponse;
 import com.kindergarten.warehouse.service.AuditLogService;
 import com.kindergarten.warehouse.service.MessageService;
 import com.kindergarten.warehouse.util.PageableUtils;
@@ -27,7 +27,7 @@ public class AuditLogController {
 
         @GetMapping
         @PreAuthorize("hasAuthority('ADMIN')")
-        public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
+        public ResponseEntity<ApiResponse<Page<AuditLogResponse>>> getAuditLogs(
                         @ModelAttribute AuditLogFilterRequest filterRequest,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
@@ -36,7 +36,7 @@ public class AuditLogController {
 
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
-                Page<AuditLog> logs = auditLogService.getLogs(filterRequest, pageable);
+                Page<AuditLogResponse> logs = auditLogService.getLogs(filterRequest, pageable);
 
                 return ResponseEntity.ok(ApiResponse.success(logs, "Audit logs retrieved successfully"));
         }

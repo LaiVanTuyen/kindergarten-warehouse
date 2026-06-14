@@ -89,6 +89,11 @@ public class Resource extends BaseEntity {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    @Version
+    @Builder.Default
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 

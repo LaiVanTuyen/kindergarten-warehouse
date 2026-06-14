@@ -1,6 +1,7 @@
 package com.kindergarten.warehouse.service;
 
 import com.kindergarten.warehouse.dto.request.AuditLogFilterRequest;
+import com.kindergarten.warehouse.dto.response.AuditLogResponse;
 import com.kindergarten.warehouse.entity.AuditLog;
 import com.kindergarten.warehouse.repository.AuditLogRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -40,8 +41,22 @@ public class AuditLogService {
         auditLogRepository.save(log);
     }
 
-    public Page<AuditLog> getLogs(AuditLogFilterRequest request, Pageable pageable) {
-        return auditLogRepository.findAll(buildSpecification(request, null), pageable);
+    public Page<AuditLogResponse> getLogs(AuditLogFilterRequest request, Pageable pageable) {
+        return auditLogRepository.findAll(buildSpecification(request, null), pageable)
+                .map(this::toResponse);
+    }
+
+    private AuditLogResponse toResponse(AuditLog log) {
+        return AuditLogResponse.builder()
+                .id(log.getId())
+                .action(log.getAction())
+                .username(log.getUsername())
+                .target(log.getTarget())
+                .detail(log.getDetail())
+                .ipAddress(log.getIpAddress())
+                .userAgent(log.getUserAgent())
+                .timestamp(log.getTimestamp())
+                .build();
     }
 
     public void exportLogsToStream(AuditLogFilterRequest request, org.springframework.data.domain.Sort sort,

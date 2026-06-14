@@ -13,11 +13,10 @@ import com.kindergarten.warehouse.repository.CommentRepository;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.UserRepository;
 import com.kindergarten.warehouse.service.CommentService;
+import com.kindergarten.warehouse.util.PageableUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +56,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByResourceId(String resourceId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         return commentRepository.findByResourceId(resourceId, pageable)
                 .map(commentMapper::toResponse);
     }
@@ -84,8 +83,8 @@ public class CommentServiceImpl implements CommentService {
     }
 
     private void updateResourceRating(Resource resource) {
-        Double avg = commentRepository.getAverageRatingByResourceId(resource.getId());
-        resource.setAverageRating(avg != null ? avg : 0.0);
-        resourceRepository.save(resource);
+        // Atomic recalc trong DB ([ARC-4]) thay cho read-modify-write tránh race
+        // và không tăng version của Resource.
+        commentRepository.recalculateAverageRating(resource.getId());
     }
 }

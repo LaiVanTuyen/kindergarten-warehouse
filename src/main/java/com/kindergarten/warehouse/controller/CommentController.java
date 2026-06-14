@@ -1,9 +1,11 @@
 package com.kindergarten.warehouse.controller;
 
+import com.kindergarten.warehouse.dto.request.CreateCommentRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.dto.response.CommentResponse;
 import com.kindergarten.warehouse.service.CommentService;
 import com.kindergarten.warehouse.service.MessageService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -24,13 +26,13 @@ public class CommentController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> createComment(
-            @RequestParam String resourceId,
-            @RequestParam String content,
-            @RequestParam(defaultValue = "5") int rating,
+            @Valid @RequestBody CreateCommentRequest request,
             Principal principal) {
-        
+
+        int rating = request.getRating() != null ? request.getRating() : 5;
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
-                commentService.createComment(resourceId, principal.getName(), content, rating),
+                commentService.createComment(request.getResourceId(), principal.getName(),
+                        request.getContent(), rating),
                 messageService.getMessage("comment.create.success")));
     }
 
