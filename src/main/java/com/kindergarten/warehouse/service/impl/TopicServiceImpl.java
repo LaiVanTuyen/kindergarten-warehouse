@@ -13,6 +13,7 @@ import com.kindergarten.warehouse.mapper.TopicMapper;
 import com.kindergarten.warehouse.repository.CategoryRepository;
 import com.kindergarten.warehouse.repository.TopicRepository;
 import com.kindergarten.warehouse.service.TopicService;
+import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,9 +21,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -39,15 +42,12 @@ public class TopicServiceImpl implements TopicService {
         Specification<Topic> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Deleted Filter
             predicates.add(cb.equal(root.get("isDeleted"), deleted));
 
-            // Category Filter
             if (categoryId != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));
             }
 
-            // Keyword Search
             if (keyword != null && !keyword.isEmpty()) {
                 String likePattern = "%" + keyword.toLowerCase() + "%";
                 predicates.add(cb.or(
@@ -67,13 +67,13 @@ public class TopicServiceImpl implements TopicService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // Proactive validation for better UX
         if (topicRepository.existsByNameAndIsDeletedFalse(topicRequest.getName())) {
             throw new AppException(ErrorCode.DUPLICATE_NAME);
         }
 
         Topic topic = new Topic();
         topic.setName(topicRequest.getName());
+        topic.setSlug(resolveCreateSlug(topicRequest));
         topic.setDescription(topicRequest.getDescription());
         if (topicRequest.getIsActive() != null) {
             topic.setIsActive(topicRequest.getIsActive());
@@ -89,23 +89,23 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
 
-        // Proactive validation: check if name changed and conflicts with existing
         if (!topic.getName().equals(topicRequest.getName())
                 && topicRepository.existsByNameAndIsDeletedFalse(topicRequest.getName())) {
             throw new AppException(ErrorCode.DUPLICATE_NAME);
         }
 
-        // Determine message key based on status change
+        String slug = resolveSlug(topicRequest);
+        if (!Objects.equals(topic.getSlug(), slug) && topicRepository.existsBySlugAndIsDeletedFalse(slug)) {
+            throw new AppException(ErrorCode.DUPLICATE_SLUG);
+        }
+
         String messageKey = "topic.update.success";
         if (topicRequest.getIsActive() != null && !topicRequest.getIsActive().equals(topic.getIsActive())) {
-            if (topicRequest.getIsActive()) {
-                messageKey = "topic.activated";
-            } else {
-                messageKey = "topic.deactivated";
-            }
+            messageKey = topicRequest.getIsActive() ? "topic.activated" : "topic.deactivated";
         }
 
         topic.setName(topicRequest.getName());
+        topic.setSlug(slug);
         topic.setDescription(topicRequest.getDescription());
         if (topicRequest.getIsActive() != null) {
             topic.setIsActive(topicRequest.getIsActive());
@@ -138,5 +138,35 @@ public class TopicServiceImpl implements TopicService {
 
         topic.setIsDeleted(false);
         return topicMapper.toResponse(topicRepository.save(topic));
+    }
+
+    private String resolveCreateSlug(TopicRequest topicRequest) {
+        String slug = resolveSlug(topicRequest);
+        if (topicRepository.existsBySlugAndIsDeletedFalse(slug)) {
+            if (StringUtils.hasText(topicRequest.getSlug())) {
+                throw new AppException(ErrorCode.DUPLICATE_SLUG);
+            }
+            slug = buildUniqueGeneratedSlug(slug);
+        }
+        return slug;
+    }
+
+    private String resolveSlug(TopicRequest topicRequest) {
+        String source = StringUtils.hasText(topicRequest.getSlug()) ? topicRequest.getSlug() : topicRequest.getName();
+        String slug = SlugUtil.toSlug(source);
+        if (!StringUtils.hasText(slug)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        return slug;
+    }
+
+    private String buildUniqueGeneratedSlug(String baseSlug) {
+        String slug = baseSlug;
+        int suffix = 2;
+        while (topicRepository.existsBySlugAndIsDeletedFalse(slug)) {
+            slug = baseSlug + "-" + suffix;
+            suffix++;
+        }
+        return slug;
     }
 }

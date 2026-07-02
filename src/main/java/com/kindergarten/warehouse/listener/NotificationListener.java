@@ -19,38 +19,31 @@ import java.nio.charset.StandardCharsets;
 public class NotificationListener {
 
     private final JavaMailSender mailSender;
-    // We assume the application properties has spring.mail.username defined
-    // but standard practice is to inject a specific sender address if needed.
-    // For now, we will rely on default spring boot starter mail autoconfiguration.
 
-    @Async
+    @Async("emailExecutor")
     @EventListener
     public void handleResourceRejectedEvent(ResourceRejectedEvent event) {
-        log.info("🔔 [ASYNC] Handling ResourceRejectedEvent for document: {}, uploader email: {}",
+        log.info("Handling ResourceRejectedEvent for document: {}, uploader email: {}",
                 event.getDocumentTitle(), event.getUploaderEmail());
 
         if (event.getUploaderEmail() == null || event.getUploaderEmail().isEmpty()) {
-            log.warn("❌ [ASYNC] Cannot send rejection email because uploader email is null/empty for resource: {}",
+            log.warn("Cannot send rejection email because uploader email is null/empty for resource: {}",
                     event.getDocumentTitle());
             return;
         }
 
         try {
             sendRejectionEmail(event);
-            log.info("✅ [ASYNC] Successfully sent rejection email to {}", event.getUploaderEmail());
+            log.info("Successfully sent rejection email to {}", event.getUploaderEmail());
         } catch (Exception e) {
-            log.error("💥 [ASYNC] Failed to send rejection email to {}: {}", event.getUploaderEmail(), e.getMessage(),
+            log.error("Failed to send rejection email to {}: {}", event.getUploaderEmail(), e.getMessage(),
                     e);
-            // We catch generic Exception to prevent the main thread from knowing or caring
-            // about this failure
-            // This ensures full decoupling - the API transaction continues even if SMTP is
-            // completely down
         }
     }
 
     private void sendRejectionEmail(ResourceRejectedEvent event) throws MessagingException {
         if (event.getUploaderEmail() == null) {
-            return; // Safety check
+            return;
         }
 
         MimeMessage message = mailSender.createMimeMessage();
@@ -95,15 +88,29 @@ public class NotificationListener {
                 </html>
                 """;
 
-        String reason = event.getReason() != null ? event.getReason() : "Chưa tuân thủ quy định đăng tải.";
+        String uploaderName = escapeHtml(event.getUploaderName() != null ? event.getUploaderName() : "Giáo viên");
+        String documentTitle = escapeHtml(event.getDocumentTitle());
+        String reason = escapeHtml(event.getReason() != null ? event.getReason() : "Chưa tuân thủ quy định đăng tải.");
         String htmlContent = String.format(
                 htmlTemplate,
-                event.getUploaderName() != null ? event.getUploaderName() : "Giáo viên",
-                event.getDocumentTitle(),
+                uploaderName,
+                documentTitle,
                 reason);
 
-        helper.setText(htmlContent, true); // Set parameter true indicates this is an HTML email
+        helper.setText(htmlContent, true);
 
         mailSender.send(message);
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }

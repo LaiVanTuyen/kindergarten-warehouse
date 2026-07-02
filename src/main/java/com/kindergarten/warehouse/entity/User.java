@@ -63,10 +63,11 @@ public class User extends BaseEntity {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role", columnDefinition = "VARCHAR(20)")
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 

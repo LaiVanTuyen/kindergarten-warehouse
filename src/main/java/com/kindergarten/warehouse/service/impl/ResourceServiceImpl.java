@@ -6,6 +6,7 @@ import com.kindergarten.warehouse.dto.request.BulkResourceRequest;
 import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.request.ResourceUpdateRequest;
 import com.kindergarten.warehouse.dto.response.BulkOperationResponse;
+import com.kindergarten.warehouse.dto.response.FileDownloadInfo;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import com.kindergarten.warehouse.entity.*;
 import com.kindergarten.warehouse.event.ResourceRejectedEvent;
@@ -18,6 +19,7 @@ import com.kindergarten.warehouse.service.ResourceService;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import com.kindergarten.warehouse.service.YoutubeService;
 import com.kindergarten.warehouse.util.AppConstants;
+import com.kindergarten.warehouse.util.PageableUtils;
 import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -25,14 +27,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
@@ -52,7 +54,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceMapper resourceMapper;
     private final ResourceStatService resourceStatService;
-    private final YoutubeService youtubeService; // Injected
+    private final YoutubeService youtubeService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.kindergarten.warehouse.service.AuditLogService auditLogService;
 
@@ -75,20 +77,15 @@ public class ResourceServiceImpl implements ResourceService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Topic topic = topicRepository.findById(request.getTopicId())
-                .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
-
-        Set<AgeGroup> ageGroups = new HashSet<>();
-        if (request.getAgeGroupIds() != null && !request.getAgeGroupIds().isEmpty()) {
-            ageGroups.addAll(ageGroupRepository.findAllById(request.getAgeGroupIds()));
-        }
+        Topic topic = getActiveTopicOrThrow(request.getTopicId());
+        Set<AgeGroup> ageGroups = getAgeGroupsOrThrow(request.getAgeGroupIds());
 
         String fileUrl;
         ResourceType resourceType;
         String fileType;
         String extension;
         Long fileSize = 0L;
-        String duration = request.getDuration(); // Default from request
+        String duration = request.getDuration();
 
         if (request.getYoutubeLink() != null && !request.getYoutubeLink().isEmpty()) {
             String youtubeId = youtubeService.extractVideoId(request.getYoutubeLink());
@@ -111,13 +108,11 @@ public class ResourceServiceImpl implements ResourceService {
             fileType = "VIDEO";
             extension = "youtube";
 
-            // ✅ CRITICAL FIX #2: YouTube API error handling with try-catch
             if (duration == null || duration.isEmpty()) {
                 try {
                     duration = youtubeService.getVideoDuration(youtubeId);
                 } catch (Exception e) {
                     log.warn("Failed to fetch YouTube duration for video {}: {}", youtubeId, e.getMessage());
-                    // Duration optional - don't fail upload
                     duration = "Unknown";
                 }
             }
@@ -162,7 +157,7 @@ public class ResourceServiceImpl implements ResourceService {
         if (duration != null && duration.length() > 20) {
             duration = duration.substring(0, 20);
         }
-        resource.setDuration(duration); // Set duration
+        resource.setDuration(duration);
         resource.setCreatedBy(user.getId());
         resource.setCreator(user);
         resource.setAgeGroups(ageGroups);
@@ -238,26 +233,31 @@ public class ResourceServiceImpl implements ResourceService {
             User currentUser) {
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
 
+        List<String> resourceIds = resourcePage.getContent().stream()
+                .map(Resource::getId)
+                .collect(Collectors.toList());
+
         Set<String> favoritedResourceIds = Collections.emptySet();
-        if (currentUser != null) {
-            List<String> resourceIds = resourcePage.getContent().stream()
-                    .map(Resource::getId)
-                    .collect(Collectors.toList());
-            if (!resourceIds.isEmpty()) {
-                favoritedResourceIds = favoriteRepository
-                        .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
-            }
+        if (currentUser != null && !resourceIds.isEmpty()) {
+            favoritedResourceIds = favoriteRepository
+                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
         }
 
+        Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
+        Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
+
         final Set<String> finalFavoritedIds = favoritedResourceIds;
-        return resourcePage
-                .map(resource -> resourceMapper.toResponse(resource, finalFavoritedIds.contains(resource.getId())));
+        return resourcePage.map(resource -> {
+            long pv = pendingViews.getOrDefault(resource.getId(), 0L);
+            long pd = pendingDownloads.getOrDefault(resource.getId(), 0L);
+            return resourceMapper.toResponse(resource, finalFavoritedIds.contains(resource.getId()), pv, pd);
+        });
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> portalSpec = (root, query, cb) -> {
@@ -287,7 +287,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> adminSpec = (root, query, cb) -> {
@@ -320,7 +320,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size,
             String username) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         User currentUser = getUserOrThrow(username);
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
@@ -339,6 +339,41 @@ public class ResourceServiceImpl implements ResourceService {
         Specification<Resource> finalSpec = Specification.where(mySpec).and(baseSpec);
 
         return executeQueryAndMap(finalSpec, pageable, currentUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResourceResponse> getFavoriteResources(int page, int size, String username) {
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
+        User currentUser = getUserOrThrow(username);
+        List<Resource> resources = getVisibleFavoriteResources(currentUser);
+
+        int start = Math.toIntExact(Math.min(pageable.getOffset(), resources.size()));
+        int end = Math.min(start + pageable.getPageSize(), resources.size());
+        List<Resource> pageContent = resources.subList(start, end);
+
+        List<String> resourceIds = pageContent.stream().map(Resource::getId).collect(Collectors.toList());
+        Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
+        Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
+
+        List<ResourceResponse> content = pageContent.stream()
+                .map(resource -> resourceMapper.toResponse(
+                        resource,
+                        true,
+                        pendingViews.getOrDefault(resource.getId(), 0L),
+                        pendingDownloads.getOrDefault(resource.getId(), 0L)))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, resources.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getFavoriteResourceIds(String username) {
+        User currentUser = getUserOrThrow(username);
+        return getVisibleFavoriteResources(currentUser).stream()
+                .map(Resource::getId)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -446,10 +481,21 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        if (request.getTitle() != null)
+        // Snapshot pre-edit state to compute the diff for the audit log.
+        String prevTitle = resource.getTitle();
+        String prevDescription = resource.getDescription();
+        String prevFileUrl = resource.getFileUrl();
+        Long prevTopicId = resource.getTopic() != null ? resource.getTopic().getId() : null;
+        List<String> changedFields = new ArrayList<>();
+
+        if (request.getTitle() != null) {
+            if (!java.util.Objects.equals(prevTitle, request.getTitle())) changedFields.add("title");
             resource.setTitle(request.getTitle());
-        if (request.getDescription() != null)
+        }
+        if (request.getDescription() != null) {
+            if (!java.util.Objects.equals(prevDescription, request.getDescription())) changedFields.add("description");
             resource.setDescription(request.getDescription());
+        }
         if (isAdmin(user)) {
             // ADMIN WORKFLOW: Allow Admin to change status directly from the form.
             // If they don't provide a status, it stays whatever it was originally.
@@ -512,15 +558,11 @@ public class ResourceServiceImpl implements ResourceService {
             resource.setFileType("VIDEO");
             resource.setFileExtension("youtube");
 
-            // ✅ CRITICAL FIX #5: Always update thumbnail when YouTube link changes
-            // (Unless it's a custom uploaded thumbnail, but if they change the link, we
-            // should reset to the new video's thumbnail)
             if (resource.getThumbnailUrl() == null || resource.getThumbnailUrl().isEmpty()
                     || resource.getThumbnailUrl().contains("youtube.com")) {
                 resource.setThumbnailUrl("https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg");
             }
 
-            // ✅ CRITICAL FIX #2: Auto-fetch duration on update with error handling
             try {
                 String duration = youtubeService.getVideoDuration(youtubeId);
                 if (duration != null && duration.length() <= 20) {
@@ -557,33 +599,29 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         if (request.getTopicId() != null) {
-            Topic topic = topicRepository.findById(request.getTopicId())
-                    .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
+            Topic topic = getActiveTopicOrThrow(request.getTopicId());
+            if (!java.util.Objects.equals(prevTopicId, topic.getId())) changedFields.add("topic");
             resource.setTopic(topic);
         }
 
         if (request.getAgeGroupIds() != null && !request.getAgeGroupIds().isEmpty()) {
-            Set<AgeGroup> ageGroups = new HashSet<>(ageGroupRepository.findAllById(request.getAgeGroupIds()));
-            resource.setAgeGroups(ageGroups);
+            resource.setAgeGroups(getAgeGroupsOrThrow(request.getAgeGroupIds()));
+            changedFields.add("ageGroups");
+        }
+
+        if (!java.util.Objects.equals(prevFileUrl, resource.getFileUrl())) {
+            changedFields.add("file");
         }
 
         Resource savedResource = resourceRepository.save(resource);
 
-        // Check if the current user has favorited this resource
-        boolean isFavorited = false;
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated()
-                    && !"anonymousUser".equals(authentication.getPrincipal())) {
-                User currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-                if (currentUser != null) {
-                    isFavorited = favoriteRepository.existsByUserIdAndResourceId(currentUser.getId(),
-                            savedResource.getId());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to check favorite status after update: {}", e.getMessage());
+        if (!isAdmin(user) && !changedFields.isEmpty()) {
+            manuallyLogAudit("RESUBMIT_PENDING", username, "RESOURCE_STATUS",
+                    String.format("Uploader edited – fields changed: %s – auto-resubmit for review",
+                            changedFields));
         }
+
+        boolean isFavorited = isFavoritedByCurrentUser(savedResource.getId());
 
         return resourceMapper.toResponse(savedResource, isFavorited);
     }
@@ -602,21 +640,7 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setVisibility(request.getVisibility());
         Resource savedResource = resourceRepository.save(resource);
 
-        // Check if the current user has favorited this resource
-        boolean isFavorited = false;
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated()
-                    && !"anonymousUser".equals(authentication.getPrincipal())) {
-                User currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-                if (currentUser != null) {
-                    isFavorited = favoriteRepository.existsByUserIdAndResourceId(currentUser.getId(),
-                            savedResource.getId());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to check favorite status after update visibility: {}", e.getMessage());
-        }
+        boolean isFavorited = isFavoritedByCurrentUser(savedResource.getId());
 
         return resourceMapper.toResponse(savedResource, isFavorited);
     }
@@ -635,13 +659,11 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        // ✅ IMPORTANT FIX #4: Validate image format
         String contentType = thumbnail.getContentType();
         if (!isValidImageFormat(contentType)) {
             throw new AppException(ErrorCode.INVALID_IMAGE_FORMAT);
         }
 
-        // Check file size (max configured)
         if (thumbnail.getSize() > thumbnailMaxBytes) {
             throw new AppException(ErrorCode.THUMBNAIL_TOO_LARGE);
         }
@@ -670,6 +692,10 @@ public class ResourceServiceImpl implements ResourceService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        Resource resource = resourceRepository.findByIdWithDetails(resourceId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        ensurePortalVisible(resource);
+
         Optional<Favorite> favorite = favoriteRepository.findByUserIdAndResourceId(user.getId(), resourceId);
 
         if (favorite.isPresent()) {
@@ -683,6 +709,36 @@ public class ResourceServiceImpl implements ResourceService {
             favoriteRepository.save(newFavorite);
             return true; // Now favorited
         }
+    }
+
+    private List<Resource> getVisibleFavoriteResources(User user) {
+        List<String> favoriteIds = favoriteRepository.findResourceIdsByUserId(user.getId());
+        if (favoriteIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Specification<Resource> visibleFavoriteSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("id").in(favoriteIds));
+            predicates.add(cb.equal(root.get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
+            predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
+            predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("topic").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("topic").get("category").get("isActive"), true));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Map<String, Integer> order = new HashMap<>();
+        for (int i = 0; i < favoriteIds.size(); i++) {
+            order.put(favoriteIds.get(i), i);
+        }
+
+        List<Resource> resources = new ArrayList<>(
+                resourceRepository.findAll(visibleFavoriteSpec, Pageable.unpaged()).getContent());
+        resources.sort(Comparator.comparingInt(resource -> order.getOrDefault(resource.getId(), Integer.MAX_VALUE)));
+        return resources;
     }
 
     private String getExtension(String fileName) {
@@ -714,14 +770,7 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         if (!privileged) {
-            if (resource.getVisibility() != Visibility.PUBLIC
-                    || resource.getStatus() != ResourceStatus.APPROVED
-                    || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getIsActive())
-                    || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
-                throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-            }
+            ensurePortalVisible(resource);
         }
 
         boolean isFavorited = false;
@@ -739,6 +788,63 @@ public class ResourceServiceImpl implements ResourceService {
     private User getUserOrThrow(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Topic getActiveTopicOrThrow(Long topicId) {
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new AppException(ErrorCode.TOPIC_NOT_FOUND));
+        Category category = topic.getCategory();
+        if (Boolean.TRUE.equals(topic.getIsDeleted())
+                || Boolean.FALSE.equals(topic.getIsActive())
+                || category == null
+                || Boolean.TRUE.equals(category.getIsDeleted())
+                || Boolean.FALSE.equals(category.getIsActive())) {
+            throw new AppException(ErrorCode.TOPIC_NOT_FOUND);
+        }
+        return topic;
+    }
+
+    private Set<AgeGroup> getAgeGroupsOrThrow(List<Long> ageGroupIds) {
+        if (ageGroupIds == null || ageGroupIds.isEmpty()) {
+            return new HashSet<>();
+        }
+        Set<Long> uniqueIds = new HashSet<>(ageGroupIds);
+        List<AgeGroup> ageGroups = ageGroupRepository.findAllById(uniqueIds);
+        if (ageGroups.size() != uniqueIds.size()) {
+            throw new AppException(ErrorCode.AGE_GROUP_NOT_FOUND);
+        }
+        return new HashSet<>(ageGroups);
+    }
+
+    private void ensurePortalVisible(Resource resource) {
+        if (resource.getVisibility() != Visibility.PUBLIC
+                || resource.getStatus() != ResourceStatus.APPROVED
+                || Boolean.TRUE.equals(resource.getIsDeleted())
+                || resource.getTopic() == null
+                || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
+                || Boolean.FALSE.equals(resource.getTopic().getIsActive())
+                || resource.getTopic().getCategory() == null
+                || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
+                || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+    }
+
+    private boolean isFavoritedByCurrentUser(String resourceId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || "anonymousUser".equals(authentication.getPrincipal())) {
+                return false;
+            }
+            return userRepository.findByUsername(authentication.getName())
+                    .map(user -> favoriteRepository.existsByUserIdAndResourceId(user.getId(), resourceId))
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("Failed to check favorite status for resource {}: {}", resourceId, e.getMessage());
+            return false;
+        }
     }
 
     private boolean isAdmin(User user) {
@@ -804,7 +910,6 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
 
-    // ✅ IMPORTANT FIX #4: Helper method for thumbnail format validation
     private boolean isValidImageFormat(String contentType) {
         if (contentType == null)
             return false;
@@ -815,13 +920,12 @@ public class ResourceServiceImpl implements ResourceService {
                 lowerCaseType.equals("image/webp");
     }
 
-    // ✅ CRITICAL FIX #1: Get file info for download
     @Override
-    public com.kindergarten.warehouse.dto.response.FileDownloadInfo getResourceFileInfo(String id) throws Exception {
-        Resource resource = resourceRepository.findById(id)
+    @Transactional(readOnly = true)
+    public FileDownloadInfo getResourceFileInfo(String id) throws Exception {
+        Resource resource = resourceRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // Check if deleted
         if (resource.getIsDeleted()) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
@@ -837,68 +941,63 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         if (!privileged) {
-            if (resource.getVisibility() != Visibility.PUBLIC
-                    || resource.getStatus() != ResourceStatus.APPROVED
-                    || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getIsActive())
-                    || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                    || Boolean.FALSE.equals(resource.getTopic().getCategory().getIsActive())) {
-                throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-            }
+            ensurePortalVisible(resource);
         }
 
-        // Cannot download YouTube videos
         if (resource.getResourceType() == ResourceType.YOUTUBE) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
         resourceStatService.incrementDownloadCount(resource.getId());
 
-        // Get file info
-        String fileName = resource.getTitle();
-        String contentType = getContentType(resource.getFileType());
-
-        // Get file stream from MinIO
+        String extension = normalizeExtension(resource.getFileExtension());
+        String fileName = buildDownloadFileName(resource, extension);
+        String contentType = getContentTypeByExtension(extension);
         var inputStream = minioStorageService.getObject(resource.getFileUrl());
 
-        return com.kindergarten.warehouse.dto.response.FileDownloadInfo.builder()
+        return FileDownloadInfo.builder()
                 .inputStream(inputStream)
-                .fileName(fileName + "." + getFileExtensionByType(resource.getFileType()))
+                .fileName(fileName)
                 .contentType(contentType)
                 .fileSize(resource.getFileSize() != null ? resource.getFileSize() : 0L)
                 .build();
     }
 
-    private String getContentType(String fileType) {
-        if (fileType == null)
+    private String getContentTypeByExtension(String extension) {
+        if (!StringUtils.hasText(extension)) {
             return "application/octet-stream";
-        return switch (fileType.toUpperCase()) {
-            case "PDF" -> "application/pdf";
-            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            case "DOC" -> "application/msword";
-            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            case "XLS" -> "application/vnd.ms-excel";
-            case "VIDEO", "MP4" -> "video/mp4";
-            case "PNG" -> "image/png";
-            case "JPG", "JPEG" -> "image/jpeg";
+        }
+        return switch (extension.toLowerCase(Locale.ROOT)) {
+            case "pdf" -> "application/pdf";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "doc" -> "application/msword";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "xls" -> "application/vnd.ms-excel";
+            case "mp4" -> "video/mp4";
+            case "mov" -> "video/quicktime";
+            case "avi" -> "video/x-msvideo";
             default -> "application/octet-stream";
         };
     }
 
-    private String getFileExtensionByType(String fileType) {
-        if (fileType == null)
-            return "bin";
-        return switch (fileType.toUpperCase()) {
-            case "PDF" -> "pdf";
-            case "DOCX" -> "docx";
-            case "DOC" -> "doc";
-            case "XLSX" -> "xlsx";
-            case "XLS" -> "xls";
-            case "VIDEO", "MP4" -> "mp4";
-            case "PNG" -> "png";
-            case "JPG", "JPEG" -> "jpg";
-            default -> "bin";
-        };
+    private String buildDownloadFileName(Resource resource, String extension) {
+        String title = resource.getTitle() == null ? "" : resource.getTitle();
+        String safeBaseName = title.replaceAll("[\\\\/:*?\"<>|\\r\\n]+", "_").trim();
+        if (!StringUtils.hasText(safeBaseName)) {
+            safeBaseName = "resource-" + resource.getId();
+        }
+        if (!StringUtils.hasText(extension)) {
+            return safeBaseName;
+        }
+        return safeBaseName + "." + extension;
+    }
+
+    private String normalizeExtension(String extension) {
+        if (!StringUtils.hasText(extension)) {
+            return "";
+        }
+        String normalized = extension.toLowerCase(Locale.ROOT).replaceFirst("^\\.", "");
+        return normalized.matches("[a-z0-9]{1,10}") ? normalized : "";
     }
 
     @Override
@@ -913,10 +1012,9 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         resource.setStatus(ResourceStatus.APPROVED);
-        resource.setRejectionReason(null); // Clear any previous rejection reasons
+        resource.setRejectionReason(null);
         Resource savedResource = resourceRepository.save(resource);
 
-        // Custom professional audit log
         String detail = String.format("Approved document: %s", resource.getTitle());
         manuallyLogAudit("APPROVE", username, "RESOURCE_STATUS", detail);
 
@@ -942,25 +1040,13 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setRejectionReason(reason);
         Resource savedResource = resourceRepository.save(resource);
 
-        // Custom professional audit log
         String detail = String.format("Rejected document: %s | Reason: %s", resource.getTitle(), reason);
         manuallyLogAudit("REJECT", username, "RESOURCE_STATUS", detail);
 
-        // Fetch original uploader details to send the email
-        // We catch exception here because we don't want a missing user to block the
-        // rejection process
         try {
             if (resource.getCreatedBy() != null) {
                 userRepository.findById(resource.getCreatedBy()).ifPresent(uploader -> {
                     ResourceRejectedEvent event = ResourceRejectedEvent.builder()
-                            // The provided code snippet for URLEncoder and ResponseEntity.ok()
-                            // appears to be intended for a file download endpoint in a controller,
-                            // not for this service method's event publishing logic.
-                            // Inserting it here would cause syntax errors and logical inconsistencies.
-                            // Therefore, this specific part of the instruction cannot be applied
-                            // directly at the indicated location while maintaining syntactical correctness
-                            // and logical flow for the rejectResource method.
-                            // The original event building logic is preserved.
                             .uploaderId(String.valueOf(uploader.getId()))
                             .uploaderEmail(uploader.getEmail())
                             .uploaderName(
@@ -969,7 +1055,7 @@ public class ResourceServiceImpl implements ResourceService {
                             .reason(reason)
                             .build();
 
-                    log.info("📢 Publishing ResourceRejectedEvent for resource ID: {}", id);
+                    log.info("Publishing ResourceRejectedEvent for resource ID: {}", id);
                     eventPublisher.publishEvent(event);
                 });
             }
@@ -1007,27 +1093,34 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
+        List<String> requestedIds = request.getResourceIds();
+        List<Resource> loaded = resourceRepository.findAllById(requestedIds);
+        Map<String, Resource> byId = loaded.stream()
+                .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));
+
+        List<Resource> toSave = new ArrayList<>();
         List<String> failedIds = new ArrayList<>();
+        List<String> auditDetails = new ArrayList<>();
         int successCount = 0;
 
-        for (String id : request.getResourceIds()) {
-            try {
-                Resource resource = resourceRepository.findById(id)
-                        .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-
-                if (resource.getStatus() != ResourceStatus.APPROVED) {
-                    resource.setStatus(ResourceStatus.APPROVED);
-                    resource.setRejectionReason(null);
-                    resourceRepository.save(resource);
-
-                    String detail = String.format("Bulk Approved document: %s", resource.getTitle());
-                    manuallyLogAudit("APPROVE_BULK", username, "RESOURCE_STATUS", detail);
-                }
-                successCount++;
-            } catch (Exception e) {
-                log.error("Bulk Approve failed for resource ID {}: {}", id, e.getMessage());
+        for (String id : requestedIds) {
+            Resource resource = byId.get(id);
+            if (resource == null) {
                 failedIds.add(id);
+                continue;
             }
+            if (resource.getStatus() != ResourceStatus.APPROVED) {
+                resource.setStatus(ResourceStatus.APPROVED);
+                resource.setRejectionReason(null);
+                toSave.add(resource);
+                auditDetails.add(String.format("Bulk Approved document: %s", resource.getTitle()));
+            }
+            successCount++;
+        }
+
+        if (!toSave.isEmpty()) {
+            resourceRepository.saveAll(toSave);
+            auditDetails.forEach(d -> manuallyLogAudit("APPROVE_BULK", username, "RESOURCE_STATUS", d));
         }
 
         return BulkOperationResponse.builder()
@@ -1049,46 +1142,67 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
         }
 
+        List<String> requestedIds = request.getResourceIds();
+        List<Resource> loaded = resourceRepository.findAllById(requestedIds);
+        Map<String, Resource> byId = loaded.stream()
+                .collect(Collectors.toMap(Resource::getId, java.util.function.Function.identity()));
+
+        List<Long> uploaderIds = loaded.stream()
+                .map(Resource::getCreatedBy)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> uploadersById = uploaderIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(uploaderIds).stream()
+                        .collect(Collectors.toMap(User::getId, java.util.function.Function.identity()));
+
+        List<Resource> toSave = new ArrayList<>();
         List<String> failedIds = new ArrayList<>();
+        List<String> auditDetails = new ArrayList<>();
+        List<ResourceRejectedEvent> pendingEvents = new ArrayList<>();
         int successCount = 0;
 
-        for (String id : request.getResourceIds()) {
-            try {
-                Resource resource = resourceRepository.findById(id)
-                        .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-
-                if (resource.getStatus() != ResourceStatus.REJECTED) {
-                    resource.setStatus(ResourceStatus.REJECTED);
-                    resource.setRejectionReason(request.getReason());
-                    resourceRepository.save(resource);
-
-                    String detail = String.format("Bulk Rejected document: %s | Reason: %s", resource.getTitle(),
-                            request.getReason());
-                    manuallyLogAudit("REJECT_BULK", username, "RESOURCE_STATUS", detail);
-
-                    // Publish Event for Uploader notification
-                    try {
-                        User uploader = userRepository.findByUsername(String.valueOf(resource.getCreatedBy()))
-                                .orElse(null);
-                        if (uploader != null) {
-                            ResourceRejectedEvent event = ResourceRejectedEvent.builder()
-                                    .uploaderId(String.valueOf(uploader.getId()))
-                                    .uploaderEmail(uploader.getEmail())
-                                    .uploaderName(uploader.getFullName())
-                                    .documentTitle(resource.getTitle())
-                                    .reason(request.getReason())
-                                    .build();
-                            eventPublisher.publishEvent(event);
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to publish rejection event during bulk operation for resource {}: {}", id,
-                                e.getMessage());
-                    }
-                }
-                successCount++;
-            } catch (Exception e) {
-                log.error("Bulk Reject failed for resource ID {}: {}", id, e.getMessage());
+        for (String id : requestedIds) {
+            Resource resource = byId.get(id);
+            if (resource == null) {
                 failedIds.add(id);
+                continue;
+            }
+
+            if (resource.getStatus() != ResourceStatus.REJECTED) {
+                resource.setStatus(ResourceStatus.REJECTED);
+                resource.setRejectionReason(request.getReason());
+                toSave.add(resource);
+
+                auditDetails.add(String.format("Bulk Rejected document: %s | Reason: %s",
+                        resource.getTitle(), request.getReason()));
+
+                User uploader = uploadersById.get(resource.getCreatedBy());
+                if (uploader != null) {
+                    pendingEvents.add(ResourceRejectedEvent.builder()
+                            .uploaderId(String.valueOf(uploader.getId()))
+                            .uploaderEmail(uploader.getEmail())
+                            .uploaderName(uploader.getFullName() != null ? uploader.getFullName() : uploader.getUsername())
+                            .documentTitle(resource.getTitle())
+                            .reason(request.getReason())
+                            .build());
+                }
+            }
+            successCount++;
+        }
+
+        if (!toSave.isEmpty()) {
+            resourceRepository.saveAll(toSave);
+            // Audit + event publish only after a successful save so we don't log work
+            // that ended up rolled back.
+            auditDetails.forEach(d -> manuallyLogAudit("REJECT_BULK", username, "RESOURCE_STATUS", d));
+            for (ResourceRejectedEvent event : pendingEvents) {
+                try {
+                    eventPublisher.publishEvent(event);
+                } catch (Exception e) {
+                    log.warn("Failed to publish rejection event during bulk operation: {}", e.getMessage());
+                }
             }
         }
 

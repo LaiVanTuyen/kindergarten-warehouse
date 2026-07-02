@@ -1,54 +1,61 @@
 package com.kindergarten.warehouse.service;
 
-import com.kindergarten.warehouse.dto.request.ResourceCreationRequest;
 import com.kindergarten.warehouse.dto.request.BulkResourceRequest;
+import com.kindergarten.warehouse.dto.request.ResourceCreationRequest;
 import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.request.ResourceUpdateRequest;
+import com.kindergarten.warehouse.dto.request.VisibilityUpdateRequest;
 import com.kindergarten.warehouse.dto.response.BulkOperationResponse;
+import com.kindergarten.warehouse.dto.response.FileDownloadInfo;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface ResourceService {
-        ResourceResponse uploadResource(ResourceCreationRequest request, String username);
 
-        Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size);
+    ResourceResponse uploadResource(ResourceCreationRequest request, String username);
 
-        Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size);
+    Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size);
 
-        Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size, String username);
+    Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size);
 
-        void incrementViewCount(String id, String ipAddress);
+    Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size, String username);
 
-        void deleteResource(String id, String username, boolean hard);
+    Page<ResourceResponse> getFavoriteResources(int page, int size, String username);
 
-        ResourceResponse getResourceBySlug(String slug);
+    List<String> getFavoriteResourceIds(String username);
 
-        void incrementDownloadCount(String id);
+    void incrementViewCount(String id, String ipAddress);
 
-        ResourceResponse updateResource(String id, ResourceUpdateRequest request, String username);
+    void deleteResource(String id, String username, boolean hard);
 
-        boolean toggleFavorite(String resourceId, String username);
+    ResourceResponse getResourceBySlug(String slug);
 
-        void restoreResource(String id, String username);
+    void incrementDownloadCount(String id);
 
-        void deleteResources(java.util.List<String> ids, String username, boolean hard);
+    ResourceResponse updateResource(String id, ResourceUpdateRequest request, String username);
 
-        void restoreResources(java.util.List<String> ids, String username);
+    boolean toggleFavorite(String resourceId, String username);
 
-        String updateThumbnail(String id, MultipartFile thumbnail, String username);
+    void restoreResource(String id, String username);
 
-        // ✅ CRITICAL FIX #1: Get file info for download
-        com.kindergarten.warehouse.dto.response.FileDownloadInfo getResourceFileInfo(String id) throws Exception;
+    void deleteResources(List<String> ids, String username, boolean hard);
 
-        ResourceResponse updateVisibility(String id,
-                        com.kindergarten.warehouse.dto.request.VisibilityUpdateRequest request, String username);
+    void restoreResources(List<String> ids, String username);
 
-        ResourceResponse approveResource(String id, String username);
+    String updateThumbnail(String id, MultipartFile thumbnail, String username);
 
-        ResourceResponse rejectResource(String id, String reason, String username);
+    FileDownloadInfo getResourceFileInfo(String id) throws Exception;
 
-        BulkOperationResponse bulkApprove(BulkResourceRequest request, String username);
+    ResourceResponse updateVisibility(String id, VisibilityUpdateRequest request, String username);
 
-        BulkOperationResponse bulkReject(BulkResourceRequest request, String username);
+    ResourceResponse approveResource(String id, String username);
+
+    ResourceResponse rejectResource(String id, String reason, String username);
+
+    BulkOperationResponse bulkApprove(BulkResourceRequest request, String username);
+
+    BulkOperationResponse bulkReject(BulkResourceRequest request, String username);
 }

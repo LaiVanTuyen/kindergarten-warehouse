@@ -31,7 +31,7 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String senderEmail;
 
-    @Async
+    @Async("emailExecutor")
     public void sendOtpForPasswordReset(String to, String otp) {
         sendHtml(to,
                 "Mã OTP đặt lại mật khẩu - Kindergarten Warehouse",
@@ -39,7 +39,7 @@ public class EmailService {
                 "reset-password OTP", otp);
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendOtpForEmailVerification(String to, String otp) {
         sendHtml(to,
                 "Xác thực email - Kindergarten Warehouse",
@@ -47,7 +47,7 @@ public class EmailService {
                 "verify-email OTP", otp);
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendNewPassword(String to, String password) {
         sendHtml(to,
                 "Mật khẩu mới - Kindergarten Warehouse",
@@ -56,7 +56,7 @@ public class EmailService {
                 null /* không log password kể cả ở dev */);
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendAccountBlockedNotification(String to, String reason) {
         sendHtml(to,
                 "Tài khoản đã bị khóa - Kindergarten Warehouse",
@@ -64,7 +64,7 @@ public class EmailService {
                 "account blocked", null);
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendAccountUnblockedNotification(String to) {
         sendHtml(to,
                 "Tài khoản đã được mở khóa - Kindergarten Warehouse",

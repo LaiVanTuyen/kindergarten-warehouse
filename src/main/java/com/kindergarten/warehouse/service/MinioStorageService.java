@@ -18,6 +18,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -27,6 +29,9 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 public class MinioStorageService {
+
+    /** Hard cap khi streamable size không xác định để tránh OOM. */
+    private static final long UNKNOWN_SIZE_BUFFER_MAX_BYTES = 50L * 1024L * 1024L;
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -53,13 +58,16 @@ public class MinioStorageService {
             }
         }
 
-        // Ensure bucket policy is set for public access to avatars
         setPublicAccessPolicy();
     }
 
+    /**
+     * Public-read chỉ cho asset hiển thị (avatar, banner, icon, thumbnail).
+     * Resource files (resources/files/*) là PRIVATE — chỉ truy cập qua endpoint
+     * có kiểm tra quyền của application.
+     */
     private void setPublicAccessPolicy() {
         try {
-            // JSON policy to allow public read access to "avatars/*"
             String policy = String.format("{\n" +
                     "    \"Version\": \"2012-10-17\",\n" +
                     "    \"Statement\": [\n" +
@@ -79,7 +87,7 @@ public class MinioStorageService {
                     "                \"arn:aws:s3:::%s/icons/*\",\n" +
                     "                \"arn:aws:s3:::%s/profiles/*\",\n" +
                     "                \"arn:aws:s3:::%s/categories/*\",\n" +
-                    "                \"arn:aws:s3:::%s/resources/*\"\n" +
+                    "                \"arn:aws:s3:::%s/resources/thumbnails/*\"\n" +
                     "            ]\n" +
                     "        }\n" +
                     "    ]\n" +
@@ -93,62 +101,79 @@ public class MinioStorageService {
             s3Client.putBucketPolicy(policyRequest);
 
         } catch (S3Exception e) {
-            // Log warning but don't fail startup if policy update fails
             log.warn("Failed to set MinIO bucket policy: {}", e.getMessage());
         }
     }
 
     public String uploadFile(MultipartFile file, String folderName) {
         try {
-            return uploadFile(file.getInputStream(), folderName, file.getOriginalFilename(), file.getContentType());
+            return uploadFile(file.getInputStream(), folderName, file.getOriginalFilename(),
+                    file.getContentType(), file.getSize());
         } catch (IOException e) {
             throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 
     public String uploadFile(InputStream inputStream, String folderName, String originalFilename,
-            String contentType) {
+            String contentType, long contentLength) {
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        String fileName = folderName + "/" + UUID.randomUUID().toString() + extension;
+        String key = folderName + "/" + UUID.randomUUID() + extension;
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(fileName)
+                    .key(key)
                     .contentType(contentType)
                     .build();
 
-            // S3Client needs length. We might need to read all bytes if length is unknown,
-            // but for classpath resources we can usually read bytes first.
-            // Converting to byte array to get size. This is safe for small banner images.
-            byte[] bytes = inputStream.readAllBytes();
+            RequestBody body;
+            if (contentLength > 0) {
+                body = RequestBody.fromInputStream(inputStream, contentLength);
+            } else {
+                body = bufferToRequestBody(inputStream);
+            }
 
-            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
+            s3Client.putObject(putObjectRequest, body);
 
-            // Construct Public URL
-            // Format: http://<VPS_IP>:9000/<bucket>/<key>
-            return String.format("%s/%s/%s", publicEndpoint, bucketName, fileName);
+            return String.format("%s/%s/%s", publicEndpoint, bucketName, key);
 
-        } catch (IOException | S3Exception e) {
+        } catch (S3Exception e) {
+            throw new AppException(ErrorCode.STORAGE_ERROR, e);
+        }
+    }
+
+    /**
+     * Khi size không xác định, đọc tối đa {@value #UNKNOWN_SIZE_BUFFER_MAX_BYTES}
+     * bytes vào memory. Vượt → STORAGE_ERROR để không sập JVM.
+     */
+    private RequestBody bufferToRequestBody(InputStream inputStream) {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            byte[] chunk = new byte[8192];
+            long total = 0;
+            int n;
+            while ((n = inputStream.read(chunk)) != -1) {
+                total += n;
+                if (total > UNKNOWN_SIZE_BUFFER_MAX_BYTES) {
+                    throw new AppException(ErrorCode.STORAGE_ERROR);
+                }
+                buffer.write(chunk, 0, n);
+            }
+            byte[] bytes = buffer.toByteArray();
+            return RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length);
+        } catch (IOException e) {
             throw new AppException(ErrorCode.STORAGE_ERROR, e);
         }
     }
 
     public void deleteFile(String fileUrl) {
         try {
-            // Extract key from URL. URL is: endpoint/bucket/key
-            // Key might contain slashes (e.g., avatars/abc.jpg)
-            // Robust way: remove prefix "endpoint/bucket/"
             String prefix = publicEndpoint + "/" + bucketName + "/";
             if (fileUrl.startsWith(prefix)) {
                 String key = fileUrl.substring(prefix.length());
                 s3Client.deleteObject(b -> b.bucket(bucketName).key(key));
-            } else {
-                // Fallback or ignore if URL format doesn't match
-                // Maybe it's already a key?
             }
         } catch (S3Exception e) {
             throw new AppException(ErrorCode.STORAGE_ERROR, e);
@@ -178,23 +203,19 @@ public class MinioStorageService {
         }
     }
 
-    // ✅ NEW: Get object input stream for download
     public InputStream getObject(String fileUrl) throws Exception {
         try {
-            // Extract key from URL: endpoint/bucket/key
             String prefix = publicEndpoint + "/" + bucketName + "/";
             String key;
             if (fileUrl.startsWith(prefix)) {
                 key = fileUrl.substring(prefix.length());
             } else if (fileUrl.startsWith("http")) {
-                // Handle full URL
                 key = fileUrl.substring(fileUrl.lastIndexOf(bucketName) + bucketName.length() + 1);
             } else {
                 key = fileUrl;
             }
 
-            var response = s3Client.getObject(b -> b.bucket(bucketName).key(key));
-            return response;
+            return s3Client.getObject(b -> b.bucket(bucketName).key(key));
         } catch (S3Exception e) {
             throw new Exception("Failed to get file from MinIO: " + e.getMessage(), e);
         }
