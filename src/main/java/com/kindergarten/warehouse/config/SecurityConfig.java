@@ -19,17 +19,19 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+// CSRF disabled - stateless JWT API with SameSite=Lax cookies
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -60,15 +62,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers(
-                                new AntPathRequestMatcher("/v3/api-docs/**"),
-                                new AntPathRequestMatcher("/swagger-ui/**"),
-                                new AntPathRequestMatcher("/swagger-ui.html"),
-                                new AntPathRequestMatcher("/error"),
-                                new AntPathRequestMatcher("/api/v1/auth/login"),
-                                new AntPathRequestMatcher("/api/v1/auth/register")))
+                .csrf(csrf -> csrf.disable()) // Disabled: stateless JWT + SameSite=Lax already prevents CSRF
                 .authorizeHttpRequests(auth -> auth
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -78,7 +72,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/age-groups/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/banners/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comments/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/resources/*/view").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/resources/*/download").permitAll()
                         // Authenticated User Endpoints (Profile)
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/users/profile").authenticated()
@@ -112,6 +108,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
+                            log.error("Authentication failed on request: {} {}, error: {}", request.getMethod(), request.getRequestURI(), authException.getMessage(), authException);
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
@@ -121,6 +118,7 @@ public class SecurityConfig {
                             response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            log.error("Access Denied on request: {} {}, error: {}", request.getMethod(), request.getRequestURI(), accessDeniedException.getMessage(), accessDeniedException);
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 

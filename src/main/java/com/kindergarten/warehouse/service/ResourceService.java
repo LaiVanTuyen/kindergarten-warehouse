@@ -23,6 +23,10 @@ public interface ResourceService {
 
     Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size, String username);
 
+    Page<ResourceResponse> getFavoriteResources(int page, int size, String username);
+
+    List<String> getFavoriteResourceIds(String username);
+
     void incrementViewCount(String id, String ipAddress);
 
     void deleteResource(String id, String username, boolean hard);

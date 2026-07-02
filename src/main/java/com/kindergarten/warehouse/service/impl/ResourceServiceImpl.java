@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
@@ -338,6 +339,41 @@ public class ResourceServiceImpl implements ResourceService {
         Specification<Resource> finalSpec = Specification.where(mySpec).and(baseSpec);
 
         return executeQueryAndMap(finalSpec, pageable, currentUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResourceResponse> getFavoriteResources(int page, int size, String username) {
+        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
+        User currentUser = getUserOrThrow(username);
+        List<Resource> resources = getVisibleFavoriteResources(currentUser);
+
+        int start = Math.toIntExact(Math.min(pageable.getOffset(), resources.size()));
+        int end = Math.min(start + pageable.getPageSize(), resources.size());
+        List<Resource> pageContent = resources.subList(start, end);
+
+        List<String> resourceIds = pageContent.stream().map(Resource::getId).collect(Collectors.toList());
+        Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
+        Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
+
+        List<ResourceResponse> content = pageContent.stream()
+                .map(resource -> resourceMapper.toResponse(
+                        resource,
+                        true,
+                        pendingViews.getOrDefault(resource.getId(), 0L),
+                        pendingDownloads.getOrDefault(resource.getId(), 0L)))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, resources.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getFavoriteResourceIds(String username) {
+        User currentUser = getUserOrThrow(username);
+        return getVisibleFavoriteResources(currentUser).stream()
+                .map(Resource::getId)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -673,6 +709,36 @@ public class ResourceServiceImpl implements ResourceService {
             favoriteRepository.save(newFavorite);
             return true; // Now favorited
         }
+    }
+
+    private List<Resource> getVisibleFavoriteResources(User user) {
+        List<String> favoriteIds = favoriteRepository.findResourceIdsByUserId(user.getId());
+        if (favoriteIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Specification<Resource> visibleFavoriteSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("id").in(favoriteIds));
+            predicates.add(cb.equal(root.get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
+            predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
+            predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("topic").get("isActive"), true));
+            predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
+            predicates.add(cb.equal(root.get("topic").get("category").get("isActive"), true));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Map<String, Integer> order = new HashMap<>();
+        for (int i = 0; i < favoriteIds.size(); i++) {
+            order.put(favoriteIds.get(i), i);
+        }
+
+        List<Resource> resources = new ArrayList<>(
+                resourceRepository.findAll(visibleFavoriteSpec, Pageable.unpaged()).getContent());
+        resources.sort(Comparator.comparingInt(resource -> order.getOrDefault(resource.getId(), Integer.MAX_VALUE)));
+        return resources;
     }
 
     private String getExtension(String fileName) {

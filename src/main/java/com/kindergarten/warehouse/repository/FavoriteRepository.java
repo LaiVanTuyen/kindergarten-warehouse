@@ -20,6 +20,9 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Favorite.Fav
     Set<String> findFavoritedResourceIdsByUserIdAndResourceIdIn(@Param("userId") Long userId,
             @Param("resourceIds") List<String> resourceIds);
 
+    @Query("SELECT f.resourceId FROM Favorite f WHERE f.userId = :userId ORDER BY f.createdAt DESC")
+    List<String> findResourceIdsByUserId(@Param("userId") Long userId);
+
     void deleteByResourceId(String resourceId);
 
     void deleteByResourceIdIn(List<String> resourceIds);
