@@ -7,9 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Configuration;
 
-@Configuration()
+@Configuration
 @ComponentScan({
         "com.rollbar.spring"
 })
@@ -30,9 +29,6 @@ public class RollbarConfig {
     }
 
     private Config getRollbarConfigs(String accessToken) {
-
-        // Reference: https://docs.rollbar.com/docs/spring-boot
-
         return RollbarSpringConfigBuilder.withAccessToken(accessToken)
                 .environment(environment)
                 .enabled(enabled)

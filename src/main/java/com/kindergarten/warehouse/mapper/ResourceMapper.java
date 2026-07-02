@@ -1,12 +1,14 @@
 package com.kindergarten.warehouse.mapper;
 
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
+import com.kindergarten.warehouse.entity.AgeGroup;
 import com.kindergarten.warehouse.entity.Resource;
 import com.kindergarten.warehouse.entity.ResourceType;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Component
@@ -54,7 +56,7 @@ public class ResourceMapper {
                 .title(resource.getTitle())
                 .slug(resource.getSlug())
                 .description(resource.getDescription())
-                .viewsCount(resource.getViewsCount() + pendingViews)
+                .viewsCount(safeLong(resource.getViewsCount()) + pendingViews)
                 .fileUrl(exposedFileUrl)
                 .thumbnailUrl(resource.getThumbnailUrl())
                 .resourceType(resource.getResourceType())
@@ -63,10 +65,12 @@ public class ResourceMapper {
                 .fileSize(resource.getFileSize())
                 .duration(resource.getDuration())
                 .status(resource.getStatus())
-                .downloadCount(resource.getDownloadCount() + pendingDownloads)
-                .averageRating(resource.getAverageRating())
+                .downloadCount(safeLong(resource.getDownloadCount()) + pendingDownloads)
+                .averageRating(resource.getAverageRating() == null ? 0.0 : resource.getAverageRating())
                 .topic(topicMapper.toResponse(resource.getTopic()))
-                .ageGroups(resource.getAgeGroups().stream()
+                .ageGroups((resource.getAgeGroups() == null
+                        ? Collections.<AgeGroup>emptySet()
+                        : resource.getAgeGroups()).stream()
                         .map(ageGroupMapper::toResponse)
                         .collect(Collectors.toList()))
                 .visibility(resource.getVisibility())
@@ -77,5 +81,9 @@ public class ResourceMapper {
                 .createdBy(resource.getCreator() != null ? resource.getCreator().getFullName() : null)
                 .updatedBy(resource.getUpdater() != null ? resource.getUpdater().getFullName() : null)
                 .build();
+    }
+
+    private long safeLong(Long value) {
+        return value == null ? 0L : value;
     }
 }

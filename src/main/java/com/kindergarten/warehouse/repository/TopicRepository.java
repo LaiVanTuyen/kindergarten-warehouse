@@ -1,49 +1,54 @@
 package com.kindergarten.warehouse.repository;
 
 import com.kindergarten.warehouse.entity.Topic;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
-public interface TopicRepository extends JpaRepository<Topic, Long>,
-                org.springframework.data.jpa.repository.JpaSpecificationExecutor<Topic> {
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = false AND t.category.isDeleted = false")
-        java.util.List<Topic> findByCategoryIdAndIsDeletedFalse(
-                        @org.springframework.data.repository.query.Param("categoryId") Long categoryId);
+public interface TopicRepository extends JpaRepository<Topic, Long>, JpaSpecificationExecutor<Topic> {
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
-        java.util.List<Topic> findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(
-                        @org.springframework.data.repository.query.Param("categoryId") Long categoryId);
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = false AND t.category.isDeleted = false")
+    List<Topic> findByCategoryIdAndIsDeletedFalse(@Param("categoryId") Long categoryId);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = true")
-        java.util.List<Topic> findByCategoryIdAndIsDeletedTrue(
-                        @org.springframework.data.repository.query.Param("categoryId") Long categoryId);
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
+    List<Topic> findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(@Param("categoryId") Long categoryId);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.category.isDeleted = false")
-        java.util.List<Topic> findAllByIsDeletedFalse();
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.category.id = :categoryId AND t.isDeleted = true")
+    List<Topic> findByCategoryIdAndIsDeletedTrue(@Param("categoryId") Long categoryId);
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
-        java.util.List<Topic> findAllByIsDeletedFalseAndIsActiveTrue();
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.category.isDeleted = false")
+    List<Topic> findAllByIsDeletedFalse();
 
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        @org.springframework.data.jpa.repository.Query("SELECT t FROM Topic t WHERE t.isDeleted = true")
-        java.util.List<Topic> findAllByIsDeletedTrue();
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.isDeleted = false AND t.isActive = true AND t.category.isDeleted = false")
+    List<Topic> findAllByIsDeletedFalseAndIsActiveTrue();
 
-        @Override
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "category", "creator", "updater" })
-        java.util.Optional<Topic> findById(Long id);
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    @Query("SELECT t FROM Topic t WHERE t.isDeleted = true")
+    List<Topic> findAllByIsDeletedTrue();
 
-        @Override
-        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-        default java.util.List<Topic> findAll() {
-                return findAllByIsDeletedFalse();
-        }
+    @Override
+    @EntityGraph(attributePaths = { "category", "creator", "updater" })
+    Optional<Topic> findById(Long id);
 
-        // Duplicate validation methods
-        boolean existsByNameAndIsDeletedFalse(String name);
+    @Override
+    @EntityGraph(attributePaths = { "creator", "updater" })
+    default List<Topic> findAll() {
+        return findAllByIsDeletedFalse();
+    }
+
+    boolean existsByNameAndIsDeletedFalse(String name);
+
+    boolean existsBySlugAndIsDeletedFalse(String slug);
 }
