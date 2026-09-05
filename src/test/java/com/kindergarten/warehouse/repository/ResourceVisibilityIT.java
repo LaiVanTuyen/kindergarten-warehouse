@@ -272,13 +272,18 @@ class ResourceVisibilityIT {
 
     private List<String> titlesFor(Viewer viewer, Pageable pageable) {
         Page<ResourceResponse> page =
-                resourceService.getPortalResources(onlyThisTopic(), pageable, viewer);
+                portalResources(onlyThisTopic(), pageable, viewer);
         return page.getContent().stream().map(ResourceResponse::getTitle).toList();
     }
 
     private long totalFor(Viewer viewer) {
-        return resourceService.getPortalResources(onlyThisTopic(), PAGE_12, viewer)
+        return portalResources(onlyThisTopic(), PAGE_12, viewer)
                 .getTotalElements();
+    }
+
+    private Page<ResourceResponse> portalResources(ResourceFilterRequest filter, Pageable pageable, Viewer viewer) {
+        return resourceService.getPortalResources(
+                filter, pageable.getPageNumber(), pageable.getPageSize(), viewer);
     }
 
     private static Viewer guest() {
@@ -430,7 +435,7 @@ class ResourceVisibilityIT {
         Pageable size1 = PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<ResourceResponse> page =
-                resourceService.getPortalResources(onlyThisTopic(), size1, admin());
+                portalResources(onlyThisTopic(), size1, admin());
 
         // Neu loc SAU phan trang thi tong se la so ban ghi tho, khong phai 4.
         assertThat(page.getTotalElements()).isEqualTo(4);
@@ -444,7 +449,7 @@ class ResourceVisibilityIT {
         Pageable page3 = PageRequest.of(3, 1, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<ResourceResponse> page =
-                resourceService.getPortalResources(onlyThisTopic(), page3, admin());
+                portalResources(onlyThisTopic(), page3, admin());
 
         assertThat(page.getContent()).hasSize(1);
         assertThat(page.isLast()).isTrue();
@@ -461,9 +466,9 @@ class ResourceVisibilityIT {
         filter.setKeyword("priv-owner");
 
         Page<ResourceResponse> asGuest =
-                resourceService.getPortalResources(filter, PAGE_12, guest());
+                portalResources(filter, PAGE_12, guest());
         Page<ResourceResponse> asOwner =
-                resourceService.getPortalResources(filter, PAGE_12, owner());
+                portalResources(filter, PAGE_12, owner());
 
         assertThat(asGuest.getTotalElements()).isZero();
         assertThat(asOwner.getContent()).extracting(ResourceResponse::getTitle)
@@ -476,15 +481,15 @@ class ResourceVisibilityIT {
         ResourceFilterRequest filter = onlyThisTopic();
         filter.setKeyword("priv-other");
 
-        assertThat(resourceService.getPortalResources(filter, PAGE_12, otherTeacher())
+        assertThat(portalResources(filter, PAGE_12, otherTeacher())
                 .getContent())
                 .extracting(ResourceResponse::getTitle)
                 .contains("IT priv-other tai lieu");
 
-        assertThat(resourceService.getPortalResources(filter, PAGE_12, owner())
+        assertThat(portalResources(filter, PAGE_12, owner())
                 .getTotalElements())
                 .isZero();
-        assertThat(resourceService.getPortalResources(filter, PAGE_12, guest())
+        assertThat(portalResources(filter, PAGE_12, guest())
                 .getTotalElements())
                 .isZero();
     }
@@ -522,7 +527,7 @@ class ResourceVisibilityIT {
         filter.setTopicId(-1L);
 
         Page<ResourceResponse> page =
-                resourceService.getPortalResources(filter, PAGE_12, admin());
+                portalResources(filter, PAGE_12, admin());
 
         assertThat(page.getContent()).isEmpty();
         assertThat(page.getTotalElements()).isZero();
