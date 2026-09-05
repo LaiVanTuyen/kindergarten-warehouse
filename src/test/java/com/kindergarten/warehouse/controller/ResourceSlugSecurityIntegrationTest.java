@@ -229,6 +229,26 @@ class ResourceSlugSecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value(1011));
     }
 
+    @Test
+    @DisplayName("GET /comments vẫn public theo contract")
+    void commentsRootRemainsPublic() throws Exception {
+        mockMvc.perform(get("/api/v1/comments").param("resourceId", "res-1"))
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    if (status == 401 || status == 403) {
+                        throw new AssertionError("GET /api/v1/comments was blocked by SecurityFilterChain");
+                    }
+                });
+    }
+
+    @Test
+    @DisplayName("Route con category không tồn tại không được wildcard tự động public")
+    void unknownCategoryChildRouteIsFailClosed() throws Exception {
+        mockMvc.perform(get("/api/v1/categories/123"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(1011));
+    }
+
     private static ResourceResponse response() {
         ResourceResponse response = new ResourceResponse();
         response.setId("res-1");
