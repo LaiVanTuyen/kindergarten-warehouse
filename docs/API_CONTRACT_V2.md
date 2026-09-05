@@ -156,25 +156,29 @@ Endpoint list dùng projection hẹp thay vì entity đầy đủ, nên bốn tr
 có ngữ nghĩa khác endpoint chi tiết. **Đây là quyết định có chủ đích, không
 phải hệ quả phụ của tối ưu.**
 
-| Trường | Ở list | Ở detail/admin | Lý do |
-|---|---|---|---|
-| `createdBy` | ✅ **có giá trị** | ✅ có | Màn Admin hiển thị cột "Người tải lên" và **dùng chính endpoint này**, không phải `/admin/resources` |
-| `updatedBy` | ⚠️ **luôn `null`** | ✅ có | Không giao diện nào hiển thị trong danh sách |
-| `topic.createdBy` | ⚠️ **luôn `null`** | ✅ có | `grep` toàn bộ FE không thấy nơi nào đọc |
-| `topic.updatedBy` | ⚠️ **luôn `null`** | ✅ có | Như trên |
+| Trường | `GET /resources` (list, search) | `GET /resources/{slug}` và `/admin/resources` |
+|---|---|---|
+| `createdBy` | ⚠️ **luôn `null`** | ✅ có giá trị |
+| `updatedBy` | ⚠️ **luôn `null`** | ✅ có giá trị |
+| `topic.createdBy` | ⚠️ **luôn `null`** | ✅ có giá trị |
+| `topic.updatedBy` | ⚠️ **luôn `null`** | ✅ có giá trị |
 
 Hình dạng JSON **không đổi** — các trường vẫn xuất hiện, chỉ mang giá trị
-`null`. FE không mất trường, nhưng không được dựa vào chúng ở màn danh sách.
+`null`. FE không mất trường, nhưng **không được dựa vào chúng ở màn danh sách**.
 
-`createdBy` lấy bằng một batch query chỉ select `id, full_name`
-(`UserRepository.findDisplayNamesByIds`). Cố ý **không** khai quan hệ
-`creator` trong projection: projection lồng nhau khiến Hibernate nạp cả entity
-`User`, kéo theo `password`, `token_version` và `original_email` vào bộ nhớ
-ứng dụng trên một endpoint công khai.
+Căn cứ: hai consumer duy nhất của endpoint list Portal là
+`portal/home.component` và `portal/resource-list.component`, cả hai render qua
+`resource-card` vốn không hiển thị tên người đăng. Màn Admin gọi
+`/admin/resources` — đường entity riêng, không đụng projection — nên cột
+"Người tải lên" vẫn đủ dữ liệu.
 
-Ràng buộc này được khoá bằng [`perf/check-query-count.sh`](../perf/check-query-count.sh):
-tối đa một truy vấn chạm `users`, và không truy vấn nào select ba cột nhạy cảm
-kể trên.
+Nguyên tắc: **endpoint công khai chỉ trả tối thiểu dữ liệu thật sự được dùng.**
+Lấy thêm bốn cái tên nghĩa là join hoặc truy vấn thêm bảng `users` trên đường
+đi công khai — không có lý do khi không ai hiển thị chúng.
+
+Ràng buộc được khoá bằng [`perf/check-query-count.sh`](../perf/check-query-count.sh):
+tối đa một truy vấn chạm `users`, và không truy vấn nào select `password`,
+`token_version` hay `original_email`.
 
 ### 0.6 Xác thực
 

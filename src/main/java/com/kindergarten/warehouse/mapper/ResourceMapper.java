@@ -30,15 +30,14 @@ public class ResourceMapper {
      * hai đều có chủ đích:
      *
      * <ul>
-     *   <li>{@code createdBy} truyền vào từ batch query chỉ select
-     *       {@code id, full_name}, <strong>không</strong> hydrate entity
-     *       {@code User}. Trường này cần cho cột "Người tải lên" của màn Admin
-     *       — màn đó gọi chính endpoint list này, không phải
-     *       {@code /admin/resources}.</li>
-     *   <li>{@code updatedBy} và {@code topic.createdBy}/{@code topic.updatedBy}
-     *       <strong>luôn null</strong> ở list. Đã kiểm tra: không giao diện nào
-     *       hiển thị chúng trong danh sách. Đây là quyết định có chủ đích, ghi
-     *       ở API_CONTRACT_V2 §0.5 — không phải hệ quả ngẫu nhiên.</li>
+     *   <li><strong>Cả bốn trường audit đều null</strong>: {@code createdBy},
+     *       {@code updatedBy}, {@code topic.createdBy}, {@code topic.updatedBy}.
+     *       Đã kiểm tra toàn bộ FE: hai consumer duy nhất của endpoint list
+     *       Portal là {@code home.component} và {@code resource-list.component},
+     *       cả hai dùng resource-card vốn không hiển thị tên người đăng. Màn
+     *       Admin gọi {@code /admin/resources} (đường entity), nên vẫn có đủ tên.
+     *       Đây là quyết định có chủ đích, ghi ở API_CONTRACT_V2 §0.5 — endpoint
+     *       công khai chỉ trả tối thiểu dữ liệu thật sự dùng.</li>
      *   <li>{@code ageGroups} truyền vào từ batch query riêng, không lazy-load
      *       theo từng dòng.</li>
      * </ul>
@@ -47,7 +46,6 @@ public class ResourceMapper {
             com.kindergarten.warehouse.repository.projection.ResourceListView view,
             java.util.List<com.kindergarten.warehouse.dto.response.AgeGroupResponse> ageGroups,
             Long topicResourceCount,
-            String creatorName,
             boolean isFavorited, long pendingViews, long pendingDownloads) {
         if (view == null) {
             return null;
@@ -80,7 +78,6 @@ public class ResourceMapper {
                 .isFavorited(isFavorited)
                 .createdAt(view.getCreatedAt())
                 .updatedAt(view.getUpdatedAt())
-                .createdBy(creatorName)
                 .build();
     }
 

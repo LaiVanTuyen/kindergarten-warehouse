@@ -260,23 +260,8 @@ public class ResourceServiceImpl implements ResourceService {
                 .toList();
 
         if (resourceIds.isEmpty()) {
-            return viewPage.map(v -> resourceMapper.toResponse(v, List.of(), null, null, false, 0L, 0L));
+            return viewPage.map(v -> resourceMapper.toResponse(v, List.of(), null, false, 0L, 0L));
         }
-
-        // Tên người tạo: MỘT batch query chỉ select id + full_name.
-        // Cột "Người tải lên" của màn Admin dùng chính endpoint list này, nên
-        // bỏ hẳn createdBy sẽ làm hỏng màn đó. Nhưng KHÔNG được nạp entity User
-        // — nó kéo theo password, token_version, original_email.
-        List<Long> creatorIds = viewPage.getContent().stream()
-                .map(com.kindergarten.warehouse.repository.projection.ResourceListView::getCreatedBy)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, String> creatorNames = creatorIds.isEmpty()
-                ? Collections.emptyMap()
-                : userRepository.findDisplayNamesByIds(creatorIds).stream()
-                        .filter(row -> row[1] != null)
-                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (String) row[1]));
 
         // Age groups: MỘT truy vấn cho cả trang. Nạp collection trong chính truy
         // vấn phân trang sẽ khiến Hibernate phân trang trong bộ nhớ.
@@ -319,7 +304,6 @@ public class ResourceServiceImpl implements ResourceService {
                     view,
                     ageGroupsByResource.getOrDefault(view.getId(), List.of()),
                     topicCount,
-                    view.getCreatedBy() == null ? null : creatorNames.get(view.getCreatedBy()),
                     finalFavoritedIds.contains(view.getId()),
                     pendingViews.getOrDefault(view.getId(), 0L),
                     pendingDownloads.getOrDefault(view.getId(), 0L));

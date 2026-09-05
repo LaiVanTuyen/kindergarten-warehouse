@@ -63,6 +63,27 @@ echo "== Kiem tra so query cua duong list Portal =="
 echo "   nguong=$NGUONG  delta cho phep=$DELTA"
 echo
 
+# ĐIỀU KIỆN TIÊN QUYẾT — không được bỏ.
+# Nếu app chưa sẵn sàng (vd. nginx tra 502 trong lúc container khoi dong lai),
+# moi phep dem se ra 0 query va CAC KIEM TRA SE BAO OK TREN DU LIEU RONG —
+# tuc la pass gia, nguy hiem hon la fail. Phai chan ngay tu dau.
+http_code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/v1/resources?page=0&size=1")
+if [ "$http_code" != "200" ]; then
+    echo "  [DUNG] Endpoint list tra HTTP $http_code, khong phai 200."
+    echo "         App chua san sang — do bay gio se cho ket qua vo nghia."
+    exit 2
+fi
+
+n_check=$(curl -s "$BASE/api/v1/resources?page=0&size=1" \
+    | grep -o '"totalElements":[0-9]*' | cut -d: -f2)
+if [ -z "$n_check" ] || [ "$n_check" -eq 0 ]; then
+    echo "  [DUNG] Dataset rong (totalElements=${n_check:-khong doc duoc})."
+    echo "         Chay perf/seed-baseline.sql truoc."
+    exit 2
+fi
+echo "  tien quyet OK: HTTP 200, totalElements=$n_check"
+echo
+
 # Làm nóng, tránh tính cả chi phí khởi tạo lần đầu
 curl -s -o /dev/null "$BASE/api/v1/resources?page=0&size=12"
 
