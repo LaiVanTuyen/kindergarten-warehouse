@@ -150,6 +150,18 @@ FE nào đang sort theo hai trường này phải bỏ. Nếu nghiệp vụ th�
 xếp theo số lượng, phải hiện thực hoá thành cột đếm được cập nhật khi ghi
 (materialized counter), **không** quay lại `@Formula`.
 
+#### Audit fields trên danh sách Portal
+
+`GET /resources` và search dùng projection hẹp. Bốn trường `createdBy`,
+`updatedBy`, `topic.createdBy`, `topic.updatedBy` vẫn giữ trong hình dạng JSON
+nhưng luôn là `null`. Hai consumer Portal hiện tại chỉ render resource card và
+không hiển thị các trường này; endpoint công khai không được join bảng `users`
+chỉ để tải dữ liệu không dùng tới.
+
+`GET /resources/{slug}` và `/admin/resources` vẫn đi qua entity đầy đủ nên các
+trường audit có giá trị. Đặc biệt, cột "Người tải lên" của Admin không bị ảnh
+hưởng vì Admin gọi endpoint riêng.
+
 ### 0.6 Xác thực
 
 JWT trong cookie HttpOnly. CSRF qua cookie `XSRF-TOKEN`.
