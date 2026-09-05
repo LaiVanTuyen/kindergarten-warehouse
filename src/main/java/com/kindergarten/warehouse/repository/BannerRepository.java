@@ -8,19 +8,10 @@ import org.springframework.stereotype.Repository;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.time.LocalDateTime;
 
 @Repository
-public interface BannerRepository extends JpaRepository<Banner, Long> {
-
-    @Query("SELECT b FROM Banner b WHERE b.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
-            "AND b.isDeleted = false " +
-            "AND (:platform IS NULL OR b.platform = :platform) " +
-            "AND (b.startDate IS NULL OR b.startDate <= :now) " +
-            "AND (b.endDate IS NULL OR b.endDate >= :now)")
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })
-    Page<Banner> findActiveBanners(@Param("platform") String platform, @Param("now") LocalDateTime now,
-            Pageable pageable);
+public interface BannerRepository extends JpaRepository<Banner, Long>,
+        org.springframework.data.jpa.repository.JpaSpecificationExecutor<Banner> {
 
     @Query("SELECT b FROM Banner b WHERE b.isDeleted = false AND (:platform IS NULL OR b.platform = :platform)")
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "creator", "updater" })

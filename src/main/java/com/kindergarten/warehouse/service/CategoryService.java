@@ -8,7 +8,8 @@ import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 
 public interface CategoryService {
         org.springframework.data.domain.Page<CategoryResponse> getAllCategories(boolean deleted, String keyword,
-                        org.springframework.data.domain.Pageable pageable);
+                        org.springframework.data.domain.Pageable pageable,
+                        com.kindergarten.warehouse.security.Viewer viewer);
 
         CategoryResponse createCategory(CategoryRequest categoryRequest,
                         org.springframework.web.multipart.MultipartFile icon);

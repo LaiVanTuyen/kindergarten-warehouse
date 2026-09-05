@@ -228,6 +228,17 @@ class ResourceSlugSecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value(1011));
     }
 
+    @Test
+    @DisplayName("Navigation matcher mới cũng fail-closed")
+    void unknownNestedNavigationRoutesAreFailClosed() throws Exception {
+        mockMvc.perform(get("/api/v1/categories/future"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/topics/future"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/banners/future"))
+                .andExpect(status().isUnauthorized());
+    }
+
     private static ResourceResponse response() {
         ResourceResponse response = new ResourceResponse();
         response.setId("res-1");

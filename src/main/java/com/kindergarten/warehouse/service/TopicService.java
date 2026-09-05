@@ -8,7 +8,8 @@ import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 
 public interface TopicService {
         org.springframework.data.domain.Page<TopicResponse> getAllTopics(Long categoryId, boolean deleted,
-                        String keyword, org.springframework.data.domain.Pageable pageable);
+                        String keyword, org.springframework.data.domain.Pageable pageable,
+                        com.kindergarten.warehouse.security.Viewer viewer);
 
         TopicResponse createTopic(TopicRequest topicRequest, Long categoryId);
 

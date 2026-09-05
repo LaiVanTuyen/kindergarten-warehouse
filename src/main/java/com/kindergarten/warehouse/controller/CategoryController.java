@@ -33,18 +33,21 @@ public class CategoryController {
 
         private final CategoryService categoryService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<CategoryResponse>>> getAllCategories(
                         @RequestParam(defaultValue = "false") boolean deleted,
                         @RequestParam(required = false) String keyword,
-                        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable) {
+                        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable,
+                        org.springframework.security.core.Authentication authentication) {
 
                 Pageable pageable = PageableUtils.sanitize(
                                 requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "id"));
 
                 return ResponseEntity
-                                .ok(ApiResponse.success(categoryService.getAllCategories(deleted, keyword, pageable),
+                                .ok(ApiResponse.success(categoryService.getAllCategories(
+                                                deleted, keyword, pageable, viewerResolver.resolve(authentication)),
                                                 messageService.getMessage("category.list.success")));
         }
 

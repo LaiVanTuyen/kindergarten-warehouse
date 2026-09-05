@@ -34,14 +34,17 @@ public class BannerController {
 
         private final BannerService bannerService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<BannerResponse>>> getActiveBanners(
                         @RequestParam(value = "platform", required = false) String platform,
-                        @PageableDefault(size = 10, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable requestedPageable) {
+                        @PageableDefault(size = 10, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable requestedPageable,
+                        org.springframework.security.core.Authentication authentication) {
                 Pageable pageable = PageableUtils.sanitize(
                                 requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.ASC, "displayOrder"));
-                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(platform, pageable),
+                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(
+                                platform, pageable, viewerResolver.resolve(authentication)),
                                 messageService.getMessage("banner.list.success")));
         }
 

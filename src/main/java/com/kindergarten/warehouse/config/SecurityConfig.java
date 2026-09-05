@@ -87,10 +87,11 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/topics/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/age-groups/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/banners/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/topics").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/age-groups").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/banners/all").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/banners").permitAll()
                         // Resource GET routes are intentionally enumerated (fail-closed).
                         // Order matters: /me must not be swallowed by the public one-segment slug matcher.
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/me").authenticated()

@@ -30,20 +30,23 @@ public class TopicController {
 
         private final TopicService topicService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<TopicResponse>>> getAllTopics(
                         @RequestParam(required = false) Long categoryId,
                         @RequestParam(defaultValue = "false") boolean deleted,
                         @RequestParam(required = false) String keyword,
-                        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable) {
+                        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable,
+                        org.springframework.security.core.Authentication authentication) {
 
                 Pageable pageable = PageableUtils.sanitize(
                                 requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "id"));
 
                 return ResponseEntity
                                 .ok(ApiResponse.success(
-                                                topicService.getAllTopics(categoryId, deleted, keyword, pageable),
+                                                topicService.getAllTopics(categoryId, deleted, keyword, pageable,
+                                                                viewerResolver.resolve(authentication)),
                                                 messageService.getMessage("topic.list.success")));
         }
 
