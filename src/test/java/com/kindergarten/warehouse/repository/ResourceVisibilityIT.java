@@ -1,5 +1,6 @@
 package com.kindergarten.warehouse.repository;
 
+import com.kindergarten.warehouse.config.DataSeeder;
 import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import com.kindergarten.warehouse.entity.Category;
@@ -10,8 +11,11 @@ import com.kindergarten.warehouse.entity.Topic;
 import com.kindergarten.warehouse.entity.User;
 import com.kindergarten.warehouse.entity.UserStatus;
 import com.kindergarten.warehouse.entity.Visibility;
+import com.kindergarten.warehouse.scheduler.AuditLogCleanupScheduler;
+import com.kindergarten.warehouse.scheduler.RedisSyncScheduler;
 import com.kindergarten.warehouse.security.Viewer;
 import com.kindergarten.warehouse.service.MinioStorageService;
+import com.kindergarten.warehouse.service.RedisLastActiveService;
 import com.kindergarten.warehouse.service.ResourceService;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import org.junit.jupiter.api.BeforeEach;
@@ -118,6 +122,18 @@ class ResourceVisibilityIT {
         registry.add("spring.mail.password", () -> "not-used");
         registry.add("rollbar.access-token", () -> "not-used");
         registry.add("rollbar.enabled", () -> "false");
+
+        // Redis: CO LAP, khong phai bo qua.
+        //
+        // Test nay khong dung Redis. Neu de mac dinh (localhost:6379) thi tren
+        // CI khong co Redis nao lang nghe, moi lan cham vao chi sinh WARN/ERROR
+        // trong log — nhieu den muc che mat loi that.
+        //
+        // Tro sang cong 1 (khong dich vu nao lang nghe duoc o day) de bien
+        // "cham vao Redis" thanh loi NGAY va TO, thay vi tieng on. Neu sau nay
+        // co doan code moi thuc su can Redis, test se do dung cho, khong im.
+        registry.add("spring.data.redis.host", () -> "127.0.0.1");
+        registry.add("spring.data.redis.port", () -> "1");
     }
 
     // MinIO va Redis se co gang ket noi that khi khoi dong; test nay khong dung
@@ -127,6 +143,33 @@ class ResourceVisibilityIT {
 
     @MockBean
     ResourceStatService resourceStatService;
+
+    /**
+     * {@code DataSeeder} la {@link org.springframework.boot.CommandLineRunner},
+     * va {@code @SpringBootTest} CO chay runner (chinh no la ly do phai khai
+     * bao {@code app.admin.*} o tren). De nguyen thi truoc moi lan chay, seeder
+     * ghi category/topic/banner/admin vao MySQL, va khang dinh cua test phu
+     * thuoc mot phan vao du lieu khong do test tao ra. Mock lai de
+     * {@code run()} thanh no-op: du lieu duy nhat trong DB la do
+     * {@code setUp()} tao.
+     */
+    @MockBean
+    DataSeeder dataSeeder;
+
+    /**
+     * {@code @EnableScheduling} nam tren {@code WarehouseApplication}, nen cac
+     * job duoi day chay ngay khi context len ({@code fixedRate} kich hoat lan
+     * dau tuc thi) va ca ba deu cham Redis. Mock lai de context khong tu lam gi
+     * ngoai pham vi test — day la nua con lai cua viec co lap Redis o tren.
+     */
+    @MockBean
+    RedisSyncScheduler redisSyncScheduler;
+
+    @MockBean
+    AuditLogCleanupScheduler auditLogCleanupScheduler;
+
+    @MockBean
+    RedisLastActiveService redisLastActiveService;
 
     @Autowired ResourceService resourceService;
     @Autowired ResourceRepository resourceRepository;
