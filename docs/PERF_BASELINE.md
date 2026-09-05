@@ -13,7 +13,8 @@ Script và dữ liệu thô: [`perf/`](../perf/). Kết quả lần đo này:
 | Hạng mục | Giá trị |
 |---|---|
 | Commit | `386610b` |
-| Máy | Windows, 8 CPU logic, Docker Desktop 29.4.3 |
+| Máy | Windows, 8 CPU logic |
+| Docker | Desktop 29.4.3 — **quota 8 lõi, 9,54 GiB RAM** (`docker info`: NCPU=8) |
 | Stack | `warehouse_demo` (compose demo), profile `prod,demo` |
 | Dataset | 2.000 resources seed + 1 thật = **2.001**, trong đó **1.701** Portal thấy |
 | Nguồn dataset | [`perf/seed-baseline.sql`](../perf/seed-baseline.sql) — sinh từ biến đếm, không dùng `RAND()`, chạy lại cho ra đúng cùng tập |
@@ -27,6 +28,20 @@ Gọi thẳng `portal` trong docker network để loại bỏ biến động c�
 trên host. Khi đo lại phải dùng đúng cách này.
 
 Không trộn upload hay email vào bài đọc. Download đo riêng.
+
+### 1.1 Cách đọc con số CPU
+
+`docker stats` báo CPU **theo tổng số lõi logic**: 100 % = một lõi, nên trần
+lý thuyết ở máy này là **800 %**.
+
+Vì vậy:
+
+- Giá trị **≥ 800 %** nghĩa là bão hoà hoàn toàn. Các số như 1040 % hay 1136 %
+  ghi ở dưới là do `docker stats` lấy mẫu theo khoảng và có thể vọt lên trong
+  chốc lát — **đừng đọc chúng như "10 lõi"**, chỉ nên đọc là "đã kịch trần".
+- Khi đo lại ở Tuần 7 **bắt buộc giữ nguyên quota CPU và cùng máy**, và ghi lại
+  `docker info` NCPU vào `context.txt`. So sánh CPU % giữa hai máy có số lõi
+  khác nhau là vô nghĩa.
 
 ---
 
@@ -108,7 +123,18 @@ khác**. Sửa đúng một endpoint này sẽ kéo theo cả hệ thống.
 
 Chi phí khác nhau tuỳ mức tải, nên phải nêu cả hai.
 
-### 4.1 Ở một request đơn lẻ: tầng ứng dụng chiếm phần lớn
+### 4.1 Ở một request đơn lẻ: phần lớn thời gian nằm ngoài DB
+
+> **Mức độ chắc chắn.** Con số ~690 ms ngoài DB là **đo được**. Việc quy nó cho
+> `@EntityGraph` mới chỉ là **nghi phạm chính**, dựa trên tương quan: câu SQL
+> mà Hibernate sinh ra thực sự có 4 lần join `users` với đầy đủ cột. Chưa chạy
+> JFR hay profiler nên **chưa khẳng định được toàn bộ 690 ms là do hydrate 48
+> entity `User`** — phần còn lại có thể nằm ở mapping DTO, serialize JSON, hoặc
+> N+1 khi lấy `ageGroups`.
+>
+> Cách xác nhận: sau khi chuyển sang projection (việc #1 và #3 ở mục 5), đo lại
+> cùng điều kiện. Nếu 690 ms giảm mạnh thì giả thuyết đúng; nếu không, chạy JFR
+> trên `warehouse_demo_app` trước khi sửa tiếp.
 
 Endpoint `GET /resources?page=0&size=12` mất **~800 ms**. Nhưng chạy thẳng SQL
 tương đương trong MySQL chỉ mất:
@@ -141,7 +167,8 @@ c1_0.blocked_reason, c1_0.email, ...   -- lặp lại cho c5_0, u4_0, u6_0
 Hai vấn đề:
 
 1. **Hiệu năng** — mỗi trang 12 bản ghi phải hydrate tới 48 entity `User` đầy
-   đủ, chỉ để hiển thị tên người đăng.
+   đủ, chỉ để hiển thị tên người đăng. Đây là công việc thừa đã xác nhận qua
+   câu SQL; phần nó chiếm trong 690 ms thì chưa đo tách được.
 2. **An toàn** — cột `password` và `token_version` được đọc vào bộ nhớ ứng dụng
    trên mỗi lần gọi một endpoint **công khai, không cần đăng nhập**. DTO không
    phơi ra ngoài nên chưa phải lỗ hổng, nhưng không có lý do gì để đọc chúng.
@@ -189,7 +216,7 @@ bão hoà. Phải sửa truy vấn trước, đo lại, rồi mới xét pool.
 |---|---|---|
 | 1 | Bỏ `topic.creator`, `topic.updater`, `creator`, `updater` khỏi `@EntityGraph`; lấy tên người đăng bằng projection | Bỏ 4 join `users`, hết đọc `password` |
 | 2 | Bỏ hai `@Formula`; tính `resourceCount`/`topicCount` bằng truy vấn gộp riêng, có cache | Bỏ subquery tương quan trên từng dòng |
-| 3 | Dùng DTO projection cho danh sách thay vì hydrate entity đầy đủ | Bỏ chi phí hydrate ~690 ms |
+| 3 | Dùng DTO projection cho danh sách thay vì hydrate entity đầy đủ | Nhắm vào phần lớn trong ~690 ms ngoài DB — **đo lại để xác nhận**, xem §4.1 |
 | 4 | Thêm index theo filter thật sau khi đã sửa 1–3 | Chỉ có nghĩa sau khi hết quét thừa |
 | 5 | Xét lại pool size — **sau** khi đo lại | Tránh đẩy thêm tải vào DB đang bão hoà |
 | 6 | Chuyển download sang X-Accel-Redirect | Hạ 417 % CPU app khi tải file |
