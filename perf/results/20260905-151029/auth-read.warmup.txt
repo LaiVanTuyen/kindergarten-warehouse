@@ -1,0 +1,288 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/auth-read.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 150 max VUs, 50s max duration (incl. graceful stop):
+              * authList: 100 looping VUs for 20s (exec: authList, gracefulStop: 30s)
+              * myResources: 50 looping VUs for 20s (exec: myResources, gracefulStop: 30s)
+
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+running (07.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [   0% ] 100 VUs  00.0s/20s
+myResources   [   0% ] 50 VUs   00.0s/20s
+
+running (08.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [   5% ] 100 VUs  01.0s/20s
+myResources   [   5% ] 50 VUs   01.0s/20s
+
+running (09.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [  10% ] 100 VUs  02.0s/20s
+myResources   [  10% ] 50 VUs   02.0s/20s
+
+running (10.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [  15% ] 100 VUs  03.0s/20s
+myResources   [  15% ] 50 VUs   03.0s/20s
+
+running (11.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [  20% ] 100 VUs  04.0s/20s
+myResources   [  20% ] 50 VUs   04.0s/20s
+
+running (12.8s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [  25% ] 100 VUs  05.0s/20s
+myResources   [  25% ] 50 VUs   05.0s/20s
+
+running (13.8s), 150/150 VUs, 3 complete and 0 interrupted iterations
+authList      [  30% ] 100 VUs  06.0s/20s
+myResources   [  30% ] 50 VUs   06.0s/20s
+
+running (14.8s), 150/150 VUs, 6 complete and 0 interrupted iterations
+authList      [  35% ] 100 VUs  07.0s/20s
+myResources   [  35% ] 50 VUs   07.0s/20s
+
+running (15.8s), 150/150 VUs, 7 complete and 0 interrupted iterations
+authList      [  40% ] 100 VUs  08.0s/20s
+myResources   [  40% ] 50 VUs   08.0s/20s
+
+running (16.8s), 150/150 VUs, 14 complete and 0 interrupted iterations
+authList      [  45% ] 100 VUs  09.0s/20s
+myResources   [  45% ] 50 VUs   09.0s/20s
+
+running (17.8s), 150/150 VUs, 14 complete and 0 interrupted iterations
+authList      [  50% ] 100 VUs  10.0s/20s
+myResources   [  50% ] 50 VUs   10.0s/20s
+
+running (18.8s), 150/150 VUs, 17 complete and 0 interrupted iterations
+authList      [  55% ] 100 VUs  11.0s/20s
+myResources   [  55% ] 50 VUs   11.0s/20s
+
+running (19.8s), 150/150 VUs, 21 complete and 0 interrupted iterations
+authList      [  60% ] 100 VUs  12.0s/20s
+myResources   [  60% ] 50 VUs   12.0s/20s
+
+running (20.8s), 150/150 VUs, 22 complete and 0 interrupted iterations
+authList      [  65% ] 100 VUs  13.0s/20s
+myResources   [  65% ] 50 VUs   13.0s/20s
+
+running (21.8s), 150/150 VUs, 27 complete and 0 interrupted iterations
+authList      [  70% ] 100 VUs  14.0s/20s
+myResources   [  70% ] 50 VUs   14.0s/20s
+
+running (22.8s), 150/150 VUs, 30 complete and 0 interrupted iterations
+authList      [  75% ] 100 VUs  15.0s/20s
+myResources   [  75% ] 50 VUs   15.0s/20s
+
+running (23.8s), 150/150 VUs, 34 complete and 0 interrupted iterations
+authList      [  80% ] 100 VUs  16.0s/20s
+myResources   [  80% ] 50 VUs   16.0s/20s
+
+running (24.8s), 150/150 VUs, 37 complete and 0 interrupted iterations
+authList      [  85% ] 100 VUs  17.0s/20s
+myResources   [  85% ] 50 VUs   17.0s/20s
+
+running (25.8s), 150/150 VUs, 40 complete and 0 interrupted iterations
+authList      [  90% ] 100 VUs  18.0s/20s
+myResources   [  90% ] 50 VUs   18.0s/20s
+
+running (26.8s), 150/150 VUs, 42 complete and 0 interrupted iterations
+authList      [  95% ] 100 VUs  19.0s/20s
+myResources   [  95% ] 50 VUs   19.0s/20s
+
+running (27.8s), 150/150 VUs, 45 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (28.8s), 147/150 VUs, 48 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (29.8s), 146/150 VUs, 49 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (30.8s), 144/150 VUs, 51 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (31.8s), 143/150 VUs, 52 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (32.8s), 140/150 VUs, 55 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (33.8s), 138/150 VUs, 57 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (34.8s), 138/150 VUs, 57 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (35.8s), 135/150 VUs, 60 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (36.8s), 132/150 VUs, 63 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (37.8s), 131/150 VUs, 64 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (38.8s), 129/150 VUs, 66 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (39.8s), 071/150 VUs, 124 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (40.8s), 056/150 VUs, 139 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (41.8s), 053/150 VUs, 142 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (42.8s), 052/150 VUs, 143 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (43.8s), 050/150 VUs, 145 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (44.8s), 047/150 VUs, 148 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (45.8s), 042/150 VUs, 153 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (46.8s), 037/150 VUs, 158 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (47.8s), 037/150 VUs, 158 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (48.8s), 032/150 VUs, 163 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (49.8s), 029/150 VUs, 166 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (50.8s), 024/150 VUs, 171 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (51.8s), 020/150 VUs, 175 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (52.8s), 016/150 VUs, 179 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (53.8s), 014/150 VUs, 181 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (54.8s), 007/150 VUs, 188 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=32.65%
+
+    t_auth_list
+    ✗ 'p(95)<500' p(95)=33.52s
+
+    t_my_resources
+    ✗ 'p(95)<500' p(95)=32.87s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 195    3.531633/s
+    checks_succeeded...: 67.17% 131 out of 195
+    checks_failed......: 32.82% 64 out of 195
+
+    ✗ me 200
+      ↳  76% — ✓ 54 / ✗ 17
+    ✗ auth list 200
+      ↳  62% — ✓ 77 / ✗ 47
+
+    CUSTOM
+    t_auth_list....................: avg=27.17s min=6.52s med=31.41s p(50)=31.41s p(95)=33.52s p(99)=36.62s max=37.31s
+    t_my_resources.................: avg=25.38s min=5.32s med=30.59s p(50)=30.59s p(95)=32.87s p(99)=36.37s max=37.75s
+
+    HTTP
+    http_req_duration..............: avg=26.43s min=5.32s med=31.06s p(50)=31.06s p(95)=33.4s  p(99)=36.75s max=37.75s
+      { expected_response:true }...: avg=23.9s  min=5.32s med=28.27s p(50)=28.27s p(95)=34.97s p(99)=37.13s max=37.75s
+    http_req_failed................: 32.65% 64 out of 196
+    http_reqs......................: 196    3.549744/s
+
+    EXECUTION
+    iteration_duration.............: avg=26.54s min=5.34s med=31.12s p(50)=31.12s p(95)=33.42s p(99)=36.78s max=37.76s
+    iterations.....................: 195    3.531633/s
+    vus............................: 7      min=0         max=150
+    vus_max........................: 150    min=150       max=150
+
+    NETWORK
+    data_received..................: 2.3 MB 42 kB/s
+    data_sent......................: 71 kB  1.3 kB/s
+
+
+
+
+running (55.2s), 000/150 VUs, 195 complete and 0 interrupted iterations
+authList    ✓ [ 100% ] 100 VUs  20s
+myResources ✓ [ 100% ] 50 VUs   20s
+time="2026-09-05T08:13:58Z" level=error msg="thresholds on metrics 'http_req_failed, t_auth_list, t_my_resources' have been crossed"
