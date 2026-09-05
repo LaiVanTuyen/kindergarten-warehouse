@@ -328,16 +328,26 @@ Nếu không, càng tối ưu thì tỷ lệ lỗi càng tăng và sẽ bị đ�
 
 Auth-read 150 VU: **55,4 req/s**, P95 4,96 s / 5,34 s, lỗi 0 %.
 
-### 6c.3 Nút thắt đã chuyển từ database sang ứng dụng
+### 6c.3 Tải CPU dịch chuyển đáng kể sang ứng dụng
 
 | | Baseline | Sau `@Formula` | Sau projection |
 |---|---|---|---|
 | MySQL CPU | **1040 %** | 919 % | **635 %** |
 | App CPU | 127 % | 159 % | **405 %** |
 
-MySQL từ kịch trần (≥800 %) xuống dưới trần; app giờ là thành phần tốn CPU
-nhất, chủ yếu cho serialize JSON ở 350 VU đồng thời. `db_threads_connected`
-vẫn 16 — pool 15 vẫn là trần, nhưng không còn gây sụp đổ.
+Phát biểu chính xác: **MySQL không còn kịch trần trong bài đo** (635 % so với
+trần 800 %), nhưng **vẫn là tiến trình dùng CPU lớn nhất** — lớn hơn app
+(405 %). Tỷ lệ app/MySQL đi từ 0,12 lên 0,64, tức tải đã dịch chuyển đáng kể
+sang tầng ứng dụng, nhưng chưa đảo ngôi.
+
+**Chưa biết 405 % của app dùng vào việc gì.** Các ứng viên đều hợp lý và chưa
+loại trừ được cái nào: mapping DTO, serialize JSON, gọi Redis, HTTP streaming,
+logging, GC. Muốn tối ưu tiếp thì **phải đo bằng JFR hoặc async-profiler
+trước**, đừng đoán — đúng bài học của §4.1, nơi giả thuyết "690 ms là do
+hydrate User" hoá ra chỉ đúng một phần.
+
+`db_threads_connected` vẫn 16 — pool 15 vẫn là trần, nhưng không còn gây sụp
+đổ. Chưa có lý do đổi pool.
 
 ### 6c.4 Hai sai sót phương pháp đã phát hiện
 
@@ -346,20 +356,35 @@ hơn* lần đo trước, điều vô lý vì thay đổi chỉ **bớt** một 
 nhân: một lệnh `UPDATE` 900 dòng (mở rộng bộ id download) chạy **trong lúc**
 bài đo đang diễn ra, tức ghi vào đúng bảng đang đọc. Đã đo lại sạch.
 
-**Việc lấy mẫu CPU tự nó làm giảm throughput.** Cùng cấu hình, cùng thời điểm:
+**Việc lấy mẫu CPU có làm giảm throughput, nhưng ít hơn nhiều so với ước tính
+ban đầu.** Con số 32 % rút ra từ *một cặp* chạy đã **không tái lập được**.
 
-| Cách chạy | Throughput |
-|---|---|
-| Không lấy mẫu | **260,7 req/s** |
-| Có lấy mẫu CPU/Hikari mỗi giây | **177,5 req/s** |
+Đo lại bằng A/B xen kẽ (không sample → sample → …), 3 lượt mỗi chế độ, cùng
+warm-up và dataset, mỗi lượt 30 s:
 
-Chênh **32 %**, vì mỗi vòng lấy mẫu phải `docker stats` và `docker exec` vào
-MySQL. Con số ghi ở bảng 6c.2 là **177,5** — bản có lấy mẫu — vì baseline và
-hai lần đo trước đều chạy qua `run-baseline.sh` vốn cũng lấy mẫu. So 260,7 với
-6,3 sẽ là so hai phương pháp khác nhau.
+| Lượt | Không sample | Có sample | Chênh |
+|---|---|---|---|
+| 1 | 237,6 req/s | 221,6 req/s | 6,7 % |
+| 2 | 222,1 req/s | 163,6 req/s | 26,3 % |
+| 3 | 228,0 req/s | 178,0 req/s | 21,9 % |
+| **Trung bình** | **229,2 req/s** | **187,8 req/s** | **18,1 %** |
 
-**Quy tắc cho lần đo sau:** không chạy bất kỳ lệnh ghi nào vào database trong
-lúc đo, và luôn nói rõ số liệu lấy từ lần chạy có hay không có lấy mẫu.
+Kết luận đúng: chi phí lấy mẫu vào khoảng **18 %**, không phải 32 %. Nhưng
+phương sai giữa các lượt rất lớn (6,7 % → 26,3 %), nên **ngay cả 18 % cũng chỉ
+là ước lượng thô** — ba lượt là chưa đủ để nói chắc. Nguồn nhiễu có thể nằm ở
+việc mỗi vòng lấy mẫu spawn hai process (`docker stats` và `docker exec`) và
+tranh chấp Docker daemon với chính container k6.
+
+Bảng 6c.2 vẫn ghi **177,5** — bản có lấy mẫu — vì baseline và hai lần đo trước
+đều chạy qua `run-baseline.sh` vốn cũng lấy mẫu. So số không-sample với baseline
+sẽ là so hai phương pháp khác nhau.
+
+**Quy tắc cho lần đo sau:**
+
+1. Không chạy bất kỳ lệnh ghi nào vào database trong lúc đo.
+2. Luôn nói rõ số liệu lấy từ lần chạy có hay không có lấy mẫu.
+3. Không rút kết luận về chênh lệch hiệu năng từ **một cặp** chạy — phương sai
+   trên máy này đủ lớn để tạo ra kết luận sai.
 
 ### 6c.5 Download với bộ id phân phối lại
 
