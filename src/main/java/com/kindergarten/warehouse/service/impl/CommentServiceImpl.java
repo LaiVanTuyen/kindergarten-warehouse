@@ -5,9 +5,7 @@ import com.kindergarten.warehouse.dto.response.CommentResponse;
 import com.kindergarten.warehouse.entity.AuditAction;
 import com.kindergarten.warehouse.entity.Comment;
 import com.kindergarten.warehouse.entity.Resource;
-import com.kindergarten.warehouse.entity.ResourceStatus;
 import com.kindergarten.warehouse.entity.User;
-import com.kindergarten.warehouse.entity.Visibility;
 import com.kindergarten.warehouse.exception.AppException;
 import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.mapper.CommentMapper;
@@ -36,6 +34,7 @@ public class CommentServiceImpl implements CommentService {
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
+    private final com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard;
 
     @Override
     @LogAction(action = AuditAction.CREATE, description = "Added comment", target = "COMMENT")
@@ -47,7 +46,8 @@ public class CommentServiceImpl implements CommentService {
 
         Resource resource = resourceRepository.findByIdWithDetails(resourceId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-        ensureCommentable(resource);
+        resourceAccessGuard.requireViewable(resource,
+                com.kindergarten.warehouse.security.Viewer.of(user.getId(), user.getRoles()));
 
         Comment comment = new Comment();
         comment.setContent(content.trim());
@@ -66,7 +66,7 @@ public class CommentServiceImpl implements CommentService {
     public Page<CommentResponse> getCommentsByResourceId(String resourceId, int page, int size) {
         Resource resource = resourceRepository.findByIdWithDetails(resourceId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-        ensureCommentable(resource);
+        resourceAccessGuard.requireViewable(resource, com.kindergarten.warehouse.security.Viewer.guest());
 
         Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         return commentRepository.findByResourceId(resourceId, pageable)
@@ -99,20 +99,6 @@ public class CommentServiceImpl implements CommentService {
                 || rating < MIN_RATING
                 || rating > MAX_RATING) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-    }
-
-    private void ensureCommentable(Resource resource) {
-        if (Boolean.TRUE.equals(resource.getIsDeleted())
-                || resource.getStatus() != ResourceStatus.APPROVED
-                || resource.getVisibility() != Visibility.PUBLIC
-                || resource.getTopic() == null
-                || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                || resource.getTopic().getVisibility() != Visibility.PUBLIC
-                || resource.getTopic().getCategory() == null
-                || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                || resource.getTopic().getCategory().getVisibility() != Visibility.PUBLIC) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
     }
 
