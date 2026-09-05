@@ -47,6 +47,7 @@ public class ResourceController {
 
         private final ResourceService resourceService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
@@ -89,9 +90,14 @@ public class ResourceController {
         }
 
         @GetMapping("/{slug}")
-        public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(@PathVariable String slug) {
+        public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(
+                        @PathVariable String slug,
+                        org.springframework.security.core.Authentication authentication) {
+                // Lấy Viewer ở biên rồi truyền tường minh xuống service, thay vì để
+                // service tự đọc SecurityContextHolder.
+                var viewer = viewerResolver.resolve(authentication);
                 return new ResponseEntity<>(
-                                ApiResponse.success(resourceService.getResourceBySlug(slug),
+                                ApiResponse.success(resourceService.getResourceBySlug(slug, viewer),
                                                 messageService.getMessage("resource.detail.success")),
                                 HttpStatus.OK);
         }

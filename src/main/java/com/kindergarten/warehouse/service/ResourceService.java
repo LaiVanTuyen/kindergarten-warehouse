@@ -23,7 +23,7 @@ public interface ResourceService {
 
         Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, Pageable pageable, String username);
 
-        ResourceResponse getResourceBySlug(String slug);
+        ResourceResponse getResourceBySlug(String slug, com.kindergarten.warehouse.security.Viewer viewer);
 
         FileDownloadInfo getResourceFileInfo(String id) throws Exception;
 

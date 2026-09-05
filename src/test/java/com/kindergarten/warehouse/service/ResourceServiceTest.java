@@ -48,6 +48,11 @@ class ResourceServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
+    // Guard that thay vi mock: test service phai chay dung pipeline 404/410.
+    @org.mockito.Spy
+    private com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard =
+            new com.kindergarten.warehouse.security.ResourceAccessGuard();
+
     @InjectMocks
     private ResourceServiceImpl resourceService;
 
@@ -102,7 +107,7 @@ class ResourceServiceTest {
             when(resourceRepository.findBySlug("unknown-slug")).thenReturn(Optional.empty());
 
             AppException exception = assertThrows(AppException.class, () -> 
-                resourceService.getResourceBySlug("unknown-slug"));
+                resourceService.getResourceBySlug("unknown-slug", com.kindergarten.warehouse.security.Viewer.guest()));
 
             assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
             verify(resourceMapper, never()).toResponse(any(), anyBoolean());
@@ -114,7 +119,7 @@ class ResourceServiceTest {
             when(resourceRepository.findBySlug("test-resource")).thenReturn(Optional.of(testResource));
             when(resourceMapper.toResponse(testResource, false)).thenReturn(mockResponse);
 
-            ResourceResponse response = resourceService.getResourceBySlug("test-resource");
+            ResourceResponse response = resourceService.getResourceBySlug("test-resource", com.kindergarten.warehouse.security.Viewer.guest());
 
             assertNotNull(response);
             assertEquals("res-1", response.getId());

@@ -54,6 +54,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final YoutubeService youtubeService; // Injected
     private final ApplicationEventPublisher eventPublisher;
     private final com.kindergarten.warehouse.service.AuditLogService auditLogService;
+    private final com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard;
 
     @Value("${app.resource.thumbnail-max-bytes:5242880}")
     private long thumbnailMaxBytes;
@@ -723,40 +724,19 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResourceResponse getResourceBySlug(String slug) {
-        Resource resource = resourceRepository.findBySlug(slug)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-
-        if (resource.getIsDeleted()) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = null;
-        boolean privileged = false;
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-            if (currentUser != null) {
-                privileged = isPrivileged(currentUser);
-            }
-        }
-
-        if (!privileged) {
-            if (resource.getVisibility() != Visibility.PUBLIC
-                    || resource.getStatus() != ResourceStatus.APPROVED
-                    || Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                    || resource.getTopic().getVisibility() != Visibility.PUBLIC
-                    || Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                    || resource.getTopic().getCategory().getVisibility() != Visibility.PUBLIC) {
-                throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-            }
-        }
+    public ResourceResponse getResourceBySlug(String slug,
+            com.kindergarten.warehouse.security.Viewer viewer) {
+        // findBySlug CỐ Ý không lọc isDeleted/ARCHIVED — lọc ở tầng truy vấn thì
+        // không phân biệt được "đã gỡ" (410) với "không tồn tại" (404).
+        // Toàn bộ thứ tự kiểm tra nằm trong ResourceAccessGuard.
+        Resource resource = resourceAccessGuard.requireViewable(
+                resourceRepository.findBySlug(slug).orElse(null), viewer);
 
         boolean isFavorited = false;
-        if (currentUser != null) {
+        if (viewer.isAuthenticated()) {
             try {
-                isFavorited = favoriteRepository.existsByUserIdAndResourceId(currentUser.getId(), resource.getId());
+                isFavorited = favoriteRepository.existsByUserIdAndResourceId(
+                        viewer.userId(), resource.getId());
             } catch (Exception e) {
                 log.warn("Failed to check favorite status for resource {}: {}", slug, e.getMessage());
             }
@@ -774,9 +754,14 @@ public class ResourceServiceImpl implements ResourceService {
         return user.getRoles().stream().anyMatch(role -> role == Role.ADMIN);
     }
 
-    private boolean isPrivileged(User user) {
-        return user.getRoles().stream().anyMatch(role -> role == Role.ADMIN || role == Role.TEACHER);
-    }
+    // isPrivileged(User) da bi XOA.
+    //
+    // No tra true cho MOI TEACHER, khong chi chu so huu, nen getResourceBySlug
+    // cu cho phep giao vien bat ky xem tai lieu PRIVATE cua giao vien khac va
+    // bo qua luon kiem tra status. Trai BUSINESS_RULES_V1 §3.3.
+    //
+    // Thay bang ResourceAccessGuard + VisibilityPolicy, noi phan biet ro
+    // "co vai tro" voi "la chu so huu". Dung khoi phuc method nay.
 
     private ResourceStatus parseStatusOrThrow(String statusValue) {
         try {
