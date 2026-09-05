@@ -38,8 +38,6 @@ public interface ResourceService {
 
     void deleteResource(String id, String username, boolean hard);
 
-    void incrementDownloadCount(String id);
-
     ResourceResponse updateResource(String id, ResourceUpdateRequest request, String username);
 
     boolean toggleFavorite(String resourceId, String username);

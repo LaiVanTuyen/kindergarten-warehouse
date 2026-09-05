@@ -5,14 +5,13 @@ import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.request.ResourceUpdateRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
-import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.service.MessageService;
 import com.kindergarten.warehouse.service.ResourceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import com.kindergarten.warehouse.util.PageableUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -110,7 +109,14 @@ public class ResourceController {
                 HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/view")
+    /**
+     * API_CONTRACT_V2 §—dong 234: <strong>POST</strong> {@code /{id}/view}.
+     *
+     * <p>Truoc day khai {@code @PutMapping} trong khi FE da gui POST
+     * ({@code resource.service.ts:264}) — moi luot xem tra 405 va khong duoc
+     * dem. Doi ve POST cho khop hop dong va cho FE.
+     */
+    @PostMapping("/{id}/view")
     public ResponseEntity<ApiResponse<Void>> incrementViewCount(
             @PathVariable String id,
             HttpServletRequest request) {
@@ -128,47 +134,45 @@ public class ResourceController {
                         messageService.getMessage("resource.view.increment.success")));
     }
 
-    @PutMapping("/{id}/download")
-    public ResponseEntity<ApiResponse<Void>> incrementDownloadCount(@PathVariable String id) {
-        resourceService.incrementDownloadCount(id);
-        return ResponseEntity.ok(ApiResponse.success(null,
-                messageService.getMessage("resource.download.increment.success")));
-    }
-
+    /**
+     * API_CONTRACT_V2 §—dong 235: {@code GET /{id}/file}, che do {@code stream}
+     * (BUSINESS_RULES §8.3).
+     *
+     * <p>Return type phai la {@code ResponseEntity<StreamingResponseBody>} chu
+     * KHONG phai {@code <?>}: neu khong Spring khong route vao
+     * {@code StreamingResponseBodyReturnValueHandler} ma co serialize lambda
+     * bang message converter -> {@code HttpMessageNotWritableException}.
+     *
+     * <p>Khong con khoi {@code try/catch} tra ResponseEntity loi: moi loi
+     * (khong tim thay / khong co quyen / youtube / storage) deu la AppException
+     * va {@code GlobalExceptionHandler} tra JSON {@code ApiResponse} dung
+     * contract. Bat rong roi tu dung body khac kieu la cach lam mat 401/410 ma
+     * ResourceAccessGuard vua tinh ra.
+     *
+     * <p>Bo dem luot tai o day — {@code getResourceFileInfo} da goi
+     * {@code resourceStatService.incrementDownloadCount} roi.
+     */
     @GetMapping("/{id}/file")
-    public ResponseEntity<?> downloadResource(
+    public ResponseEntity<StreamingResponseBody> downloadResource(
             @PathVariable String id,
-            org.springframework.security.core.Authentication authentication) {
-        try {
-            var fileInfo = resourceService.getResourceFileInfo(id, viewerResolver.resolve(authentication));
-            InputStreamResource body = new InputStreamResource(fileInfo.getInputStream());
+            org.springframework.security.core.Authentication authentication) throws Exception {
+        var fileInfo = resourceService.getResourceFileInfo(id, viewerResolver.resolve(authentication));
 
-            ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            ContentDisposition.attachment()
-                                    .filename(fileInfo.getFileName(), StandardCharsets.UTF_8)
-                                    .build()
-                                    .toString())
-                    .contentType(MediaType.parseMediaType(fileInfo.getContentType()));
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(fileInfo.getFileName(), StandardCharsets.UTF_8)
+                .build();
 
-            if (fileInfo.getFileSize() > 0) {
-                builder.contentLength(fileInfo.getFileSize());
+        StreamingResponseBody stream = outputStream -> {
+            try (java.io.InputStream inputStream = fileInfo.getInputStream()) {
+                inputStream.transferTo(outputStream);
             }
+        };
 
-            return builder.body(body);
-
-        } catch (IllegalArgumentException e) {
-            log.warn("Cannot download resource {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(ErrorCode.INVALID_REQUEST.getCode(), e.getMessage()));
-        } catch (com.kindergarten.warehouse.exception.AppException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error downloading resource {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode(),
-                            "Failed to download file"));
-        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .contentType(MediaType.parseMediaType(fileInfo.getContentType()))
+                .contentLength(fileInfo.getFileSize())
+                .body(stream);
     }
 
     @DeleteMapping("/{id}")

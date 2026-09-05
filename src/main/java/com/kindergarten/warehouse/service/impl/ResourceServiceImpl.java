@@ -422,11 +422,6 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void incrementDownloadCount(String id) {
-        resourceStatService.incrementDownloadCount(id);
-    }
-
-    @Override
     @Transactional
     @LogAction(action = AuditAction.DELETE, description = "Deleted resource", target = "RESOURCE")
     public void deleteResource(String id, String username, boolean hard) {
