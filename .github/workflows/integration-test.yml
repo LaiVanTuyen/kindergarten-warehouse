@@ -1,0 +1,60 @@
+name: Integration tests (Testcontainers)
+
+# Chay tren MOI nhanh va moi PR. Khac ci.yml — file do chi trigger tren
+# "main"/"development", trong khi repo dung "master"/"develop", nen no
+# khong chay o dau ca.
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
+jobs:
+  integration-test:
+    name: mvn verify -Pintegration-test
+    runs-on: ubuntu-latest
+    # Testcontainers keo image mysql:8.0.46 lan dau; 25 phut la du rong.
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Runner ubuntu-latest co san Docker daemon that. KHONG chay Maven
+      # trong container long — Testcontainers se khong khoi dong duoc
+      # container anh em (da gap dung loi nay tren Docker Desktop/Windows:
+      # socket mount tra HTTP 400 cho /info).
+      - name: Verify Docker is available
+        run: |
+          docker version
+          docker info --format 'NCPU={{.NCPU}} MemTotal={{.MemTotal}}'
+
+      # Keo truoc de buoc test khong tinh ca thoi gian tai image.
+      - name: Pre-pull MySQL image
+        run: docker pull mysql:8.0.46
+
+      - name: Run integration tests
+        run: mvn -B verify -Pintegration-test
+
+      # Bat buoc chay ke ca khi that bai — do la luc can report nhat.
+      - name: Upload Failsafe reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports
+          path: target/failsafe-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+# KHONG dung continue-on-error va KHONG dung co che skip khi thieu Docker.
+# Failsafe phai FAIL neu container khong khoi dong duoc — neu khong, mot
+# runner thieu Docker se cho PASS GIA va che mat toan bo 17 test.
+#
+# Job nay can duoc dat lam REQUIRED CHECK truoc merge trong Settings ->
+# Branches -> Branch protection rules. Day la cau hinh repository, khong
+# the khai bao tu file workflow.
