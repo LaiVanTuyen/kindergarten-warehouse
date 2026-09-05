@@ -53,6 +53,14 @@ public enum ErrorCode {
     THUMBNAIL_TOO_LARGE(6007, "error.resource.thumbnail.too.large", HttpStatus.BAD_REQUEST),
     AVATAR_TOO_LARGE(6008, "error.user.avatar.too_large", HttpStatus.BAD_REQUEST),
     RESOURCE_VIEW_RATE_LIMIT_EXCEEDED(6009, "error.resource.view.rate_limit_exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    // 410 Gone: tung cong khai, nay da archive/takedown. KHONG dung cho
+    // INTERNAL/PRIVATE thieu quyen - nhung truong hop do phai la 404 de
+    // khong lo su ton tai (BUSINESS_RULES §4.3).
+    RESOURCE_ARCHIVED(6010, "error.resource.archived", HttpStatus.GONE),
+    // 401 rieng cho tai file: KHACH khong tai duoc ke ca tai nguyen PUBLIC.
+    // Ma rieng de FE hien "Dang nhap de tai tai lieu" ngay tai nut tai,
+    // thay vi coi nhu loi phien dang nhap (BUSINESS_RULES §8.4).
+    DOWNLOAD_REQUIRES_AUTH(6011, "error.resource.download.requires_auth", HttpStatus.UNAUTHORIZED),
 
     // ========== Age Group Errors (65xx) ==========
     AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),
