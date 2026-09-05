@@ -23,6 +23,7 @@ public class TopicController {
 
         private final TopicService topicService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<TopicResponse>>> getAllTopics(
@@ -32,13 +33,15 @@ public class TopicController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir) {
+                        @RequestParam(defaultValue = "desc") String sortDir,
+                        org.springframework.security.core.Authentication authentication) {
 
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity
                                 .ok(ApiResponse.success(
-                                                topicService.getAllTopics(categoryId, deleted, keyword, pageable),
+                                                topicService.getAllTopics(categoryId, deleted, keyword, pageable,
+                                                                viewerResolver.resolve(authentication)),
                                                 messageService.getMessage("topic.list.success")));
         }
 

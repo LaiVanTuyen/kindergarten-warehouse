@@ -36,12 +36,19 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CategoryResponse> getAllCategories(boolean deleted, String keyword, Pageable pageable) {
+    public Page<CategoryResponse> getAllCategories(boolean deleted, String keyword, Pageable pageable,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Specification<Category> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Deleted Filter
-            predicates.add(cb.equal(root.get("isDeleted"), deleted));
+            predicates.add(cb.equal(root.get("isDeleted"), viewer.isAdmin() && deleted));
+            if (!viewer.isAdmin()) {
+                if (viewer.isAuthenticated()) {
+                    predicates.add(root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL));
+                } else {
+                    predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
+                }
+            }
 
             // Keyword Search
             if (keyword != null && !keyword.isEmpty()) {

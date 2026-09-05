@@ -39,11 +39,23 @@ public class TopicServiceImpl implements TopicService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TopicResponse> getAllTopics(Long categoryId, boolean deleted, String keyword, Pageable pageable) {
+    public Page<TopicResponse> getAllTopics(Long categoryId, boolean deleted, String keyword, Pageable pageable,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Specification<Topic> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            predicates.add(cb.equal(root.get("isDeleted"), deleted));
+            predicates.add(cb.equal(root.get("isDeleted"), viewer.isAdmin() && deleted));
+            if (!viewer.isAdmin()) {
+                predicates.add(cb.isFalse(root.get("category").get("isDeleted")));
+                if (viewer.isAuthenticated()) {
+                    predicates.add(root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL));
+                    predicates.add(root.get("category").get("visibility")
+                            .in(Visibility.PUBLIC, Visibility.INTERNAL));
+                } else {
+                    predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
+                    predicates.add(cb.equal(root.get("category").get("visibility"), Visibility.PUBLIC));
+                }
+            }
 
             if (categoryId != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));

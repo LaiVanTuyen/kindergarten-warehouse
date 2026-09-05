@@ -25,6 +25,7 @@ public class CategoryController {
 
         private final CategoryService categoryService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<CategoryResponse>>> getAllCategories(
@@ -33,7 +34,8 @@ public class CategoryController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir) {
+                        @RequestParam(defaultValue = "desc") String sortDir,
+                        org.springframework.security.core.Authentication authentication) {
 
                 // Fix FE sending 'desc' as sortBy causing PropertyReferenceException
                 if ("desc".equalsIgnoreCase(sortBy) || "asc".equalsIgnoreCase(sortBy)) {
@@ -43,7 +45,8 @@ public class CategoryController {
                 Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
 
                 return ResponseEntity
-                                .ok(ApiResponse.success(categoryService.getAllCategories(deleted, keyword, pageable),
+                                .ok(ApiResponse.success(categoryService.getAllCategories(
+                                                deleted, keyword, pageable, viewerResolver.resolve(authentication)),
                                                 messageService.getMessage("category.list.success")));
         }
 
