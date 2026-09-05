@@ -103,6 +103,21 @@ class ResourceVisibilityIT {
         // Admin seed phai co gia tri hop le, neu khong DataSeeder chan boot.
         registry.add("app.admin.password", () -> "IntegrationTest#2026");
         registry.add("app.admin.email", () -> "it-admin@example.com");
+
+        // application.yml co BON placeholder KHONG co gia tri mac dinh:
+        //   spring.mail.username / password, jwt.secret, rollbar.access-token
+        // Tren may dev chung duoc nap tu .env, nhung tren CI thi khong ton tai
+        // nen Spring nem "Could not resolve placeholder" va TOAN BO context
+        // khong len duoc — moi test se loi cung mot luc.
+        //
+        // Cac gia tri duoi day chi de context khoi dong. Test khong dung toi
+        // mail, JWT hay Rollbar.
+        registry.add("jwt.secret", () ->
+                "integration-test-secret-key-that-is-long-enough-for-hs256-abcdefgh");
+        registry.add("spring.mail.username", () -> "it@example.com");
+        registry.add("spring.mail.password", () -> "not-used");
+        registry.add("rollbar.access-token", () -> "not-used");
+        registry.add("rollbar.enabled", () -> "false");
     }
 
     // MinIO va Redis se co gang ket noi that khi khoi dong; test nay khong dung
@@ -166,10 +181,15 @@ class ResourceVisibilityIT {
         resourceRepository.save(deleted);
     }
 
+    /** Hau to ngan: cot users.username la VARCHAR(50), UUID day du se tran. */
+    private static String shortId() {
+        return UUID.randomUUID().toString().substring(0, 8);
+    }
+
     private Long createUser(String username, Role role) {
         User user = User.builder()
-                .username(username + "-" + UUID.randomUUID())
-                .email(username + "-" + UUID.randomUUID() + "@example.com")
+                .username(username + "-" + shortId())
+                .email(username + "-" + shortId() + "@example.com")
                 .password("x")
                 .fullName("IT " + username)
                 .status(UserStatus.ACTIVE)
