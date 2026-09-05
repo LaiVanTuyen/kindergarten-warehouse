@@ -1,0 +1,166 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/auth-read.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 150 max VUs, 50s max duration (incl. graceful stop):
+              * authList: 100 looping VUs for 20s (exec: authList, gracefulStop: 30s)
+              * myResources: 50 looping VUs for 20s (exec: myResources, gracefulStop: 30s)
+
+
+Run           [ 100% ] setup()
+authList      [   0% ]
+myResources   [   0% ]
+
+running (01.9s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [   4% ] 100 VUs  00.8s/20s
+myResources   [   4% ] 50 VUs   00.8s/20s
+
+running (02.9s), 150/150 VUs, 0 complete and 0 interrupted iterations
+authList      [   9% ] 100 VUs  01.8s/20s
+myResources   [   9% ] 50 VUs   01.8s/20s
+
+running (03.9s), 150/150 VUs, 20 complete and 0 interrupted iterations
+authList      [  14% ] 100 VUs  02.8s/20s
+myResources   [  14% ] 50 VUs   02.8s/20s
+
+running (05.0s), 150/150 VUs, 45 complete and 0 interrupted iterations
+authList      [  19% ] 100 VUs  03.8s/20s
+myResources   [  19% ] 50 VUs   03.8s/20s
+
+running (05.9s), 150/150 VUs, 64 complete and 0 interrupted iterations
+authList      [  24% ] 100 VUs  04.8s/20s
+myResources   [  24% ] 50 VUs   04.8s/20s
+
+running (06.9s), 150/150 VUs, 88 complete and 0 interrupted iterations
+authList      [  29% ] 100 VUs  05.8s/20s
+myResources   [  29% ] 50 VUs   05.8s/20s
+
+running (07.9s), 150/150 VUs, 110 complete and 0 interrupted iterations
+authList      [  34% ] 100 VUs  06.8s/20s
+myResources   [  34% ] 50 VUs   06.8s/20s
+
+running (08.9s), 150/150 VUs, 135 complete and 0 interrupted iterations
+authList      [  39% ] 100 VUs  07.8s/20s
+myResources   [  39% ] 50 VUs   07.8s/20s
+
+running (09.9s), 150/150 VUs, 160 complete and 0 interrupted iterations
+authList      [  44% ] 100 VUs  08.8s/20s
+myResources   [  44% ] 50 VUs   08.8s/20s
+
+running (10.9s), 150/150 VUs, 183 complete and 0 interrupted iterations
+authList      [  49% ] 100 VUs  09.8s/20s
+myResources   [  49% ] 50 VUs   09.8s/20s
+
+running (11.9s), 150/150 VUs, 210 complete and 0 interrupted iterations
+authList      [  54% ] 100 VUs  10.8s/20s
+myResources   [  54% ] 50 VUs   10.8s/20s
+
+running (12.9s), 150/150 VUs, 244 complete and 0 interrupted iterations
+authList      [  59% ] 100 VUs  11.8s/20s
+myResources   [  59% ] 50 VUs   11.8s/20s
+
+running (13.9s), 150/150 VUs, 277 complete and 0 interrupted iterations
+authList      [  64% ] 100 VUs  12.8s/20s
+myResources   [  64% ] 50 VUs   12.8s/20s
+
+running (14.9s), 150/150 VUs, 306 complete and 0 interrupted iterations
+authList      [  69% ] 100 VUs  13.8s/20s
+myResources   [  69% ] 50 VUs   13.8s/20s
+
+running (15.9s), 150/150 VUs, 328 complete and 0 interrupted iterations
+authList      [  74% ] 100 VUs  14.8s/20s
+myResources   [  74% ] 50 VUs   14.8s/20s
+
+running (16.9s), 150/150 VUs, 359 complete and 0 interrupted iterations
+authList      [  79% ] 100 VUs  15.8s/20s
+myResources   [  79% ] 50 VUs   15.8s/20s
+
+running (17.9s), 150/150 VUs, 392 complete and 0 interrupted iterations
+authList      [  84% ] 100 VUs  16.8s/20s
+myResources   [  84% ] 50 VUs   16.8s/20s
+
+running (18.9s), 150/150 VUs, 428 complete and 0 interrupted iterations
+authList      [  89% ] 100 VUs  17.8s/20s
+myResources   [  89% ] 50 VUs   17.8s/20s
+
+running (19.9s), 150/150 VUs, 464 complete and 0 interrupted iterations
+authList      [  94% ] 100 VUs  18.8s/20s
+myResources   [  94% ] 50 VUs   18.8s/20s
+
+running (20.9s), 150/150 VUs, 496 complete and 0 interrupted iterations
+authList      [  99% ] 100 VUs  19.8s/20s
+myResources   [  99% ] 50 VUs   19.8s/20s
+
+running (21.9s), 121/150 VUs, 530 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (22.9s), 089/150 VUs, 562 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (23.9s), 051/150 VUs, 600 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (24.9s), 015/150 VUs, 636 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ✓ [ 100% ] 50 VUs   20s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    t_auth_list
+    ✗ 'p(95)<500' p(95)=6.8s
+
+    t_my_resources
+    ✗ 'p(95)<500' p(95)=8.28s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 651     25.751766/s
+    checks_succeeded...: 100.00% 651 out of 651
+    checks_failed......: 0.00%   0 out of 651
+
+    ✓ auth list 200
+    ✓ me 200
+
+    CUSTOM
+    t_auth_list....................: avg=4.87s min=475.51ms med=4.78s p(50)=4.78s p(95)=6.8s  p(99)=10.72s max=14.9s 
+    t_my_resources.................: avg=5.54s min=375.75ms med=5.06s p(50)=5.06s p(95)=8.28s p(99)=11.68s max=12.34s
+
+    HTTP
+    http_req_duration..............: avg=5.07s min=375.75ms med=4.92s p(50)=4.92s p(95)=8.26s p(99)=10.89s max=14.9s 
+      { expected_response:true }...: avg=5.07s min=375.75ms med=4.92s p(50)=4.92s p(95)=8.26s p(99)=10.89s max=14.9s 
+    http_req_failed................: 0.00%  0 out of 652
+    http_reqs......................: 652    25.791323/s
+
+    EXECUTION
+    iteration_duration.............: avg=5.08s min=376.11ms med=4.93s p(50)=4.93s p(95)=8.26s p(99)=10.9s  max=14.9s 
+    iterations.....................: 651    25.751766/s
+    vus............................: 15     min=0        max=150
+    vus_max........................: 150    min=150      max=150
+
+    NETWORK
+    data_received..................: 11 MB  444 kB/s
+    data_sent......................: 236 kB 9.3 kB/s
+
+
+
+
+running (25.3s), 000/150 VUs, 651 complete and 0 interrupted iterations
+authList    ✓ [ 100% ] 100 VUs  20s
+myResources ✓ [ 100% ] 50 VUs   20s
+time="2026-09-05T11:43:02Z" level=error msg="thresholds on metrics 't_auth_list, t_my_resources' have been crossed"

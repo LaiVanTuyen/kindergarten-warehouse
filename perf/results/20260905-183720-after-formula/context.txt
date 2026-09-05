@@ -1,0 +1,11 @@
+commit=ea8cf3d524eb860980ff0517af5f1e39e8a643e2
+commit_short=ea8cf3d
+ngay_do=2026-09-05T18:40:36+07:00
+duration=60s
+warmup=20s
+vu_scale=1
+docker_version=29.4.3
+k6_image=grafana/k6:latest
+download_mode=stream (StreamingResponseBody qua Spring)
+tong	portal_thay
+2001	1701

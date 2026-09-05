@@ -213,6 +213,90 @@ Mục 1 và 2 nên làm cùng nhau và đo lại ngay: cả hai đều nằm tr�
 
 ---
 
+## 6b. Đo lần 2 — sau khi gỡ `@Formula`, TRƯỚC khi sửa `@EntityGraph`
+
+Đo ngày **2026-09-05** trên commit **`ea8cf3d`**. Cùng máy, cùng Docker quota
+(NCPU=8), cùng dataset (2.001/1.701), cùng kịch bản, **pool Hikari giữ nguyên
+15**. Kết quả thô: `perf/results/20260905-*-after-formula/`.
+
+Mốc trung gian này tồn tại để **tách đóng góp của từng thay đổi**, thay vì chỉ
+có một con số gộp sau khi đã sửa hết.
+
+### 6b.1 Đường cong tải — đọc công khai
+
+| VU | Chỉ số | Baseline | Lần 2 | Thay đổi |
+|---|---|---|---|---|
+| **17** | throughput | 106,7 req/s | **171,8** | +61 % |
+| | `t_list` P95 | 5,35 s | **538 ms** | **−90 %** |
+| | `t_search` P95 | 187 ms | 124 ms | −34 % |
+| | `t_detail` P95 | 111 ms | 79 ms | −29 % |
+| **35** | throughput | 14,9 req/s | **109,0** | **7,3×** |
+| | `t_list` P95 | 5,23 s | **668 ms** | −87 % |
+| | `t_search` P95 | 2,31 s | 383 ms | −83 % |
+| | `t_detail` P95 | 2,33 s | 357 ms | −85 % |
+| **87** | throughput | 9,6 req/s | **82,4** | **8,6×** |
+| | `t_list` P95 | 11,69 s | **1,45 s** | −88 % |
+| | `t_search` P95 | 9,06 s | 1,72 s | −81 % |
+| | `t_detail` P95 | 8,98 s | 1,73 s | −81 % |
+| **350** | throughput | 6,3 req/s | **36,7** | 5,8× |
+| | `t_list` P95 | 59,99 s (trần timeout) | **28,62 s** | — |
+| | tỷ lệ lỗi | **20,42 %** | **0 %** | đạt |
+
+### 6b.2 Đọc có đăng nhập và tải file
+
+| Bài | Chỉ số | Baseline | Lần 2 |
+|---|---|---|---|
+| Auth-read 150 VU | throughput | 4,0 req/s | **29,6** (7,4×) |
+| | `t_auth_list` P95 | 35,92 s | **5,57 s** |
+| | tỷ lệ lỗi | 36,66 % | **0 %** |
+| Download 50 VU | throughput | 28,4 req/s | **47,5** |
+| | băng thông | 26 MB/s | **41 MB/s** |
+| | `t_download` P95 | 1,59 s | **676 ms** |
+| | App CPU | 417 % | 375 % |
+
+### 6b.3 Kết luận: `@Formula` gây cả hai vấn đề
+
+Theo khung đọc kết quả đã thống nhất, số liệu rơi vào **nhánh thứ hai**:
+`t_list` ở 17 VU giảm từ 5,35 s xuống 538 ms, nên hai `@Formula` đóng góp lớn
+vào **cả độ trễ request đơn lẫn bão hoà DB**, không chỉ bão hoà.
+
+Hiện tượng "list bỏ đói các endpoint khác" đã biến mất: ở 35 VU, `detail`
+trước đây bị kéo từ 111 ms lên 2,33 s, nay chỉ còn 357 ms.
+
+### 6b.4 Vẫn chưa đạt — ba điểm phải nói rõ
+
+1. **`t_list` P95 ở 17 VU là 538 ms, vẫn trên ngưỡng 500 ms** của mục 6. Rất
+   gần nhưng chưa đạt.
+2. **Khoảng cách list ↔ detail vẫn tăng theo tải.** Ở 1 VU, list ~70 ms, ngang
+   detail. Ở 17 VU, list 538 ms còn detail 79 ms — gấp gần 7 lần. Nghĩa là list
+   vẫn mang một chi phí mà detail không có. `@EntityGraph` là ứng viên hợp lý
+   cho phần còn lại, nhưng **vẫn là giả thuyết** (xem §4.1).
+3. **MySQL vẫn bão hoà ở tải cao**: 919 % khi 350 VU, 710 % khi auth-read.
+   Pool 15 connection vẫn cạn (`db_threads_connected` = 16).
+
+### 6b.5 Cảnh báo về bài đo download
+
+Tỷ lệ lỗi download **tăng** từ 0,34 % lên **4,92 %**. Đây **không phải hồi
+quy** — nó là hệ quả của việc hệ thống chạy nhanh hơn.
+
+`RateLimitingAspect` giới hạn **30 lượt tải mỗi IP + mỗi resource trong 60 s**
+(SEC-4, có từ trước baseline). Toàn bộ tải k6 đến từ **một IP** duy nhất, và
+kịch bản chỉ xoay vòng trên 99 resource:
+
+| Lần đo | Request trong 60 s | Trung bình mỗi resource | Giới hạn |
+|---|---|---|---|
+| Baseline | 1.741 | 17,6 | 30 — không chạm |
+| Lần 2 | 2.881 | **29,1** | 30 — **chạm và vượt** |
+
+Baseline chậm tới mức không bao giờ chạm giới hạn; nay đủ nhanh để vượt.
+
+**Hệ quả cho lần đo sau:** con số lỗi của bài download không còn so sánh trực
+tiếp được. Trước khi đo lần 3, phải sửa `perf/k6/download.js` — hoặc nâng số
+resource có file thật lên vài trăm, hoặc tính đến giới hạn 30/60s trong ngưỡng.
+Nếu không, càng tối ưu thì tỷ lệ lỗi càng tăng và sẽ bị đọc nhầm thành hồi quy.
+
+---
+
 ## 7. Cách chạy lại
 
 ```bash
