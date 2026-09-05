@@ -1,11 +1,10 @@
 name: Integration tests (Testcontainers)
 
-# Chay tren MOI nhanh va moi PR. Khac ci.yml — file do chi trigger tren
-# "main"/"development", trong khi repo dung "master"/"develop", nen no
-# khong chay o dau ca.
+# Chay tren moi PR va tren push vao master/develop. KHONG chay tren moi
+# push cua moi feature branch de khoi ton phut CI — PR check la du.
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "master", "develop" ]
   pull_request:
 
 jobs:
@@ -19,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
