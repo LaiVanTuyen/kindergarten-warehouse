@@ -50,13 +50,14 @@ với V1, cần dọn khi FE chuyển hẳn sang `result`.
 | 9001 | 400 | Request không hợp lệ |
 | 9002 | 405 | Method không được hỗ trợ |
 | 9003 | 415 | Media type không được hỗ trợ |
+| 9004 | 404 | Đường dẫn không tồn tại |
 | 1011 / 1009 | 401 | Chưa xác thực |
 | 1012 | 403 | Không đủ quyền |
 | 1015 / 1016 | 429 | Vượt số lần thử |
 | 2003 | 404 | Không tìm thấy |
 | 9999 | 500 | Lỗi không phân loại |
 
-`GlobalExceptionHandler` đã có 12 handler phủ các trường hợp trên. ✅
+`GlobalExceptionHandler` đã có 14 handler phủ các trường hợp trên. ✅
 
 **⚠️ Một nguồn sai mã lỗi đã xác định.** `IllegalArgumentException` được map
 sang `INVALID_REQUEST` → **400**. Nhưng một số service dùng chính exception này
@@ -214,7 +215,12 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 | GET | `/me` | Đã đăng nhập | ⚠️ | Thêm lọc theo `status` cho các tab Draft/Pending/Approved/Rejected/Archived |
 | GET | `/{slug}` | Công khai | ⚠️ | Áp visibility phân tầng; trả **410** nếu đã archive (§4.3) |
 | POST | `/{id}/view` | Công khai | ✅ | |
-| GET | `/{id}/file` | **Đã đăng nhập** | ⚠️ | GUEST → **401** `DOWNLOAD_REQUIRES_AUTH`. Chuyển sang `stream \| accel` (BUSINESS_RULES §8.3) |
+| GET | `/{id}/file` | **Đã đăng nhập** | ⚠️ | GUEST → **401** `DOWNLOAD_REQUIRES_AUTH` ✅. Chế độ `stream` ✅ (`StreamingResponseBody`); `accel` vẫn ❌ (BUSINESS_RULES §8.3) |
+
+> **Không có endpoint đếm lượt tải riêng.** `GET /{id}/file` tự tăng bộ đếm
+> trong `getResourceFileInfo`. `PUT /{id}/download` từng tồn tại và FE gọi song
+> song với `/file` — mỗi lượt tải bị đếm **hai lần**. Endpoint đó đã bị bỏ ở cả
+> hai phía ngày 2026-09-06.
 | PUT | `/{id}` (json) | ADMIN, TEACHER | ⚠️ | Kích hoạt quy tắc về `PENDING` (BUSINESS_RULES §5) |
 | PUT | `/{id}` (multipart) | ADMIN, TEACHER | ⚠️ | Như trên |
 | POST | `/{id}/thumbnail` | ADMIN, TEACHER | ⚠️ | Như trên |

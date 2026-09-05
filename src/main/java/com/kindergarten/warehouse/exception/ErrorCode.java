@@ -8,6 +8,9 @@ public enum ErrorCode {
     // ========== General Errors (9xxx) ==========
     UNCATEGORIZED_EXCEPTION(9999, "error.internal", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_REQUEST(9001, "error.invalid.request", HttpStatus.BAD_REQUEST),
+    METHOD_NOT_ALLOWED(9002, "error.method_not_allowed", HttpStatus.METHOD_NOT_ALLOWED),
+    UNSUPPORTED_MEDIA_TYPE(9003, "error.unsupported_media_type", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    ENDPOINT_NOT_FOUND(9004, "error.endpoint.not_found", HttpStatus.NOT_FOUND),
 
     // ========== Validation Errors (1xxx) ==========
     INVALID_KEY(1001, "validation.failed", HttpStatus.BAD_REQUEST),

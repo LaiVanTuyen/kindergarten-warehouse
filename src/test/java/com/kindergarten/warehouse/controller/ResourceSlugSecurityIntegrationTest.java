@@ -40,7 +40,10 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -247,6 +250,57 @@ class ResourceSlugSecurityIntegrationTest {
         mockMvc.perform(get("/api/v1/categories/123"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(1011));
+    }
+
+    @Test
+    @DisplayName("Bộ đếm lượt xem nhận POST, không nhận PUT (contract §3 dòng 234)")
+    void viewCounterAcceptsPostNotPut() throws Exception {
+        // FE đã gửi POST (resource.service.ts) trong khi BE từng khai @PutMapping:
+        // mọi lượt xem trả 405 và không được đếm. Test này khóa lại cặp method.
+        mockMvc.perform(post("/api/v1/resources/res-1/view").with(csrf()))
+                .andExpect(status().isOk());
+
+        verify(resourceService).incrementViewCount(anyString(), any());
+
+        // Khách gửi PUT: matcher fail-closed không liệt kê method này nên dừng
+        // ở 401 TRƯỚC khi tới dispatcher — không phải 405. Đây là hành vi đúng
+        // và chặt hơn: method không nằm trong hợp đồng thì cũng không public.
+        mockMvc.perform(put("/api/v1/resources/res-1/view").with(csrf()))
+                .andExpect(status().isUnauthorized());
+
+        // Đã đăng nhập thì qua được matcher, và lúc này mới thấy sự thật: không
+        // có handler nào nhận PUT cho đường dẫn này.
+        mockMvc.perform(put("/api/v1/resources/res-1/view")
+                        .with(authentication(as(OWNER_ID, Role.TEACHER))).with(csrf()))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    @DisplayName("Không còn endpoint đếm lượt tải riêng — /file đã tự đếm")
+    void separateDownloadCounterEndpointIsGone() throws Exception {
+        // Trước đây FE gọi cả GET /file lẫn PUT /download nên mỗi lượt tải bị
+        // đếm hai lần. Endpoint riêng đã bỏ; giữ test để nó không quay lại.
+        mockMvc.perform(put("/api/v1/resources/res-1/download").with(csrf()))
+                .andExpect(status().isUnauthorized());
+
+        // Đã đăng nhập thì qua matcher và thấy: không còn handler nào cho đường
+        // dẫn này. Phải là 404 chứ không phải 500 — xem handleNoHandler.
+        mockMvc.perform(put("/api/v1/resources/res-1/download")
+                        .with(authentication(as(OWNER_ID, Role.TEACHER))).with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(9004));
+    }
+
+    @Test
+    @DisplayName("Đường dẫn không tồn tại trả 404, không phải 500 kèm cảnh báo Rollbar")
+    void unknownEndpointReturnsNotFoundNotServerError() throws Exception {
+        // Spring 6.1 để request không khớp handler rơi xuống ResourceHttpRequestHandler
+        // -> NoResourceFoundException. Nếu không bắt riêng thì mọi URL sai (bot quét,
+        // route FE cũ) đều thành 500 và một cảnh báo giám sát giả.
+        mockMvc.perform(get("/api/v1/resources/res-1/khong-ton-tai/sau-nua")
+                        .with(authentication(as(OWNER_ID, Role.TEACHER))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(9004));
     }
 
     private static ResourceResponse response() {

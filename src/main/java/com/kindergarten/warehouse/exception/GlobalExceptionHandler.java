@@ -193,6 +193,69 @@ public class GlobalExceptionHandler {
     /**
      * Handle all uncaught exceptions
      */
+    /**
+     * Loi phia CLIENT do Spring MVC nem ra truoc khi vao controller.
+     *
+     * <p>Khong co handler rieng thi chung roi vao {@code handleGlobalException}
+     * ben duoi va tra <strong>500 + ban Rollbar</strong> cho nhung viec hoan
+     * toan binh thuong: goi sai HTTP method, thieu tham so bat buoc, truyen
+     * {@code page=abc}. Ba hau qua: client khong doc duoc loi that, giam sat bi
+     * nhieu boi bao dong gia, va 405 that su bi che mat.
+     */
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        log.warn("Method not supported: {} {}", ex.getMethod(), ex.getSupportedHttpMethods());
+        ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * URL khong khop handler nao.
+     *
+     * <p>Spring 6.1 khong nem {@code NoHandlerFoundException} nua ma de request
+     * roi xuong {@code ResourceHttpRequestHandler}, cho ra
+     * {@code NoResourceFoundException}. Khong bat rieng thi no vao catch-all va
+     * tra <strong>500 kem mot canh bao Rollbar</strong> cho MOI duong dan khong
+     * ton tai — go nham, route FE cu, va nhat la bot quet lo hong. Giam sat se
+     * ngap bao dong gia den muc canh bao that bi bo qua.
+     */
+    @ExceptionHandler({
+            org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleNoHandler(Exception ex) {
+        log.warn("No handler for request: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.ENDPOINT_NOT_FOUND;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedMediaType(
+            org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        log.warn("Unsupported media type: {}", ex.getContentType());
+        ErrorCode errorCode = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @ExceptionHandler({
+            org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleBadClientRequest(Exception ex) {
+        log.warn("Bad client request: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+        return new ResponseEntity<>(
+                ApiResponse.error(errorCode.getCode(), messageService.getMessage(errorCode.getMessage())),
+                HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
         log.error("Uncategorized exception", ex);
