@@ -105,6 +105,48 @@ mất nội dung công khai**. Vì vậy:
   Không lặp lại logic so sánh rải rác.
 - Phải có integration test cho **từng ô** của bảng 3.3 trước khi merge.
 
+### 3.7 Thu hẹp matcher trong SecurityConfig — việc của Tuần 2
+
+`SecurityConfig:94` hiện là `GET /api/v1/resources/**` → `permitAll()`. Cấu
+hình này **fail-open**: mọi endpoint GET mới dưới `/resources` sẽ công khai
+theo mặc định, trừ khi người viết nhớ gắn `@PreAuthorize`. Thêm test là chưa
+đủ — phải sửa chính cấu hình.
+
+Thay bằng danh sách cụ thể, **rule hẹp đặt trước rule tổng quát** (Spring
+Security khớp theo thứ tự khai báo, rule đầu tiên trúng sẽ thắng):
+
+```java
+// 1. Rule cụ thể — phải đứng TRƯỚC
+.requestMatchers(HttpMethod.GET, "/api/v1/resources/me").authenticated()
+
+// 2. permitAll có chủ đích, từng đường dẫn một
+.requestMatchers(HttpMethod.GET, "/api/v1/resources").permitAll()
+.requestMatchers(HttpMethod.GET, "/api/v1/resources/*/file").permitAll()
+.requestMatchers(HttpMethod.GET, "/api/v1/resources/*").permitAll()   // {slug}
+
+// 3. Mọi GET còn lại dưới /resources — mặc định phải đăng nhập
+.requestMatchers(HttpMethod.GET, "/api/v1/resources/**").authenticated()
+```
+
+Ghi chú từng dòng:
+
+| Đường dẫn | Quyền | Lý do |
+|---|---|---|
+| `/resources/me` | `authenticated` | Dữ liệu riêng của người dùng. Đặt trước `/resources/*` vì `me` cũng khớp mẫu đó |
+| `/resources` | `permitAll` | Danh sách công khai |
+| `/resources/*/file` | `permitAll` | **Cố ý** giữ permitAll để service tự trả mã 6011 — xem §8.4 |
+| `/resources/*` | `permitAll` | Chi tiết theo slug |
+| `/resources/**` còn lại | `authenticated` | Fail-closed: endpoint mới mặc định bị chặn |
+
+Điểm mấu chốt là dòng cuối. Nó biến cấu hình từ fail-open thành **fail-closed**:
+endpoint GET mới thêm vào sẽ bị chặn cho tới khi có người chủ động mở, thay vì
+công khai từ lúc ra đời mà không ai để ý.
+
+Không nên tiếp tục giữ `GET /resources/**` → `permitAll` lâu dài.
+
+Vẫn giữ `@PreAuthorize` ở tầng method như lớp phòng thủ thứ hai — hai lớp
+độc lập, không thay thế nhau.
+
 ---
 
 ## 4. Vòng đời tài nguyên
