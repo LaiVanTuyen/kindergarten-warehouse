@@ -1,0 +1,33 @@
+### VU_SCALE=0.05 (~17 VU) ###
+  http_req_failed
+  t_detail
+  t_list
+  t_search
+  t_detail.......................: avg=40.03ms  min=8.16ms   med=35.51ms  max=190.85ms p(90)=65.01ms  p(95)=79.45ms 
+  t_list.........................: avg=384.83ms min=166.73ms med=371.43ms max=782.36ms p(90)=483.83ms p(95)=538.12ms
+  t_search.......................: avg=69.09ms  min=22.49ms  med=63.3ms   max=311.8ms  p(90)=106.08ms p(95)=123.57ms
+  http_req_failed................: 0.00%  0 out of 6891
+  http_reqs......................: 6891   171.849366/s
+
+### VU_SCALE=0.10 (~35 VU) ###
+  http_req_failed
+  t_detail
+  t_list
+  t_search
+  t_detail.......................: avg=201.24ms min=8.13ms  med=193.09ms max=589.22ms p(90)=306.89ms p(95)=357.02ms
+  t_list.........................: avg=506ms    min=249.6ms med=496.37ms max=946.19ms p(90)=611.79ms p(95)=668.08ms
+  t_search.......................: avg=220.57ms min=23.6ms  med=212.52ms max=837.96ms p(90)=333ms    p(95)=382.78ms
+  http_req_failed................: 0.00%  0 out of 4396
+  http_reqs......................: 4396   109.017125/s
+
+### VU_SCALE=0.25 (~87 VU) ###
+  http_req_failed
+  t_detail
+  t_list
+  t_search
+  t_detail.......................: avg=908.58ms min=6.62ms   med=896.84ms max=2.03s p(90)=1.08s p(95)=1.73s
+  t_list.........................: avg=1.18s    min=244.63ms med=1.19s    max=3.17s p(90)=1.34s p(95)=1.45s
+  t_search.......................: avg=930.74ms min=19.94ms  med=919.94ms max=2.77s p(90)=1.08s p(95)=1.72s
+  http_req_failed................: 0.00%  0 out of 3382
+  http_reqs......................: 3382   82.428832/s
+
