@@ -4,6 +4,7 @@ import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import com.kindergarten.warehouse.entity.AgeGroup;
 import com.kindergarten.warehouse.entity.Resource;
 import com.kindergarten.warehouse.entity.ResourceType;
+import com.kindergarten.warehouse.repository.projection.ResourceListView;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,43 @@ public class ResourceMapper {
         this.topicMapper = topicMapper;
         this.ageGroupMapper = ageGroupMapper;
         this.resourceStatService = resourceStatService;
+    }
+
+    public ResourceResponse toResponse(ResourceListView view,
+            java.util.List<com.kindergarten.warehouse.dto.response.AgeGroupResponse> ageGroups,
+            Long topicResourceCount, boolean isFavorited, long pendingViews, long pendingDownloads) {
+        if (view == null) {
+            return null;
+        }
+
+        String exposedFileUrl = view.getResourceType() == ResourceType.FILE
+                ? "/api/v1/resources/" + view.getId() + "/file"
+                : view.getFileUrl();
+
+        return ResourceResponse.builder()
+                .id(view.getId())
+                .title(view.getTitle())
+                .slug(view.getSlug())
+                .description(view.getDescription())
+                .viewsCount(safeLong(view.getViewsCount()) + pendingViews)
+                .fileUrl(exposedFileUrl)
+                .thumbnailUrl(view.getThumbnailUrl())
+                .resourceType(view.getResourceType())
+                .fileType(view.getFileType())
+                .fileExtension(view.getFileExtension())
+                .fileSize(view.getFileSize())
+                .duration(view.getDuration())
+                .status(view.getStatus())
+                .downloadCount(safeLong(view.getDownloadCount()) + pendingDownloads)
+                .averageRating(view.getAverageRating() == null ? 0.0 : view.getAverageRating())
+                .topic(topicMapper.toResponse(view.getTopic(), topicResourceCount))
+                .ageGroups(ageGroups == null ? java.util.List.of() : ageGroups)
+                .visibility(view.getVisibility())
+                .rejectionReason(view.getRejectionReason())
+                .isFavorited(isFavorited)
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
     }
 
     public ResourceResponse toResponse(Resource resource, boolean isFavorited) {

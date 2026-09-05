@@ -58,6 +58,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final ApplicationEventPublisher eventPublisher;
     private final com.kindergarten.warehouse.service.AuditLogService auditLogService;
     private final com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard;
+    private final com.kindergarten.warehouse.mapper.AgeGroupMapper ageGroupMapper;
 
     @Value("${app.resource.thumbnail-max-bytes:5242880}")
     private long thumbnailMaxBytes;
@@ -267,6 +268,52 @@ public class ResourceServiceImpl implements ResourceService {
         });
     }
 
+    private Page<ResourceResponse> executePortalQueryAndMap(Specification<Resource> spec, Pageable pageable,
+            Long currentUserId) {
+        Page<com.kindergarten.warehouse.repository.projection.ResourceListView> viewPage =
+                resourceRepository.findBy(spec, query -> query
+                        .as(com.kindergarten.warehouse.repository.projection.ResourceListView.class)
+                        .page(pageable));
+
+        List<String> resourceIds = viewPage.getContent().stream()
+                .map(com.kindergarten.warehouse.repository.projection.ResourceListView::getId)
+                .toList();
+        if (resourceIds.isEmpty()) {
+            return viewPage.map(view -> resourceMapper.toResponse(view, List.of(), null, false, 0L, 0L));
+        }
+
+        Map<String, List<com.kindergarten.warehouse.dto.response.AgeGroupResponse>> ageGroupsByResource =
+                new HashMap<>();
+        for (Object[] row : ageGroupRepository.findAgeGroupsByResourceIds(resourceIds)) {
+            ageGroupsByResource.computeIfAbsent((String) row[0], ignored -> new ArrayList<>())
+                    .add(ageGroupMapper.toResponse((AgeGroup) row[1]));
+        }
+
+        List<Long> topicIds = viewPage.getContent().stream()
+                .map(com.kindergarten.warehouse.repository.projection.ResourceListView::getTopic)
+                .filter(Objects::nonNull)
+                .map(com.kindergarten.warehouse.repository.projection.ResourceListView.TopicView::getId)
+                .distinct()
+                .toList();
+        Map<Long, Long> resourceCountsByTopic = topicIds.isEmpty() ? Collections.emptyMap()
+                : topicRepository.countActiveResourcesByTopicIds(topicIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        Set<String> favoriteIds = currentUserId == null ? Collections.emptySet()
+                : favoriteRepository.findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUserId, resourceIds);
+        Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
+        Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
+
+        return viewPage.map(view -> resourceMapper.toResponse(
+                view,
+                ageGroupsByResource.getOrDefault(view.getId(), List.of()),
+                view.getTopic() == null ? null
+                        : resourceCountsByTopic.getOrDefault(view.getTopic().getId(), 0L),
+                favoriteIds.contains(view.getId()),
+                pendingViews.getOrDefault(view.getId(), 0L),
+                pendingDownloads.getOrDefault(view.getId(), 0L)));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size,
@@ -278,7 +325,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         Specification<Resource> finalSpec = Specification.where(portalSpec).and(baseSpec);
 
-        return executeQueryAndMap(finalSpec, pageable, viewer.userId());
+        return executePortalQueryAndMap(finalSpec, pageable, viewer.userId());
     }
 
     @Override
