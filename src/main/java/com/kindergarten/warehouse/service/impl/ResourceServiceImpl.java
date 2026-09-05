@@ -999,7 +999,8 @@ public class ResourceServiceImpl implements ResourceService {
     private String buildDownloadFileName(Resource resource, String extension) {
         String title = resource.getTitle() == null ? "" : resource.getTitle();
         String safeBaseName = title.replaceAll("[\\\\/:*?\"<>|\\r\\n]+", "_").trim();
-        if (!StringUtils.hasText(safeBaseName)) {
+        if (!StringUtils.hasText(safeBaseName)
+                || !StringUtils.hasText(safeBaseName.replace("_", ""))) {
             safeBaseName = "resource-" + resource.getId();
         }
         if (!StringUtils.hasText(extension)) {

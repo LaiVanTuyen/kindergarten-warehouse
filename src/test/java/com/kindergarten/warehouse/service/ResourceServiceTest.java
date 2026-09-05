@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
+import java.io.ByteArrayInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,12 @@ class ResourceServiceTest {
 
     @Mock
     private AuditLogService auditLogService;
+
+    @Mock
+    private MinioStorageService minioStorageService;
+
+    @Mock
+    private ResourceStatService resourceStatService;
 
     // Guard that thay vi mock: test service phai chay dung pipeline 404/410.
     @org.mockito.Spy
@@ -123,6 +130,45 @@ class ResourceServiceTest {
 
             assertNotNull(response);
             assertEquals("res-1", response.getId());
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests for download file name")
+    class DownloadFileNameTests {
+
+        @Test
+        @DisplayName("Sanitizes reserved and line-break characters")
+        void sanitizesReservedCharacters() throws Exception {
+            testResource.setResourceType(ResourceType.FILE);
+            testResource.setTitle("Giáo án / bé \"học\"\r\n tốt");
+            testResource.setFileExtension(".PDF");
+            testResource.setFileUrl("resources/file.pdf");
+            when(resourceRepository.findByIdWithDetails("res-1")).thenReturn(Optional.of(testResource));
+            when(minioStorageService.getObject("resources/file.pdf"))
+                    .thenReturn(new ByteArrayInputStream(new byte[0]));
+
+            var result = resourceService.getResourceFileInfo(
+                    "res-1", com.kindergarten.warehouse.security.Viewer.of(2L, java.util.Set.of(Role.USER)));
+
+            assertEquals("Giáo án _ bé _học_ tốt.pdf", result.getFileName());
+        }
+
+        @Test
+        @DisplayName("Falls back to resource id when title has no safe content")
+        void fallsBackWhenTitleIsUnsafeOnly() throws Exception {
+            testResource.setResourceType(ResourceType.FILE);
+            testResource.setTitle("/\\:*?\"<>|\r\n");
+            testResource.setFileExtension("pdf");
+            testResource.setFileUrl("resources/file.pdf");
+            when(resourceRepository.findByIdWithDetails("res-1")).thenReturn(Optional.of(testResource));
+            when(minioStorageService.getObject("resources/file.pdf"))
+                    .thenReturn(new ByteArrayInputStream(new byte[0]));
+
+            var result = resourceService.getResourceFileInfo(
+                    "res-1", com.kindergarten.warehouse.security.Viewer.of(2L, java.util.Set.of(Role.USER)));
+
+            assertEquals("resource-res-1.pdf", result.getFileName());
         }
     }
 
