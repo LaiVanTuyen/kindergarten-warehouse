@@ -16,6 +16,8 @@ import com.kindergarten.warehouse.service.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,8 +37,27 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BannerResponse> getActiveBanners(String platform) {
-        return bannerRepository.findActiveBanners(platform, LocalDateTime.now()).stream()
+    public List<BannerResponse> getActiveBanners(String platform,
+            com.kindergarten.warehouse.security.Viewer viewer) {
+        LocalDateTime now = LocalDateTime.now();
+        Specification<Banner> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            predicates.add(cb.or(cb.isNull(root.get("startDate")), cb.lessThanOrEqualTo(root.get("startDate"), now)));
+            predicates.add(cb.or(cb.isNull(root.get("endDate")), cb.greaterThanOrEqualTo(root.get("endDate"), now)));
+            if (platform != null) {
+                predicates.add(cb.equal(root.get("platform"), platform));
+            }
+            if (!viewer.isAdmin()) {
+                if (viewer.isAuthenticated()) {
+                    predicates.add(root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL));
+                } else {
+                    predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
+                }
+            }
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return bannerRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "displayOrder")).stream()
                 .map(bannerMapper::toResponse)
                 .collect(Collectors.toList());
     }

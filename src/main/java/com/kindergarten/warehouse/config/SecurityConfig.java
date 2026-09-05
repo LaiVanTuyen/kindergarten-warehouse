@@ -90,7 +90,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/topics/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/age-groups/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/banners/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/banners/all").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/banners").permitAll()
                         // Resource routes are enumerated so newly-added paths fail closed.
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/me/favorites").authenticated()

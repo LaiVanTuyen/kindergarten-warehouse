@@ -27,11 +27,14 @@ public class BannerController {
 
         private final BannerService bannerService;
         private final MessageService messageService;
+        private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
         @GetMapping
         public ResponseEntity<ApiResponse<List<BannerResponse>>> getActiveBanners(
-                        @RequestParam(value = "platform", required = false) String platform) {
-                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(platform),
+                        @RequestParam(value = "platform", required = false) String platform,
+                        org.springframework.security.core.Authentication authentication) {
+                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(
+                                platform, viewerResolver.resolve(authentication)),
                                 messageService.getMessage("banner.list.success")));
         }
 
