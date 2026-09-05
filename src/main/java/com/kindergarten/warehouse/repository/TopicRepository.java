@@ -43,4 +43,11 @@ public interface TopicRepository extends JpaRepository<Topic, Long>, JpaSpecific
     boolean existsByNameAndIsDeletedFalse(String name);
 
     boolean existsBySlugAndIsDeletedFalse(String slug);
+
+    @Query("""
+            SELECT r.topic.id, COUNT(r) FROM Resource r
+            WHERE r.isDeleted = false AND r.topic.id IN :topicIds
+            GROUP BY r.topic.id
+            """)
+    List<Object[]> countActiveResourcesByTopicIds(@Param("topicIds") java.util.Collection<Long> topicIds);
 }

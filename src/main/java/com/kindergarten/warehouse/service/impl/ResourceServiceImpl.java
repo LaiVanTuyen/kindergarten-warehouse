@@ -238,6 +238,18 @@ public class ResourceServiceImpl implements ResourceService {
                 .map(Resource::getId)
                 .collect(Collectors.toList());
 
+        List<Long> topicIds = resourcePage.getContent().stream().map(Resource::getTopic)
+                .filter(Objects::nonNull).map(Topic::getId).distinct().toList();
+        Map<Long, Long> resourceCountsByTopic = topicIds.isEmpty() ? Collections.emptyMap()
+                : topicRepository.countActiveResourcesByTopicIds(topicIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        resourcePage.forEach(resource -> {
+            if (resource.getTopic() != null) {
+                resource.getTopic().setResourceCount(
+                        resourceCountsByTopic.getOrDefault(resource.getTopic().getId(), 0L));
+            }
+        });
+
         Set<String> favoritedResourceIds = Collections.emptySet();
         if (currentUserId != null && !resourceIds.isEmpty()) {
             favoritedResourceIds = favoriteRepository

@@ -42,7 +42,7 @@ public class Topic extends BaseEntity {
     @ToString.Exclude
     private Category category;
 
-    @org.hibernate.annotations.Formula("(SELECT COUNT(*) FROM resources r WHERE r.topic_id = id AND r.is_deleted = false)")
+    @Transient
     private Long resourceCount;
 
     @Builder.Default
