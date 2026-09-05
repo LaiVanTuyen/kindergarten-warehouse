@@ -89,6 +89,20 @@ public class Resource extends BaseEntity {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    /**
+     * Optimistic lock (DESIGN_REVIEW [DB-6]/[ARC-4]). Hai admin cung sua/duyet
+     * mot resource se khong con ghi de len nhau im lang: transaction thu hai
+     * nem ObjectOptimisticLockingFailureException, da co GlobalExceptionHandler
+     * ánh xạ sang ma loi tuong ung.
+     *
+     * <p>Cac UPDATE dem view/download va recalc average_rating dung bulk JPQL
+     * nen KHONG tang version -> khong xung dot voi luong chinh sua.
+     */
+    @Version
+    @Builder.Default
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
