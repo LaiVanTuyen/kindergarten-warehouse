@@ -23,6 +23,8 @@ public interface ResourceService {
 
     Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size, String username);
 
+    ResourceResponse getResourceBySlug(String slug, com.kindergarten.warehouse.security.Viewer viewer);
+
     Page<ResourceResponse> getFavoriteResources(int page, int size, String username);
 
     List<String> getFavoriteResourceIds(String username);
@@ -30,8 +32,6 @@ public interface ResourceService {
     void incrementViewCount(String id, String ipAddress);
 
     void deleteResource(String id, String username, boolean hard);
-
-    ResourceResponse getResourceBySlug(String slug);
 
     void incrementDownloadCount(String id);
 

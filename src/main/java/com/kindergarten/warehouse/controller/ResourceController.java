@@ -47,13 +47,13 @@ public class ResourceController {
 
     private final ResourceService resourceService;
     private final MessageService messageService;
+    private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<ResourceResponse>> uploadResource(
             @Valid @ModelAttribute ResourceCreationRequest request,
             Principal principal) {
-
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.success(
                         resourceService.uploadResource(request, principal.getName()),
@@ -105,9 +105,12 @@ public class ResourceController {
     }
 
     @GetMapping("/{slug}")
-    public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(@PathVariable String slug) {
+    public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(
+            @PathVariable String slug,
+            org.springframework.security.core.Authentication authentication) {
+        var viewer = viewerResolver.resolve(authentication);
         return new ResponseEntity<>(
-                ApiResponse.success(resourceService.getResourceBySlug(slug),
+                ApiResponse.success(resourceService.getResourceBySlug(slug, viewer),
                         messageService.getMessage("resource.detail.success")),
                 HttpStatus.OK);
     }
@@ -193,7 +196,6 @@ public class ResourceController {
         return ResponseEntity.ok(ApiResponse.success(null,
                 messageService.getMessage("resource.delete.bulk.success")));
     }
-
     @PutMapping("/{id}/restore")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<Void>> restoreResource(@PathVariable String id, Principal principal) {
