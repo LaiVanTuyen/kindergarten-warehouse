@@ -256,6 +256,31 @@ từ chối đưa một bản ghi thiếu dữ liệu ra khỏi `DRAFT` — kể
 Nới lỏng `NOT NULL` mà không thêm `CHECK` là đánh đổi an toàn dữ liệu lấy tính
 linh hoạt của nháp; có `CHECK` thì được cả hai.
 
+**Thứ tự triển khai — không được đảo:**
+
+| # | Bước | Vì sao đúng thứ tự này |
+|---|---|---|
+| 1 | Bổ sung `DRAFT` vào enum `ResourceStatus` | `CHECK` ở bước 3 tham chiếu `'DRAFT'`; model phải biết giá trị này trước |
+| 2 | Cho phép bốn cột `NULL` | Phải nới trước, nếu không bước 3 vô nghĩa |
+| 3 | Thêm `CHECK` | Chỉ thêm được sau khi đã nới `NULL` |
+| 4 | Cập nhật annotation ở `Resource.java` | Bỏ `nullable = false` cho khớp schema mới |
+| 5 | **Kiểm tra dữ liệu hiện hữu trước khi chạy** | Xem bên dưới |
+
+Bước 5 phải làm **trước** khi chạy migration trên Demo hay Production. Nếu có
+bất kỳ dòng nào vi phạm điều kiện `CHECK` sẵn từ trước, lệnh `ALTER TABLE` sẽ
+thất bại giữa chừng:
+
+```sql
+SELECT COUNT(*) AS so_dong_vi_pham
+FROM resources
+WHERE status <> 'DRAFT'
+  AND (title IS NULL OR slug IS NULL
+       OR file_url IS NULL OR topic_id IS NULL);
+```
+
+Kết quả phải bằng **0**. Hiện tại chắc chắn bằng 0 vì bốn cột còn `NOT NULL`,
+nhưng vẫn phải chạy — migration có thể được áp lên một database đã bị sửa tay.
+
 ### 4.2.2 Quy tắc bản nháp
 
 | # | Quy tắc |
@@ -277,6 +302,15 @@ ngoài ý muốn.
 Quy tắc 6 nối thẳng với §3.6.1: `DRAFT` phải kiểm cùng bốn đường rò rỉ như
 `INTERNAL`/`PRIVATE`, vì bản nháp thường chứa nội dung chưa hoàn chỉnh mà chủ
 sở hữu không muốn ai thấy.
+
+**Test bắt buộc ở tầng database/service**, không chỉ test qua endpoint:
+
+> Một `DRAFT` thiếu trường bắt buộc **không thể** chuyển sang `PENDING`, kể cả
+> khi cố tình đi vòng qua `POST /{id}/submit` — ví dụ gọi thẳng service, hoặc
+> `UPDATE` trực tiếp vào database.
+
+Test qua endpoint chỉ chứng minh `submit` kiểm đúng. Test ở tầng dưới mới chứng
+minh **bất biến được database bảo vệ**, đó mới là điều `CHECK` tồn tại để làm.
 
 ### 4.2.3 Vòng đời tệp của nháp bị bỏ dở — backlog vận hành
 
