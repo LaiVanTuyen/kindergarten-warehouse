@@ -17,13 +17,16 @@ public interface ResourceService {
 
     ResourceResponse uploadResource(ResourceCreationRequest request, String username);
 
-    Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size);
+    Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size,
+            com.kindergarten.warehouse.security.Viewer viewer);
 
     Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size);
 
     Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size, String username);
 
     ResourceResponse getResourceBySlug(String slug, com.kindergarten.warehouse.security.Viewer viewer);
+
+    FileDownloadInfo getResourceFileInfo(String id, com.kindergarten.warehouse.security.Viewer viewer) throws Exception;
 
     Page<ResourceResponse> getFavoriteResources(int page, int size, String username);
 
@@ -46,8 +49,6 @@ public interface ResourceService {
     void restoreResources(List<String> ids, String username);
 
     String updateThumbnail(String id, MultipartFile thumbnail, String username);
-
-    FileDownloadInfo getResourceFileInfo(String id) throws Exception;
 
     ResourceResponse updateVisibility(String id, VisibilityUpdateRequest request, String username);
 

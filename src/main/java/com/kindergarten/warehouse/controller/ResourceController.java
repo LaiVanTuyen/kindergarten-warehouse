@@ -64,9 +64,11 @@ public class ResourceController {
     public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getPortalResources(
             @ModelAttribute ResourceFilterRequest filterRequest,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            org.springframework.security.core.Authentication authentication) {
         return new ResponseEntity<>(
-                ApiResponse.success(resourceService.getPortalResources(filterRequest, page, size),
+                ApiResponse.success(resourceService.getPortalResources(
+                                filterRequest, page, size, viewerResolver.resolve(authentication)),
                         messageService.getMessage("resource.list.success")),
                 HttpStatus.OK);
     }
@@ -141,9 +143,11 @@ public class ResourceController {
     }
 
     @GetMapping("/{id}/file")
-    public ResponseEntity<?> downloadResource(@PathVariable String id) {
+    public ResponseEntity<?> downloadResource(
+            @PathVariable String id,
+            org.springframework.security.core.Authentication authentication) {
         try {
-            var fileInfo = resourceService.getResourceFileInfo(id);
+            var fileInfo = resourceService.getResourceFileInfo(id, viewerResolver.resolve(authentication));
             InputStreamResource body = new InputStreamResource(fileInfo.getInputStream());
 
             ResponseEntity.BodyBuilder builder = ResponseEntity.ok()

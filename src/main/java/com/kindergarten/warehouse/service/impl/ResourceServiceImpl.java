@@ -231,7 +231,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private Page<ResourceResponse> executeQueryAndMap(Specification<Resource> spec, Pageable pageable,
-            User currentUser) {
+            Long currentUserId) {
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
 
         List<String> resourceIds = resourcePage.getContent().stream()
@@ -239,9 +239,9 @@ public class ResourceServiceImpl implements ResourceService {
                 .collect(Collectors.toList());
 
         Set<String> favoritedResourceIds = Collections.emptySet();
-        if (currentUser != null && !resourceIds.isEmpty()) {
+        if (currentUserId != null && !resourceIds.isEmpty()) {
             favoritedResourceIds = favoriteRepository
-                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
+                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUserId, resourceIds);
         }
 
         Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
@@ -257,32 +257,16 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size) {
+    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
-
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
-        Specification<Resource> portalSpec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
-            predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        Specification<Resource> portalSpec =
+                com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer);
 
         Specification<Resource> finalSpec = Specification.where(portalSpec).and(baseSpec);
 
-        User currentUser = null;
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-        }
-
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable, viewer.userId());
     }
 
     @Override
@@ -314,7 +298,8 @@ public class ResourceServiceImpl implements ResourceService {
             currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
         }
 
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable,
+                currentUser == null ? null : currentUser.getId());
     }
 
     @Override
@@ -339,7 +324,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         Specification<Resource> finalSpec = Specification.where(mySpec).and(baseSpec);
 
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable, currentUser.getId());
     }
 
     @Override
@@ -914,31 +899,15 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public FileDownloadInfo getResourceFileInfo(String id) throws Exception {
-        Resource resource = resourceRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+    public FileDownloadInfo getResourceFileInfo(String id,
+            com.kindergarten.warehouse.security.Viewer viewer) throws Exception {
+        // Dùng fetch-join để topic/category được load sẵn: method không chạy trong
+        // transaction + OSIV tắt nên truy cập lazy proxy sẽ ném LazyInitializationException.
+        Resource resource = resourceAccessGuard.requireDownloadable(
+                resourceRepository.findByIdWithDetails(id).orElse(null), viewer);
 
-        if (resource.getIsDeleted()) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean privileged = false;
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            User currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-            if (currentUser != null) {
-                privileged = isAdmin(currentUser)
-                        || (resource.getCreatedBy() != null
-                                && resource.getCreatedBy().equals(currentUser.getId()));
-            }
-        }
-
-        if (!privileged) {
-            ensurePortalVisible(resource);
-        }
-
-        if (resource.getResourceType() == ResourceType.YOUTUBE) {
+        // Only objects stored by this service have a downloadable stream.
+        if (resource.getResourceType() != ResourceType.FILE) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
