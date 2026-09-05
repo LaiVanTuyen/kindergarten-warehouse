@@ -297,6 +297,102 @@ Nếu không, càng tối ưu thì tỷ lệ lỗi càng tăng và sẽ bị đ�
 
 ---
 
+## 6c. Đo lần 3 — sau khi thêm projection cho list/search
+
+Đo ngày **2026-09-05** trên commit **`86ebf1d`**. Cùng máy, NCPU=8, cùng dataset
+(2.001/1.701), pool Hikari vẫn 15. Kết quả thô:
+`perf/results/20260905-*-final-350/`.
+
+### 6c.1 Ba mốc đường cong tải
+
+| VU | Chỉ số | Baseline | Sau `@Formula` | **Sau projection** |
+|---|---|---|---|---|
+| **17** | `t_list` P95 | 5,35 s | 538 ms | **270 ms** |
+| | throughput | 106,7 req/s | 171,8 | **177,8** |
+| **35** | `t_list` P95 | 5,23 s | 668 ms | **295 ms** |
+| | `t_detail` P95 | 2,33 s | 357 ms | **240 ms** |
+| | throughput | 14,9 req/s | 109,0 | **235,4** |
+| **87** | `t_list` P95 | 11,69 s | 1,45 s | **611 ms** |
+| | throughput | 9,6 req/s | 82,4 | **296,5** |
+
+### 6c.2 Mốc 350 VU
+
+| Chỉ số | Baseline | Sau `@Formula` | **Sau projection** |
+|---|---|---|---|
+| Throughput | 6,3 req/s | 36,7 | **177,5** |
+| `t_list` P95 | 59,99 s (trần timeout) | 28,62 s | **2,36 s** |
+| `t_search` P95 | 47,98 s | — | **2,31 s** |
+| `t_detail` P95 | 55,39 s | — | **2,28 s** |
+| Tỷ lệ lỗi | 20,42 % | 0 % | **0 %** |
+| Checks | — | — | **100 %** (15.913/15.913) |
+
+Auth-read 150 VU: **55,4 req/s**, P95 4,96 s / 5,34 s, lỗi 0 %.
+
+### 6c.3 Nút thắt đã chuyển từ database sang ứng dụng
+
+| | Baseline | Sau `@Formula` | Sau projection |
+|---|---|---|---|
+| MySQL CPU | **1040 %** | 919 % | **635 %** |
+| App CPU | 127 % | 159 % | **405 %** |
+
+MySQL từ kịch trần (≥800 %) xuống dưới trần; app giờ là thành phần tốn CPU
+nhất, chủ yếu cho serialize JSON ở 350 VU đồng thời. `db_threads_connected`
+vẫn 16 — pool 15 vẫn là trần, nhưng không còn gây sụp đổ.
+
+### 6c.4 Hai sai sót phương pháp đã phát hiện
+
+**Phép đo đầu tiên bị nhiễu.** Lần chạy 350 VU đầu cho 114,9 req/s — *thấp
+hơn* lần đo trước, điều vô lý vì thay đổi chỉ **bớt** một truy vấn. Nguyên
+nhân: một lệnh `UPDATE` 900 dòng (mở rộng bộ id download) chạy **trong lúc**
+bài đo đang diễn ra, tức ghi vào đúng bảng đang đọc. Đã đo lại sạch.
+
+**Việc lấy mẫu CPU tự nó làm giảm throughput.** Cùng cấu hình, cùng thời điểm:
+
+| Cách chạy | Throughput |
+|---|---|
+| Không lấy mẫu | **260,7 req/s** |
+| Có lấy mẫu CPU/Hikari mỗi giây | **177,5 req/s** |
+
+Chênh **32 %**, vì mỗi vòng lấy mẫu phải `docker stats` và `docker exec` vào
+MySQL. Con số ghi ở bảng 6c.2 là **177,5** — bản có lấy mẫu — vì baseline và
+hai lần đo trước đều chạy qua `run-baseline.sh` vốn cũng lấy mẫu. So 260,7 với
+6,3 sẽ là so hai phương pháp khác nhau.
+
+**Quy tắc cho lần đo sau:** không chạy bất kỳ lệnh ghi nào vào database trong
+lúc đo, và luôn nói rõ số liệu lấy từ lần chạy có hay không có lấy mẫu.
+
+### 6c.5 Download với bộ id phân phối lại
+
+Bộ id tải được mở từ **99 → 999** (trỏ vào cùng một object thật), đưa mật độ
+xuống ~2,8 request mỗi id trong 60 s — dư xa ngưỡng 30/60 s của
+`RateLimitingAspect`.
+
+| Chỉ số | Baseline | Lần 2 (99 id) | **Lần 3 (999 id)** |
+|---|---|---|---|
+| Tỷ lệ lỗi | 0,34 % | 4,92 % | **0,08 %** |
+| `t_download` P95 | 1,59 s | 676 ms | **719 ms** |
+| Băng thông | 26 MB/s | 41 MB/s | **35 MB/s** |
+| App CPU | 417 % | 375 % | **363 %** |
+
+Tỷ lệ lỗi trở lại mức nhiễu nền, xác nhận 4,92 % ở lần 2 là **do chạm rate
+limit vì hệ thống nhanh hơn**, không phải hồi quy.
+
+### 6c.6 Đối chiếu tiêu chí §6
+
+| Tiêu chí | Kết quả |
+|---|---|
+| 17 VU: `t_list` P95 < 500 ms | **270 ms** ✅ |
+| 35 VU: `search`/`detail` P95 < 500 ms | 261 / 240 ms ✅ |
+| 87 VU: throughput > 100 req/s | **296,5** ✅ |
+| 350 VU: tỷ lệ lỗi < 1 % | **0 %** ✅ |
+| MySQL hết bão hoà ở 87 VU | ✅ |
+| Download giữ throughput, App CPU giảm | 39 req/s, 363 % (baseline 28,4 / 417 %) ✅ |
+| Không lần đo nào chạm trần timeout 60 s | ✅ |
+
+Cả bảy tiêu chí đạt.
+
+---
+
 ## 7. Cách chạy lại
 
 ```bash
