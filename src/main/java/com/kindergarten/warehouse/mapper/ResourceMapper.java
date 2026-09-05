@@ -23,6 +23,64 @@ public class ResourceMapper {
         this.resourceStatService = resourceStatService;
     }
 
+    /**
+     * Map từ projection của danh sách Portal.
+     *
+     * <p>Khác {@link #toResponse(Resource, boolean, long, long)} ở hai điểm, cả
+     * hai đều có chủ đích:
+     *
+     * <ul>
+     *   <li><strong>Không có</strong> {@code createdBy}/{@code updatedBy}.
+     *       Card của Portal không hiển thị tên người đăng, nên projection
+     *       không join bảng {@code users}. Đây là thay đổi contract của riêng
+     *       endpoint list — xem API_CONTRACT_V2 §0.5.</li>
+     *   <li>{@code ageGroups} truyền vào từ batch query riêng, không lazy-load
+     *       theo từng dòng.</li>
+     * </ul>
+     */
+    public ResourceResponse toResponse(
+            com.kindergarten.warehouse.repository.projection.ResourceListView view,
+            java.util.List<com.kindergarten.warehouse.dto.response.AgeGroupResponse> ageGroups,
+            Long topicResourceCount,
+            boolean isFavorited, long pendingViews, long pendingDownloads) {
+        if (view == null) {
+            return null;
+        }
+
+        String exposedFileUrl = view.getResourceType() == ResourceType.FILE
+                ? "/api/v1/resources/" + view.getId() + "/file"
+                : view.getFileUrl();
+
+        return ResourceResponse.builder()
+                .id(view.getId())
+                .title(view.getTitle())
+                .slug(view.getSlug())
+                .description(view.getDescription())
+                .viewsCount(nullSafe(view.getViewsCount()) + pendingViews)
+                .fileUrl(exposedFileUrl)
+                .thumbnailUrl(view.getThumbnailUrl())
+                .resourceType(view.getResourceType())
+                .fileType(view.getFileType())
+                .fileExtension(view.getFileExtension())
+                .fileSize(view.getFileSize())
+                .duration(view.getDuration())
+                .status(view.getStatus())
+                .downloadCount(nullSafe(view.getDownloadCount()) + pendingDownloads)
+                .averageRating(view.getAverageRating())
+                .topic(topicMapper.toResponse(view.getTopic(), topicResourceCount))
+                .ageGroups(ageGroups == null ? java.util.List.of() : ageGroups)
+                .visibility(view.getVisibility())
+                .rejectionReason(view.getRejectionReason())
+                .isFavorited(isFavorited)
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
+    }
+
+    private static long nullSafe(Long value) {
+        return value == null ? 0L : value;
+    }
+
     public ResourceResponse toResponse(Resource resource, boolean isFavorited) {
         if (resource == null) {
             return null;

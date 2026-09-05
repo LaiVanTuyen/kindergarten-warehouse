@@ -1,0 +1,120 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/download.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 50s max duration (incl. graceful stop):
+              * download: 50 looping VUs for 20s (gracefulStop: 30s)
+
+
+running (01.0s), 50/50 VUs, 0 complete and 0 interrupted iterations
+download   [   4% ] 50 VUs  00.8s/20s
+
+running (02.0s), 50/50 VUs, 0 complete and 0 interrupted iterations
+download   [   9% ] 50 VUs  01.9s/20s
+
+running (03.0s), 50/50 VUs, 19 complete and 0 interrupted iterations
+download   [  14% ] 50 VUs  02.8s/20s
+
+running (04.0s), 50/50 VUs, 54 complete and 0 interrupted iterations
+download   [  19% ] 50 VUs  03.8s/20s
+
+running (05.0s), 50/50 VUs, 84 complete and 0 interrupted iterations
+download   [  24% ] 50 VUs  04.8s/20s
+
+running (06.0s), 50/50 VUs, 127 complete and 0 interrupted iterations
+download   [  29% ] 50 VUs  05.8s/20s
+
+running (07.2s), 50/50 VUs, 167 complete and 0 interrupted iterations
+download   [  35% ] 50 VUs  07.0s/20s
+
+running (08.0s), 50/50 VUs, 214 complete and 0 interrupted iterations
+download   [  39% ] 50 VUs  07.9s/20s
+
+running (09.1s), 50/50 VUs, 240 complete and 0 interrupted iterations
+download   [  45% ] 50 VUs  08.9s/20s
+
+running (10.0s), 50/50 VUs, 292 complete and 0 interrupted iterations
+download   [  49% ] 50 VUs  09.8s/20s
+
+running (11.0s), 50/50 VUs, 342 complete and 0 interrupted iterations
+download   [  54% ] 50 VUs  10.8s/20s
+
+running (12.0s), 50/50 VUs, 381 complete and 0 interrupted iterations
+download   [  59% ] 50 VUs  11.8s/20s
+
+running (13.0s), 50/50 VUs, 425 complete and 0 interrupted iterations
+download   [  64% ] 50 VUs  12.8s/20s
+
+running (14.1s), 50/50 VUs, 479 complete and 0 interrupted iterations
+download   [  70% ] 50 VUs  13.9s/20s
+
+running (15.0s), 50/50 VUs, 509 complete and 0 interrupted iterations
+download   [  74% ] 50 VUs  14.9s/20s
+
+running (16.0s), 50/50 VUs, 565 complete and 0 interrupted iterations
+download   [  79% ] 50 VUs  15.8s/20s
+
+running (17.0s), 50/50 VUs, 620 complete and 0 interrupted iterations
+download   [  84% ] 50 VUs  16.8s/20s
+
+running (18.0s), 50/50 VUs, 664 complete and 0 interrupted iterations
+download   [  89% ] 50 VUs  17.8s/20s
+
+running (19.0s), 50/50 VUs, 703 complete and 0 interrupted iterations
+download   [  94% ] 50 VUs  18.8s/20s
+
+running (20.0s), 50/50 VUs, 754 complete and 0 interrupted iterations
+download   [  99% ] 50 VUs  19.8s/20s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    t_download
+    ✓ 'p(95)<3000' p(95)=1.37s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1618    78.969819/s
+    checks_succeeded...: 100.00% 1618 out of 1618
+    checks_failed......: 0.00%   0 out of 1618
+
+    ✓ download 200
+    ✓ nhận đủ file
+
+    CUSTOM
+    download_bytes.................: 701352033 34230929.057758/s
+    t_download.....................: avg=478.17ms min=69.16ms  med=384.13ms p(50)=384.13ms p(95)=1.37s p(99)=2.24s max=2.82s
+
+    HTTP
+    http_req_duration..............: avg=477.77ms min=69.16ms  med=383.9ms  p(50)=383.9ms  p(95)=1.37s p(99)=2.24s max=2.82s
+      { expected_response:true }...: avg=477.77ms min=69.16ms  med=383.9ms  p(50)=383.9ms  p(95)=1.37s p(99)=2.24s max=2.82s
+    http_req_failed................: 0.00%     0 out of 810
+    http_reqs......................: 810       39.533717/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.24s    min=391.93ms med=1.11s    p(50)=1.11s    p(95)=2.18s p(99)=3.86s max=4.44s
+    iterations.....................: 809       39.48491/s
+    vus............................: 50        min=50            max=50
+    vus_max........................: 50        min=50            max=50
+
+    NETWORK
+    data_received..................: 729 MB    36 MB/s
+    data_sent......................: 314 kB    15 kB/s
+
+
+
+
+running (20.5s), 00/50 VUs, 809 complete and 0 interrupted iterations
+download ✓ [ 100% ] 50 VUs  20s

@@ -1,0 +1,243 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/download.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 1m30s max duration (incl. graceful stop):
+              * download: 50 looping VUs for 1m0s (gracefulStop: 30s)
+
+
+running (0m01.0s), 50/50 VUs, 3 complete and 0 interrupted iterations
+download   [   1% ] 50 VUs  0m00.8s/1m0s
+
+running (0m02.0s), 50/50 VUs, 27 complete and 0 interrupted iterations
+download   [   3% ] 50 VUs  0m01.9s/1m0s
+
+running (0m03.0s), 50/50 VUs, 58 complete and 0 interrupted iterations
+download   [   5% ] 50 VUs  0m02.8s/1m0s
+
+running (0m04.0s), 50/50 VUs, 82 complete and 0 interrupted iterations
+download   [   6% ] 50 VUs  0m03.9s/1m0s
+
+running (0m05.0s), 50/50 VUs, 136 complete and 0 interrupted iterations
+download   [   8% ] 50 VUs  0m04.9s/1m0s
+
+running (0m06.0s), 50/50 VUs, 172 complete and 0 interrupted iterations
+download   [  10% ] 50 VUs  0m05.8s/1m0s
+
+running (0m07.0s), 50/50 VUs, 210 complete and 0 interrupted iterations
+download   [  11% ] 50 VUs  0m06.8s/1m0s
+
+running (0m08.0s), 50/50 VUs, 232 complete and 0 interrupted iterations
+download   [  13% ] 50 VUs  0m07.8s/1m0s
+
+running (0m09.0s), 50/50 VUs, 277 complete and 0 interrupted iterations
+download   [  15% ] 50 VUs  0m08.9s/1m0s
+
+running (0m10.0s), 50/50 VUs, 313 complete and 0 interrupted iterations
+download   [  16% ] 50 VUs  0m09.8s/1m0s
+
+running (0m11.0s), 50/50 VUs, 348 complete and 0 interrupted iterations
+download   [  18% ] 50 VUs  0m10.8s/1m0s
+
+running (0m12.0s), 50/50 VUs, 392 complete and 0 interrupted iterations
+download   [  20% ] 50 VUs  0m11.9s/1m0s
+
+running (0m13.0s), 50/50 VUs, 412 complete and 0 interrupted iterations
+download   [  21% ] 50 VUs  0m12.9s/1m0s
+
+running (0m14.0s), 50/50 VUs, 451 complete and 0 interrupted iterations
+download   [  23% ] 50 VUs  0m13.9s/1m0s
+
+running (0m15.0s), 50/50 VUs, 488 complete and 0 interrupted iterations
+download   [  25% ] 50 VUs  0m14.8s/1m0s
+
+running (0m16.0s), 50/50 VUs, 535 complete and 0 interrupted iterations
+download   [  26% ] 50 VUs  0m15.9s/1m0s
+
+running (0m17.0s), 50/50 VUs, 572 complete and 0 interrupted iterations
+download   [  28% ] 50 VUs  0m16.9s/1m0s
+
+running (0m18.1s), 50/50 VUs, 601 complete and 0 interrupted iterations
+download   [  30% ] 50 VUs  0m17.9s/1m0s
+
+running (0m19.0s), 50/50 VUs, 630 complete and 0 interrupted iterations
+download   [  31% ] 50 VUs  0m18.9s/1m0s
+
+running (0m20.0s), 50/50 VUs, 671 complete and 0 interrupted iterations
+download   [  33% ] 50 VUs  0m19.9s/1m0s
+
+running (0m21.0s), 50/50 VUs, 707 complete and 0 interrupted iterations
+download   [  35% ] 50 VUs  0m20.9s/1m0s
+
+running (0m22.1s), 50/50 VUs, 741 complete and 0 interrupted iterations
+download   [  37% ] 50 VUs  0m21.9s/1m0s
+
+running (0m23.0s), 50/50 VUs, 777 complete and 0 interrupted iterations
+download   [  38% ] 50 VUs  0m22.9s/1m0s
+
+running (0m24.0s), 50/50 VUs, 811 complete and 0 interrupted iterations
+download   [  40% ] 50 VUs  0m23.8s/1m0s
+
+running (0m25.0s), 50/50 VUs, 854 complete and 0 interrupted iterations
+download   [  41% ] 50 VUs  0m24.8s/1m0s
+
+running (0m26.0s), 50/50 VUs, 880 complete and 0 interrupted iterations
+download   [  43% ] 50 VUs  0m25.9s/1m0s
+
+running (0m27.0s), 50/50 VUs, 927 complete and 0 interrupted iterations
+download   [  45% ] 50 VUs  0m26.9s/1m0s
+
+running (0m28.0s), 50/50 VUs, 957 complete and 0 interrupted iterations
+download   [  46% ] 50 VUs  0m27.9s/1m0s
+
+running (0m29.0s), 50/50 VUs, 1008 complete and 0 interrupted iterations
+download   [  48% ] 50 VUs  0m28.8s/1m0s
+
+running (0m30.1s), 50/50 VUs, 1043 complete and 0 interrupted iterations
+download   [  50% ] 50 VUs  0m29.9s/1m0s
+
+running (0m31.0s), 50/50 VUs, 1086 complete and 0 interrupted iterations
+download   [  52% ] 50 VUs  0m30.9s/1m0s
+
+running (0m32.1s), 50/50 VUs, 1117 complete and 0 interrupted iterations
+download   [  53% ] 50 VUs  0m31.9s/1m0s
+
+running (0m33.0s), 50/50 VUs, 1160 complete and 0 interrupted iterations
+download   [  55% ] 50 VUs  0m32.9s/1m0s
+
+running (0m34.0s), 50/50 VUs, 1208 complete and 0 interrupted iterations
+download   [  56% ] 50 VUs  0m33.9s/1m0s
+
+running (0m35.0s), 50/50 VUs, 1261 complete and 0 interrupted iterations
+download   [  58% ] 50 VUs  0m34.8s/1m0s
+
+running (0m36.0s), 50/50 VUs, 1301 complete and 0 interrupted iterations
+download   [  60% ] 50 VUs  0m35.9s/1m0s
+
+running (0m37.0s), 50/50 VUs, 1337 complete and 0 interrupted iterations
+download   [  61% ] 50 VUs  0m36.8s/1m0s
+
+running (0m38.1s), 50/50 VUs, 1400 complete and 0 interrupted iterations
+download   [  63% ] 50 VUs  0m37.9s/1m0s
+
+running (0m39.0s), 50/50 VUs, 1467 complete and 0 interrupted iterations
+download   [  65% ] 50 VUs  0m38.8s/1m0s
+
+running (0m40.0s), 50/50 VUs, 1524 complete and 0 interrupted iterations
+download   [  66% ] 50 VUs  0m39.9s/1m0s
+
+running (0m41.0s), 50/50 VUs, 1577 complete and 0 interrupted iterations
+download   [  68% ] 50 VUs  0m40.9s/1m0s
+
+running (0m42.0s), 50/50 VUs, 1615 complete and 0 interrupted iterations
+download   [  70% ] 50 VUs  0m41.8s/1m0s
+
+running (0m43.0s), 50/50 VUs, 1649 complete and 0 interrupted iterations
+download   [  71% ] 50 VUs  0m42.9s/1m0s
+
+running (0m44.0s), 50/50 VUs, 1692 complete and 0 interrupted iterations
+download   [  73% ] 50 VUs  0m43.8s/1m0s
+
+running (0m45.0s), 50/50 VUs, 1750 complete and 0 interrupted iterations
+download   [  75% ] 50 VUs  0m44.9s/1m0s
+
+running (0m46.0s), 50/50 VUs, 1793 complete and 0 interrupted iterations
+download   [  76% ] 50 VUs  0m45.8s/1m0s
+
+running (0m47.0s), 50/50 VUs, 1835 complete and 0 interrupted iterations
+download   [  78% ] 50 VUs  0m46.9s/1m0s
+
+running (0m48.0s), 50/50 VUs, 1871 complete and 0 interrupted iterations
+download   [  80% ] 50 VUs  0m47.8s/1m0s
+
+running (0m49.0s), 50/50 VUs, 1927 complete and 0 interrupted iterations
+download   [  81% ] 50 VUs  0m48.9s/1m0s
+
+running (0m50.0s), 50/50 VUs, 1976 complete and 0 interrupted iterations
+download   [  83% ] 50 VUs  0m49.8s/1m0s
+
+running (0m51.0s), 50/50 VUs, 2023 complete and 0 interrupted iterations
+download   [  85% ] 50 VUs  0m51.0s/1m0s
+
+running (0m52.1s), 50/50 VUs, 2074 complete and 0 interrupted iterations
+download   [  87% ] 50 VUs  0m51.9s/1m0s
+
+running (0m53.0s), 50/50 VUs, 2106 complete and 0 interrupted iterations
+download   [  88% ] 50 VUs  0m52.9s/1m0s
+
+running (0m54.0s), 50/50 VUs, 2156 complete and 0 interrupted iterations
+download   [  90% ] 50 VUs  0m53.9s/1m0s
+
+running (0m55.0s), 50/50 VUs, 2203 complete and 0 interrupted iterations
+download   [  91% ] 50 VUs  0m54.8s/1m0s
+
+running (0m56.0s), 50/50 VUs, 2229 complete and 0 interrupted iterations
+download   [  93% ] 50 VUs  0m55.9s/1m0s
+
+running (0m57.0s), 50/50 VUs, 2278 complete and 0 interrupted iterations
+download   [  95% ] 50 VUs  0m56.8s/1m0s
+
+running (0m58.0s), 50/50 VUs, 2314 complete and 0 interrupted iterations
+download   [  96% ] 50 VUs  0m57.9s/1m0s
+
+running (0m59.1s), 50/50 VUs, 2363 complete and 0 interrupted iterations
+download   [  98% ] 50 VUs  0m58.9s/1m0s
+
+running (1m00.0s), 50/50 VUs, 2418 complete and 0 interrupted iterations
+download   [ 100% ] 50 VUs  0m59.9s/1m0s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=1.21%
+
+    t_download
+    ✓ 'p(95)<3000' p(95)=718.87ms
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 4952   81.834834/s
+    checks_succeeded...: 98.78% 4892 out of 4952
+    checks_failed......: 1.21%  60 out of 4952
+
+    ✗ download 200
+      ↳  98% — ✓ 2446 / ✗ 30
+    ✗ nhận đủ file
+      ↳  98% — ✓ 2446 / ✗ 30
+
+    CUSTOM
+    download_bytes.................: 2120532371 35043096.537206/s
+    t_download.....................: avg=364.03ms min=65.96ms med=315.72ms p(50)=315.72ms p(95)=718.87ms p(99)=1.04s max=1.44s
+
+    HTTP
+    http_req_duration..............: avg=363.94ms min=65.96ms med=315.44ms p(50)=315.44ms p(95)=718.61ms p(99)=1.04s max=1.44s
+      { expected_response:true }...: avg=365.71ms min=65.96ms med=317.43ms p(50)=317.43ms p(95)=723.06ms p(99)=1.04s max=1.44s
+    http_req_failed................: 1.21%      30 out of 2477
+    http_reqs......................: 2477       40.933942/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.21s    min=72.7ms  med=1.16s    p(50)=1.16s    p(95)=1.95s    p(99)=2.44s max=3.54s
+    iterations.....................: 2476       40.917417/s
+    vus............................: 50         min=50            max=50
+    vus_max........................: 50         min=50            max=50
+
+    NETWORK
+    data_received..................: 2.2 GB     36 MB/s
+    data_sent......................: 961 kB     16 kB/s
+
+
+
+
+running (1m00.5s), 00/50 VUs, 2476 complete and 0 interrupted iterations
+download ✓ [ 100% ] 50 VUs  1m0s
+time="2026-09-05T12:20:22Z" level=error msg="thresholds on metrics 'http_req_failed' have been crossed"
