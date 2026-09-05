@@ -121,6 +121,31 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Testcontainers: integration test chay tren MySQL THAT.
+             H2 khong dung duoc o day vi Flyway migration viet cho MySQL, va
+             hanh vi enum/JSON/unique-NULL/collation cua H2 khac MySQL du de
+             lam test visibility cho ket qua sai lech. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
 	</dependencies>
 
 	<build>
@@ -154,5 +179,49 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<!--
+		Integration test chay tren MySQL that qua Testcontainers.
+
+		Tach khoi `mvn test` co chu dich: unit test phai chay nhanh va KHONG
+		bat buoc co Docker. Integration test chay bang:
+
+		    mvn verify -Pintegration-test
+
+		CI BAT BUOC chay profile nay. Khong dung
+		`@EnabledIfDockerAvailable` / `disabledWithoutDocker=true` trong CI:
+		may khong co Docker se lam test bi bo qua va bao PASS GIA.
+		Failsafe se that bai neu container khong khoi dong duoc — do la hanh
+		vi mong muon.
+
+		Surefire mac dinh chi nhan *Test/*Tests/Test*, nen cac lop *IT khong
+		bi chay hai lan.
+	-->
+	<profiles>
+		<profile>
+			<id>integration-test</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<configuration>
+							<includes>
+								<include>**/*IT.java</include>
+							</includes>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>
