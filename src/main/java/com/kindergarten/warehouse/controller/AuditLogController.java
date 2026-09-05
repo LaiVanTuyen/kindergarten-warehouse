@@ -9,6 +9,8 @@ import com.kindergarten.warehouse.util.PageableUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +19,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
+
 @RestController
 @RequestMapping("/api/v1/audit-logs")
 @RequiredArgsConstructor
 public class AuditLogController {
+
+        private static final Set<String> SORT_FIELDS = Set.of(
+                        "id", "action", "username", "target", "ipAddress", "timestamp");
 
         private final AuditLogService auditLogService;
         private final MessageService messageService;
@@ -29,12 +36,10 @@ public class AuditLogController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<AuditLogResponse>>> getAuditLogs(
                         @ModelAttribute AuditLogFilterRequest filterRequest,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "timestamp") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir) {
+                        @PageableDefault(size = 10, sort = "timestamp", direction = Sort.Direction.DESC) Pageable requestedPageable) {
 
-                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "timestamp"));
 
                 Page<AuditLogResponse> logs = auditLogService.getLogs(filterRequest, pageable);
 
@@ -45,11 +50,10 @@ public class AuditLogController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> exportAuditLogs(
                         @ModelAttribute AuditLogFilterRequest filterRequest,
-                        @RequestParam(defaultValue = "timestamp") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir) {
+                        @PageableDefault(size = 10, sort = "timestamp", direction = Sort.Direction.DESC) Pageable requestedPageable) {
 
-                org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
-                                org.springframework.data.domain.Sort.Direction.fromString(sortDir), sortBy);
+                Sort sort = PageableUtils.sanitizeSort(
+                                requestedPageable.getSort(), SORT_FIELDS, Sort.by(Sort.Direction.DESC, "timestamp"));
 
                 org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody stream = out -> {
                         auditLogService.exportLogsToStream(filterRequest, sort, out);

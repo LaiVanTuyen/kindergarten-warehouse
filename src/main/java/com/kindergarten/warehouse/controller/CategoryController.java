@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +21,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Set;
+
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
 public class CategoryController {
+
+        private static final Set<String> SORT_FIELDS = Set.of(
+                        "id", "name", "slug", "visibility", "topicCount", "createdAt", "updatedAt");
 
         private final CategoryService categoryService;
         private final MessageService messageService;
@@ -31,17 +38,10 @@ public class CategoryController {
         public ResponseEntity<ApiResponse<Page<CategoryResponse>>> getAllCategories(
                         @RequestParam(defaultValue = "false") boolean deleted,
                         @RequestParam(required = false) String keyword,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "id") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir) {
+                        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable) {
 
-                // Fix FE sending 'desc' as sortBy causing PropertyReferenceException
-                if ("desc".equalsIgnoreCase(sortBy) || "asc".equalsIgnoreCase(sortBy)) {
-                        sortBy = "id";
-                }
-
-                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "id"));
 
                 return ResponseEntity
                                 .ok(ApiResponse.success(categoryService.getAllCategories(deleted, keyword, pageable),

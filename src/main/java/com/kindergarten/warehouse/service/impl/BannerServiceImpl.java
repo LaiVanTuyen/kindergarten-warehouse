@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,10 +34,9 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BannerResponse> getActiveBanners(String platform) {
-        return bannerRepository.findActiveBanners(platform, LocalDateTime.now()).stream()
-                .map(bannerMapper::toResponse)
-                .collect(Collectors.toList());
+    public Page<BannerResponse> getActiveBanners(String platform, Pageable pageable) {
+        return bannerRepository.findActiveBanners(platform, LocalDateTime.now(), pageable)
+                .map(bannerMapper::toResponse);
     }
 
     @Override

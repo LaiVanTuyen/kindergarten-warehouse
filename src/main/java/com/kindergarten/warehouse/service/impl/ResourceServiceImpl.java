@@ -18,7 +18,7 @@ import com.kindergarten.warehouse.service.ResourceService;
 import com.kindergarten.warehouse.service.ResourceStatService;
 import com.kindergarten.warehouse.service.YoutubeService;
 import com.kindergarten.warehouse.util.AppConstants;
-import com.kindergarten.warehouse.util.PageableUtils;
+import com.kindergarten.warehouse.util.ResourceFileTypeRegistry;
 import com.kindergarten.warehouse.util.SlugUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -120,11 +120,14 @@ public class ResourceServiceImpl implements ResourceService {
                 }
             }
         } else {
+            extension = ResourceFileTypeRegistry.normalizeExtension(
+                    getExtension(request.getFile().getOriginalFilename()));
+            ResourceFileTypeRegistry.FileMetadata fileMetadata =
+                    ResourceFileTypeRegistry.requireSupported(extension);
             String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
             fileUrl = minioStorageService.uploadFile(request.getFile(), path);
             resourceType = ResourceType.FILE;
-            extension = getExtension(request.getFile().getOriginalFilename());
-            fileType = determineFileType(extension).name();
+            fileType = fileMetadata.fileType().name();
             fileSize = request.getFile().getSize();
         }
 
@@ -259,9 +262,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
-
+    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable) {
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> portalSpec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -289,9 +290,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
-
+    public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, Pageable pageable) {
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> adminSpec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -321,9 +320,8 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size,
+    public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, Pageable pageable,
             String username) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         User currentUser = getUserOrThrow(username);
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
@@ -486,6 +484,11 @@ public class ResourceServiceImpl implements ResourceService {
         // Ignore client-supplied fileType; backend derives from file/link.
 
         if (request.getFile() != null && !request.getFile().isEmpty()) {
+            String extension = ResourceFileTypeRegistry.normalizeExtension(
+                    getExtension(request.getFile().getOriginalFilename()));
+            ResourceFileTypeRegistry.FileMetadata fileMetadata =
+                    ResourceFileTypeRegistry.requireSupported(extension);
+
             // Delete old file if present
             if (resource.getResourceType() == ResourceType.FILE && resource.getFileUrl() != null
                     && !resource.getFileUrl().isEmpty()) {
@@ -499,9 +502,8 @@ public class ResourceServiceImpl implements ResourceService {
             String newFileUrl = minioStorageService.uploadFile(request.getFile(), path);
             resource.setFileUrl(newFileUrl);
             resource.setResourceType(ResourceType.FILE);
-            String extension = getExtension(request.getFile().getOriginalFilename());
             resource.setFileExtension(extension);
-            resource.setFileType(determineFileType(extension).name());
+            resource.setFileType(fileMetadata.fileType().name());
             resource.setFileSize(request.getFile().getSize());
         }
 
@@ -812,25 +814,6 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
 
-    private FileType determineFileType(String extension) {
-        switch (extension) {
-            case "mp4":
-            case "mov":
-            case "avi":
-                return FileType.VIDEO;
-            case "doc":
-            case "docx":
-                return FileType.DOCUMENT;
-            case "xls":
-            case "xlsx":
-                return FileType.EXCEL;
-            case "pdf":
-                return FileType.PDF;
-            default:
-                throw new AppException(ErrorCode.FILE_TYPE_INVALID);
-        }
-    }
-
     private boolean isValidImageFormat(String contentType) {
         if (contentType == null)
             return false;
@@ -885,49 +868,21 @@ public class ResourceServiceImpl implements ResourceService {
 
         // Get file info
         String fileName = resource.getTitle();
-        String contentType = getContentType(resource.getFileType());
+        String extension = ResourceFileTypeRegistry.normalizeExtension(resource.getFileExtension());
+        if (extension.isEmpty()) {
+            extension = "bin";
+        }
+        String contentType = ResourceFileTypeRegistry.contentTypeOrDefault(extension);
 
         // Get file stream from MinIO
         var inputStream = minioStorageService.getObject(resource.getFileUrl());
 
         return com.kindergarten.warehouse.dto.response.FileDownloadInfo.builder()
                 .inputStream(inputStream)
-                .fileName(fileName + "." + getFileExtensionByType(resource.getFileType()))
+                .fileName(fileName + "." + extension)
                 .contentType(contentType)
                 .fileSize(resource.getFileSize() != null ? resource.getFileSize() : 0L)
                 .build();
-    }
-
-    private String getContentType(String fileType) {
-        if (fileType == null)
-            return "application/octet-stream";
-        return switch (fileType.toUpperCase()) {
-            case "PDF" -> "application/pdf";
-            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            case "DOC" -> "application/msword";
-            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            case "XLS" -> "application/vnd.ms-excel";
-            case "VIDEO", "MP4" -> "video/mp4";
-            case "PNG" -> "image/png";
-            case "JPG", "JPEG" -> "image/jpeg";
-            default -> "application/octet-stream";
-        };
-    }
-
-    private String getFileExtensionByType(String fileType) {
-        if (fileType == null)
-            return "bin";
-        return switch (fileType.toUpperCase()) {
-            case "PDF" -> "pdf";
-            case "DOCX" -> "docx";
-            case "DOC" -> "doc";
-            case "XLSX" -> "xlsx";
-            case "XLS" -> "xls";
-            case "VIDEO", "MP4" -> "mp4";
-            case "PNG" -> "png";
-            case "JPG", "JPEG" -> "jpg";
-            default -> "bin";
-        };
     }
 
     @Override

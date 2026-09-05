@@ -142,6 +142,7 @@ Mọi thao tác hàng loạt dùng một DTO thống nhất:
 ```
 - Resource bulk-reject dùng field `ids` + `reason` (lý do dùng chung — đã thống nhất là chấp nhận được).
 - Vượt 1000 phần tử hoặc rỗng → `1002 VALIDATION_ERROR`.
+- `PATCH /banners/reorder` không phải bulk CRUD; endpoint này nhận mảng ID có thứ tự (`[3,1,2]`) để biểu diễn vị trí.
 > Hiện FE/BE chỗ dùng `resourceIds`, chỗ dùng `List<String>` inline → **đổi hết về `ids`** cho nhất quán. (Nếu muốn giữ `resourceIds` cho resource thì phải ghi rõ; khuyến nghị `ids` cho mọi nơi.)
 
 ---
@@ -166,7 +167,7 @@ visibility:   "PUBLIC" | "PRIVATE"
 resourceType: "FILE" | "YOUTUBE" | "EXTERNAL_LINK"
 fileType:     "VIDEO" | "DOCUMENT" | "PDF" | "EXCEL" | "POWERPOINT" | "IMAGE"
 ```
-> ⚠️ BE còn thiếu nhánh `POWERPOINT (.pptx)` trong mapping ([ARC-8]) — sẽ bổ sung; FE cứ coi `POWERPOINT` là giá trị hợp lệ.
+BE hỗ trợ file video (`mp4/mov/avi`), tài liệu (`doc/docx`), bảng tính (`xls/xlsx`), PDF, PowerPoint (`ppt/pptx`) và ảnh (`jpg/jpeg/png/webp`).
 
 ### 3.3 AuditLog `action` (string ổn định) 🟢
 `CREATE, UPDATE, DELETE, LOGIN, LOGOUT, VIEW, UPLOAD, DOWNLOAD, APPROVE, REJECT, RESTORE, APPROVE_BULK, REJECT_BULK, DELETE_BULK, RESTORE_BULK, OTHER`.
@@ -239,7 +240,7 @@ Regex tham chiếu (FE + BE dùng cùng):
 ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$
 ```
 - BE trả `1013 INVALID_PASSWORD` (hoặc `1002` ở validation form) khi không đạt.
-> 🔴 FE: thống nhất validator ở `login/register/settings/profile/reset-password` theo regex trên. BE nâng `RegisterDto` từ min 6 → luật trên (khớp `ChangePasswordRequest`).
+> 🔴 FE: thống nhất validator ở các form tạo/đổi/reset mật khẩu (`register/settings/profile/reset-password`) theo regex trên. Login chỉ kiểm tra email/password không rỗng để tài khoản dùng mật khẩu cũ vẫn đăng nhập được.
 
 ---
 

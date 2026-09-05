@@ -6,7 +6,6 @@ import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.request.ResourceUpdateRequest;
 import com.kindergarten.warehouse.dto.response.ApiResponse;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
-import com.kindergarten.warehouse.exception.ErrorCode;
 import com.kindergarten.warehouse.service.MessageService;
 import com.kindergarten.warehouse.service.ResourceService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,12 +31,19 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
+
+import com.kindergarten.warehouse.util.PageableUtils;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/resources")
 @RequiredArgsConstructor
 public class ResourceController {
+
+        private static final Set<String> SORT_FIELDS = Set.of(
+                        "id", "title", "slug", "status", "visibility", "resourceType", "fileType",
+                        "viewsCount", "downloadCount", "averageRating", "createdBy", "createdAt", "updatedAt");
 
         private final ResourceService resourceService;
         private final MessageService messageService;
@@ -54,10 +63,11 @@ public class ResourceController {
         @GetMapping
         public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getPortalResources(
                         @ModelAttribute ResourceFilterRequest filterRequest,
-                        @RequestParam(value = "page", defaultValue = "0") int page,
-                        @RequestParam(value = "size", defaultValue = "10") int size) {
+                        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable requestedPageable) {
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "createdAt"));
                 return new ResponseEntity<>(
-                                ApiResponse.success(resourceService.getPortalResources(filterRequest, page, size),
+                                ApiResponse.success(resourceService.getPortalResources(filterRequest, pageable),
                                                 messageService.getMessage("resource.list.success")),
                                 HttpStatus.OK);
         }
@@ -66,12 +76,13 @@ public class ResourceController {
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getMyResources(
                         @ModelAttribute ResourceFilterRequest filterRequest,
-                        @RequestParam(value = "page", defaultValue = "0") int page,
-                        @RequestParam(value = "size", defaultValue = "10") int size,
+                        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable requestedPageable,
                         Principal principal) {
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "createdAt"));
                 return new ResponseEntity<>(
                                 ApiResponse.success(
-                                                resourceService.getMyResources(filterRequest, page, size,
+                                                resourceService.getMyResources(filterRequest, pageable,
                                                                 principal.getName()),
                                                 messageService.getMessage("resource.list.success")),
                                 HttpStatus.OK);

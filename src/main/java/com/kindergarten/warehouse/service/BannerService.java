@@ -10,7 +10,7 @@ import java.util.List;
 import com.kindergarten.warehouse.dto.wrapper.UpdateResult;
 
 public interface BannerService {
-    List<BannerResponse> getActiveBanners(String platform);
+    Page<BannerResponse> getActiveBanners(String platform, Pageable pageable);
 
     Page<BannerResponse> getAllBanners(String platform, Pageable pageable);
 

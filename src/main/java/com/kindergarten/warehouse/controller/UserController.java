@@ -17,6 +17,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,11 +39,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
+
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "id", "username", "email", "fullName", "status", "lastActive", "createdAt", "updatedAt");
 
     private final UserService userService;
     private final MessageService messageService;
@@ -57,7 +63,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(Authentication authentication,
-                                                                   @RequestBody UpdateProfileRequest request) {
+                                                                   @Valid @RequestBody UpdateProfileRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 userService.updateProfile(authentication, request),
                 messageService.getMessage("user.profile.update.success")));
@@ -93,12 +99,10 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
             @ModelAttribute UserFilterRequest filterRequest,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable requestedPageable) {
 
-        Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+        Pageable pageable = PageableUtils.sanitize(
+                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "id"));
         return ResponseEntity.ok(ApiResponse.success(
                 userService.getUsers(filterRequest, pageable),
                 messageService.getMessage("user.list.success")));

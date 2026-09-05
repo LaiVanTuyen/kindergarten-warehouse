@@ -21,14 +21,15 @@
 - Giữ nguyên: favorite (POST, giờ **USER cũng dùng được**), visibility (PATCH), approve/reject (PATCH), bulk-restore (PATCH).
 
 ## 3. 🔴 Bulk payload thống nhất `{ids}`
-- Tất cả bulk dùng body **`{ "ids": [...] }`** (bulk-reject thêm `reason`). `resourceIds`/mảng thô cũ → **400**.
+- Các nghiệp vụ bulk delete/restore/approve/reject dùng body **`{ "ids": [...] }`** (bulk-reject thêm `reason`). `resourceIds`/mảng thô cũ → **400**.
   - admin `bulk-approve`/`bulk-reject`: `{resourceIds}` → `{ids}` (reject: `{ids, reason}`)
   - `resources/bulk-delete`, `resources/bulk-restore`: `[...]` → `{ids:[...]}`
   - `categories/bulk-delete`, `categories/bulk-restore`: `[...]` → `{ids:[...]}` (ids number)
+- Ngoại lệ: `PATCH /banners/reorder` nhận mảng ID theo thứ tự, ví dụ `[3,1,2]`.
 
 ## 4. 🔴 Password policy dùng chung
 - register/reset/change: **≥8 ký tự + chữ hoa + thường + số**. Regex chung:
-  `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$` → FE áp ở login/register/settings/profile/reset.
+  `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$` → FE áp ở các form tạo/đổi/reset mật khẩu; login chỉ kiểm tra không rỗng.
 
 ## 5. 🟢 Tải file (download) — đã sửa, dùng được
 - `GET /resources/{id}/file`: stream **200**; owner/ADMIN tải được file PENDING/PRIVATE; lỗi luôn trả **JSON** (`404/6001`, `403/6004`, `8002` MinIO lỗi, `6009` rate-limit 429 kèm `Retry-After`).
@@ -38,7 +39,8 @@
 - Envelope chỉ dùng **`result`** (bỏ `data`); list luôn `Page<DTO>`.
 - AuditLog trả DTO (field ổn định: id, action, username, target, detail, ipAddress, userAgent, timestamp).
 - Comment: `POST /comments` body `{resourceId, content, rating}`; `GET /comments?resourceId=&page&size&sort=createdAt,desc`.
-- Pagination: `?page&size&sort=field,dir` (whitelist sort).
+- Pagination đã mở: `?page&size&sort=field,dir`, hỗ trợ multi-sort, `size` tối đa 100; field ngoài whitelist → `400/9001`.
+- `GET /banners` và `GET /age-groups` giờ trả `Page<DTO>`; FE đọc `result.content`.
 
 ## 7. Mã lỗi mới cần xử lý (bảng đầy đủ ở API_CONTRACT_V1 §4)
 | code | HTTP | Ý nghĩa |
@@ -52,7 +54,7 @@
 ## 8. Ghi chú môi trường (dev)
 - **CSRF:** BE đúng (raw double-submit). FE phải gắn `X-XSRF-TOKEN` cho request ghi — với cross-origin (`:4200`→`:8080`) dùng **dev proxy** hoặc interceptor thủ công (Angular không tự gắn header cho URL tuyệt đối khác origin).
 - **SMTP** chưa cấu hình → OTP verify/reset **in ra log BE** (`[DEV-EMAIL]...code=`) để test. Mail thật cần điền creds + restart.
-- `category/topic/banner` create/update là **multipart/form-data** (có upload ảnh) — gửi JSON sẽ nhận `415`.
+- Content-Type: Category create multipart, update JSON hoặc multipart; Topic create/update JSON; Banner create/update multipart; Resource create multipart, update JSON hoặc multipart.
 
 ---
 *BE đã build + chạy + verify live tất cả thay đổi trên `localhost:8080`. FE chạy lại E2E rồi báo lệch (nếu có).*

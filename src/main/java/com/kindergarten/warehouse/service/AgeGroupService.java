@@ -12,9 +12,8 @@ import com.kindergarten.warehouse.repository.AgeGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -25,10 +24,9 @@ public class AgeGroupService {
     private final AgeGroupMapper ageGroupMapper;
 
     @Transactional(readOnly = true)
-    public List<AgeGroupResponse> getAllAgeGroups() {
-        return ageGroupRepository.findAll().stream()
-                .map(ageGroupMapper::toResponse)
-                .collect(Collectors.toList());
+    public Page<AgeGroupResponse> getAllAgeGroups(Pageable pageable) {
+        return ageGroupRepository.findAll(pageable)
+                .map(ageGroupMapper::toResponse);
     }
 
     @LogAction(action = AuditAction.CREATE, description = "Created age group", target = "AGE_GROUP")

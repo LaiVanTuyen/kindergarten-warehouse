@@ -13,7 +13,6 @@ import com.kindergarten.warehouse.repository.CommentRepository;
 import com.kindergarten.warehouse.repository.ResourceRepository;
 import com.kindergarten.warehouse.repository.UserRepository;
 import com.kindergarten.warehouse.service.CommentService;
-import com.kindergarten.warehouse.util.PageableUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,8 +54,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommentResponse> getCommentsByResourceId(String resourceId, int page, int size) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
+    public Page<CommentResponse> getCommentsByResourceId(String resourceId, Pageable pageable) {
         return commentRepository.findByResourceId(resourceId, pageable)
                 .map(commentMapper::toResponse);
     }

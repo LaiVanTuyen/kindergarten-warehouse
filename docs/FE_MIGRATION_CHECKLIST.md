@@ -39,19 +39,26 @@
 ---
 
 ### A5. Bulk payload chuẩn hóa `{ids}` ✅🔴 — BE ĐÃ ĐỔI (BE-9)
-- **BE đã chuẩn hóa** TẤT CẢ bulk về body `{ "ids": [...] }` (bulk-reject thêm `reason`), đúng contract §2.5. Mảng thô / `resourceIds` cũ giờ **bị 400**.
+- **BE đã chuẩn hóa** tất cả nghiệp vụ bulk delete/restore/approve/reject về body `{ "ids": [...] }` (bulk-reject thêm `reason`), đúng contract §2.5. Mảng thô / `resourceIds` cũ giờ **bị 400**.
 - **FE làm (đổi lại):**
   - admin `bulk-approve`/`bulk-reject`: `{resourceIds}` → **`{ids}`** (reject: `{ids, reason}`).
   - `resources/bulk-delete`, `resources/bulk-restore`: mảng thô `[...]` → **`{ids:[...]}`**.
   - `categories/bulk-delete`, `categories/bulk-restore`: mảng thô `[...]` → **`{ids:[...]}`** (ids kiểu number).
+  - Ngoại lệ: `PATCH /banners/reorder` là thao tác sắp thứ tự, không phải bulk CRUD; body vẫn là mảng ID có thứ tự, ví dụ `[3,1,2]`.
 
 ### A6. Tải file ✅ — BE ĐÃ FIX (BE-8)
 - `GET /resources/{id}/file` giờ **stream đúng 200** (trước 500 do lazy-init + return type). Lỗi trả JSON: `404` (6001) không thấy, `403` (6004) không đủ quyền, `415`/`400` cho YouTube, `8002` STORAGE_ERROR nếu MinIO lỗi, `6009` (429) nếu vượt rate-limit. FE bật nút Tải/Xem + xử lý các mã này.
 
+### A7. Pagination/sort đã chuẩn hóa ✅🔴
+- **BE đã mở:** mọi endpoint list dùng `?page=&size=&sort=field,dir`; hỗ trợ lặp nhiều `sort`, cap `size` về 100.
+- Field sort ngoài whitelist trả `400 / 9001`, không còn rơi xuống lỗi JPA/500.
+- FE bỏ hoàn toàn `sortBy` + `sortDir` và workaround `sortBy=desc`.
+- `GET /api/v1/banners` và `GET /api/v1/age-groups` giờ cũng trả `result: Page<DTO>` thay vì mảng trực tiếp; FE đọc dữ liệu tại `result.content`.
+
 ## B. NỢ FE mà review đã chỉ ra (FE tự sửa, không phụ thuộc BE deploy)
 
 ### B1. Bỏ workaround gửi `desc` vào `sortBy` 🔴 ([API-4])
-- FE đang gửi sai `sortBy=desc`. Phải sửa thành quy ước chuẩn (xem C1). BE sẽ gỡ đoạn vá ở `CategoryController` khi FE xong.
+- FE đang gửi sai `sortBy=desc`. Phải đổi sang `sort=id,desc` hoặc field hợp lệ khác. BE đã gỡ đoạn vá ở `CategoryController`; request cũ không còn được hỗ trợ.
 
 ### B2. Dọn `result ?? data` 🟡
 - Mọi service đang phòng thủ cả `result` lẫn `data`. BE chốt **chỉ `result`** → dọn về một nhánh `response.result` cho gọn.
@@ -60,12 +67,12 @@
 
 ## C. Trạng thái phần còn lại của contract
 
-> Cập nhật: **C2 (method), C3 (download non-public), C4 (password) BE đã làm** (✅ — FE sync ngay).
-> Chỉ còn **C1 (pagination)** là BE chưa triển khai — FE chưa cần sửa, đừng hard-code bám hành vi cũ.
+> Cập nhật: **C1–C5 BE đã làm** (✅ — FE sync ngay).
 
-### C1. Pagination/sort chuẩn ⏳🔴
-- Đích: mọi list dùng `?page=&size=&sort=field,dir` (bỏ `sortBy`+`sortDir` rời rạc; whitelist field).
-- FE: chuẩn bị helper build query `sort=createdAt,desc`; chưa đổi cho tới khi BE mở.
+### C1. Pagination/sort chuẩn ✅🔴 — BE ĐÃ ĐỔI
+- Mọi list dùng `?page=&size=&sort=field,dir` (bỏ `sortBy`+`sortDir` rời rạc; whitelist field).
+- FE đổi helper query ngay, ví dụ `sort=createdAt,desc`; có thể gửi nhiều tham số `sort`.
+- `size > 100` được cap về 100; sort field không hợp lệ trả `400 / 9001`.
 
 ### C2. Method chuẩn (D2) ✅🔴 — BE ĐÃ ĐỔI
 - **BE đã đổi verb** (sửa `resource/banner/category/user.service` theo đây):
@@ -86,10 +93,11 @@
   ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$
   ```
   Không đạt → `1002` (form) hoặc `1013`. Message key `validation.password.weak`.
-- **FE làm:** áp **cùng regex** ở `login/register/settings/profile/reset-password`. (Register cũ cho ≥6 → BE đã nâng ≥8; FE phải nâng theo nếu không sẽ bị BE chặn.)
+- **FE làm:** áp **cùng regex** ở các form tạo/đổi/reset mật khẩu: `register/settings/profile/reset-password`. Form login chỉ cần kiểm tra không rỗng vì mật khẩu cũ vẫn phải đăng nhập được.
 
-### C5. Download lỗi luôn JSON ⏳🟡
-- Đích: khi download lỗi, BE trả `ApiResponse` JSON (không nhúng lỗi vào stream). FE đọc JSON lấy `code`/`message`. (BE phần lớn đã JSON; sẽ xác nhận khi làm C3.)
+### C5. Download lỗi luôn JSON ✅🟡
+- Các lỗi nghiệp vụ được phát hiện trước khi bắt đầu stream trả `ApiResponse` JSON; FE đọc `code`/`message` thay vì xử lý như Blob thành công.
+- Gián đoạn mạng xảy ra sau khi stream đã bắt đầu là lỗi transport và không thể đổi response đã gửi thành JSON.
 
 ---
 
@@ -103,7 +111,14 @@ FE giữ switch theo `code` (không đổi số). Lưu ý 2 mã mới cần xử
 
 ## E. Thứ tự đề xuất cho FE
 
-1. **Ngay (BE đã deploy A1–A3):** sửa `comment.service` (A1), model+filter `visibility` (A3), thêm xử lý `7004` (A4/D). Tự dọn B1, B2.
-2. **Khi BE báo C1/C2:** đổi pagination + verb (sửa các service một lượt).
-3. **Khi BE báo C3:** bật nút tải/xem non-public + xử lý 403/429.
-4. **Cùng đợt với BE C4:** đồng bộ validator mật khẩu.
+1. **Ngay:** sửa comment body, `visibility`, pagination/sort, HTTP verb và bulk payload trong các service.
+2. Chuyển Banner/AgeGroup list sang đọc `result.content`; dọn `result ?? data`.
+3. Bật nút tải/xem non-public + xử lý 403/429 và thêm xử lý `7004`.
+4. Đồng bộ validator mật khẩu ở các form tạo/đổi/reset mật khẩu.
+
+## F. Content-Type chính xác
+
+- Category create: `multipart/form-data`; update: hỗ trợ JSON hoặc multipart khi thay icon.
+- Topic create/update: `application/json`.
+- Banner create/update: `multipart/form-data`.
+- Resource create: `multipart/form-data`; update: hỗ trợ JSON hoặc multipart.

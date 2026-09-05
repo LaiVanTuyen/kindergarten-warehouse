@@ -12,12 +12,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.Set;
+
+import com.kindergarten.warehouse.util.PageableUtils;
 
 @Slf4j
 @RestController
@@ -26,17 +32,22 @@ import java.security.Principal;
 @PreAuthorize("hasAnyAuthority('ADMIN')")
 public class AdminResourceController {
 
+        private static final Set<String> SORT_FIELDS = Set.of(
+                        "id", "title", "slug", "status", "visibility", "resourceType", "fileType",
+                        "viewsCount", "downloadCount", "averageRating", "createdBy", "createdAt", "updatedAt");
+
         private final ResourceService resourceService;
         private final MessageService messageService;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getAdminResources(
                         @ModelAttribute ResourceFilterRequest filterRequest,
-                        @RequestParam(value = "page", defaultValue = "0") int page,
-                        @RequestParam(value = "size", defaultValue = "10") int size) {
+                        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable requestedPageable) {
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "createdAt"));
 
                 return new ResponseEntity<>(
-                                ApiResponse.success(resourceService.getAdminResources(filterRequest, page, size),
+                                ApiResponse.success(resourceService.getAdminResources(filterRequest, pageable),
                                                 messageService.getMessage("resource.list.success")),
                                 HttpStatus.OK);
         }

@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(
                 ApiResponse.<Map<String, String>>builder()
-                        .code(HttpStatus.BAD_REQUEST.value())
+                        .code(ErrorCode.VALIDATION_ERROR.getCode())
                         .message(messageService.getMessage("validation.failed"))
                         .result(errors)
                         .timestamp(java.time.LocalDateTime.now())

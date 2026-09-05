@@ -661,7 +661,7 @@ Admin:
 - `POST /api/v1/banners`: tạo banner, upload ảnh.
 - `PUT /api/v1/banners/{id}`: cập nhật banner, có thể thay ảnh.
 - `PATCH /api/v1/banners/reorder`: đổi thứ tự.
-- `PUT /api/v1/banners/{id}/toggle`: bật/tắt.
+- `PATCH /api/v1/banners/{id}/toggle`: bật/tắt.
 - `DELETE /api/v1/banners/{id}`: xóa mềm.
 
 Quy tắc hiển thị:
@@ -892,7 +892,7 @@ Quy tắc production:
 - `POST /api/v1/banners`: admin tạo banner.
 - `PUT /api/v1/banners/{id}`: admin cập nhật banner.
 - `PATCH /api/v1/banners/reorder`: admin đổi thứ tự banner.
-- `PUT /api/v1/banners/{id}/toggle`: admin bật/tắt banner.
+- `PATCH /api/v1/banners/{id}/toggle`: admin bật/tắt banner.
 - `DELETE /api/v1/banners/{id}`: admin xóa banner.
 
 ### Audit Logs
@@ -1043,4 +1043,3 @@ Audit log giúp truy vết:
 - Thêm API quản trị `age_groups` nếu nhà trường cần tự tạo nhóm tuổi ngoài seed.
 - Xác nhận chính sách bucket MinIO cho file public/private tương ứng với `visibility`.
 - Bổ sung báo cáo thống kê theo category/topic/age group/download/view/rating nếu cần dashboard quản trị.
-

@@ -281,9 +281,9 @@ if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) showError("C
 
 ## 5. Admin endpoints (cần role `ADMIN`)
 
-### 5.1. `GET /users?page=&size=&sortBy=&sortDir=&keyword=&roles=&statuses=`
+### 5.1. `GET /users?page=&size=&sort=field,dir&keyword=&roles=&statuses=`
 
-Không đổi signature. Nhưng `statuses` giờ có thêm 2 giá trị: `PENDING`, `INACTIVE`.
+Pagination dùng contract chung `sort=field,dir`; bỏ `sortBy`/`sortDir`. `statuses` có thêm 2 giá trị: `PENDING`, `INACTIVE`.
 
 **Query**:
 ```

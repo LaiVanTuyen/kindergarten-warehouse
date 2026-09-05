@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,19 +21,27 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/banners")
 @RequiredArgsConstructor
 public class BannerController {
 
+        private static final Set<String> SORT_FIELDS = Set.of(
+                        "id", "title", "platform", "visibility", "displayOrder", "startDate", "endDate",
+                        "createdAt", "updatedAt");
+
         private final BannerService bannerService;
         private final MessageService messageService;
 
         @GetMapping
-        public ResponseEntity<ApiResponse<List<BannerResponse>>> getActiveBanners(
-                        @RequestParam(value = "platform", required = false) String platform) {
-                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(platform),
+        public ResponseEntity<ApiResponse<Page<BannerResponse>>> getActiveBanners(
+                        @RequestParam(value = "platform", required = false) String platform,
+                        @PageableDefault(size = 10, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable requestedPageable) {
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.ASC, "displayOrder"));
+                return ResponseEntity.ok(ApiResponse.success(bannerService.getActiveBanners(platform, pageable),
                                 messageService.getMessage("banner.list.success")));
         }
 
@@ -39,12 +49,10 @@ public class BannerController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<BannerResponse>>> getAllBanners(
                         @RequestParam(value = "platform", required = false) String platform,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "displayOrder") String sortBy,
-                        @RequestParam(defaultValue = "asc") String sortDir) {
+                        @PageableDefault(size = 10, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable requestedPageable) {
 
-                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                Pageable pageable = PageableUtils.sanitize(
+                                requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.ASC, "displayOrder"));
 
                 return ResponseEntity.ok(
                                 ApiResponse.success(bannerService.getAllBanners(platform, pageable),
