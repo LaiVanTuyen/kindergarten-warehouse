@@ -42,6 +42,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
 
+    /**
+     * API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay.
+     * Bon cot Admin UI cho bam sort: fullName, status, lastActive, createdAt.
+     */
+    private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+            "id", "username", "email", "fullName", "status", "lastActive", "createdAt", "updatedAt");
+
+    private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+            org.springframework.data.domain.Sort.by(
+                    org.springframework.data.domain.Sort.Direction.DESC, "id");
+
     private final UserService userService;
     private final MessageService messageService;
 
@@ -92,12 +103,10 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
             @ModelAttribute UserFilterRequest filterRequest,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "id",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable requestedPageable) {
 
-        Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+        Pageable pageable = PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
         return ResponseEntity.ok(ApiResponse.success(
                 userService.getUsers(filterRequest, pageable),
                 messageService.getMessage("user.list.success")));

@@ -187,15 +187,15 @@ class ResourceSlugSecurityIntegrationTest {
     @Test
     @DisplayName("Danh sách/search của guest truyền Viewer.guest xuống tầng truy vấn")
     void guestListDelegatesVisibilityToQueryLayer() throws Exception {
-        when(resourceService.getPortalResources(any(), org.mockito.ArgumentMatchers.anyInt(),
-                org.mockito.ArgumentMatchers.anyInt(), any(Viewer.class)))
+        when(resourceService.getPortalResources(any(),
+                any(org.springframework.data.domain.Pageable.class), any(Viewer.class)))
                 .thenReturn(new PageImpl<>(java.util.List.of(), PageRequest.of(0, 10), 0));
 
         mockMvc.perform(get("/api/v1/resources").param("keyword", "toan"))
                 .andExpect(status().isOk());
 
-        verify(resourceService).getPortalResources(any(), org.mockito.ArgumentMatchers.eq(0),
-                org.mockito.ArgumentMatchers.eq(10),
+        verify(resourceService).getPortalResources(any(),
+                any(org.springframework.data.domain.Pageable.class),
                 org.mockito.ArgumentMatchers.eq(Viewer.guest()));
     }
 

@@ -23,6 +23,18 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class CategoryController {
 
+        /**
+         * API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay.
+         * KHONG co {@code topicCount} — no khong con la cot sau khi bo {@code @Formula}
+         * (xem PERF_BASELINE §4). Sort theo no se tra 400, dung nhu tai lieu ghi.
+         */
+        private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+                        "id", "name", "slug", "displayOrder", "visibility", "createdAt", "updatedAt");
+
+        private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+                        org.springframework.data.domain.Sort.by(
+                                        org.springframework.data.domain.Sort.Direction.DESC, "id");
+
         private final CategoryService categoryService;
         private final MessageService messageService;
         private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
@@ -31,18 +43,14 @@ public class CategoryController {
         public ResponseEntity<ApiResponse<Page<CategoryResponse>>> getAllCategories(
                         @RequestParam(defaultValue = "false") boolean deleted,
                         @RequestParam(required = false) String keyword,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "id") String sortBy,
-                        @RequestParam(defaultValue = "desc") String sortDir,
+                        @org.springframework.data.web.PageableDefault(size = 10, sort = "id",
+                                        direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable requestedPageable,
                         org.springframework.security.core.Authentication authentication) {
 
-                // Fix FE sending 'desc' as sortBy causing PropertyReferenceException
-                if ("desc".equalsIgnoreCase(sortBy) || "asc".equalsIgnoreCase(sortBy)) {
-                        sortBy = "id";
-                }
-
-                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                // Bo cach chua cu "neu sortBy la asc/desc thi coi nhu id". No sinh ra tu
+                // viec BE doc sortBy/sortDir con FE gui `sort=field,dir` (contract §0.5),
+                // nen tham so lech nhau mot nac. Nay BE doc dung `sort` qua Pageable.
+                Pageable pageable = PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
 
                 return ResponseEntity
                                 .ok(ApiResponse.success(categoryService.getAllCategories(

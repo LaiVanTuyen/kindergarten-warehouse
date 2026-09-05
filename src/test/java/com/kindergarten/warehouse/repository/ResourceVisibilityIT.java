@@ -287,8 +287,7 @@ class ResourceVisibilityIT {
     }
 
     private Page<ResourceResponse> portalResources(ResourceFilterRequest filter, Pageable pageable, Viewer viewer) {
-        return resourceService.getPortalResources(
-                filter, pageable.getPageNumber(), pageable.getPageSize(), viewer);
+        return resourceService.getPortalResources(filter, pageable, viewer);
     }
 
     private static Viewer guest() {

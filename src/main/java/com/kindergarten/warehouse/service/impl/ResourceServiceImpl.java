@@ -316,9 +316,8 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, int page, int size,
+    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable,
             com.kindergarten.warehouse.security.Viewer viewer) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> portalSpec =
                 com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer);
@@ -330,8 +329,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, int page, int size) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
+    public Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, Pageable pageable) {
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
         Specification<Resource> adminSpec = (root, query, cb) -> {
@@ -363,9 +361,8 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, int page, int size,
+    public Page<ResourceResponse> getMyResources(ResourceFilterRequest filterRequest, Pageable pageable,
             String username) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         User currentUser = getUserOrThrow(username);
 
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
@@ -388,9 +385,8 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getFavoriteResources(int page, int size,
+    public Page<ResourceResponse> getFavoriteResources(Pageable pageable,
             com.kindergarten.warehouse.security.Viewer viewer) {
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         List<Resource> resources = getVisibleFavoriteResources(viewer);
 
         int start = Math.toIntExact(Math.min(pageable.getOffset(), resources.size()));

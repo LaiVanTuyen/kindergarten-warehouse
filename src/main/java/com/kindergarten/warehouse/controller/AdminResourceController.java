@@ -26,17 +26,35 @@ import java.security.Principal;
 @PreAuthorize("hasAnyAuthority('ADMIN')")
 public class AdminResourceController {
 
+        /**
+         * API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay.
+         * Bon cot Admin UI cho bam sort la title, status, viewsCount, createdAt —
+         * truoc day endpoint KHONG nhan tham so {@code sort} nen bam vao khong co
+         * tac dung gi, trong khi UI van hien mui ten sort.
+         */
+        private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+                        "id", "title", "status", "visibility", "createdAt", "updatedAt",
+                        "viewsCount", "downloadCount", "averageRating");
+
+        private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+                        org.springframework.data.domain.Sort.by(
+                                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
+
         private final ResourceService resourceService;
         private final MessageService messageService;
 
         @GetMapping
         public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getAdminResources(
                         @ModelAttribute ResourceFilterRequest filterRequest,
-                        @RequestParam(value = "page", defaultValue = "0") int page,
-                        @RequestParam(value = "size", defaultValue = "10") int size) {
+                        @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt",
+                                        direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable requestedPageable) {
+
+                org.springframework.data.domain.Pageable pageable =
+                                com.kindergarten.warehouse.util.PageableUtils.sanitize(
+                                                requestedPageable, SORT_FIELDS, DEFAULT_SORT);
 
                 return new ResponseEntity<>(
-                                ApiResponse.success(resourceService.getAdminResources(filterRequest, page, size),
+                                ApiResponse.success(resourceService.getAdminResources(filterRequest, pageable),
                                                 messageService.getMessage("resource.list.success")),
                                 HttpStatus.OK);
         }

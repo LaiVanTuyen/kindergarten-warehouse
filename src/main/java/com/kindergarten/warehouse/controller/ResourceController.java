@@ -13,7 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
+import com.kindergarten.warehouse.util.PageableUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -45,6 +47,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ResourceController {
 
+    /** API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay. */
+    private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+            "id", "title", "createdAt", "updatedAt", "viewsCount", "downloadCount", "averageRating");
+
+    private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+            org.springframework.data.domain.Sort.by(
+                    org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
+
     private final ResourceService resourceService;
     private final MessageService messageService;
     private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
@@ -63,12 +73,13 @@ public class ResourceController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getPortalResources(
             @ModelAttribute ResourceFilterRequest filterRequest,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable requestedPageable,
             org.springframework.security.core.Authentication authentication) {
+        Pageable pageable = PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
         return new ResponseEntity<>(
                 ApiResponse.success(resourceService.getPortalResources(
-                                filterRequest, page, size, viewerResolver.resolve(authentication)),
+                                filterRequest, pageable, viewerResolver.resolve(authentication)),
                         messageService.getMessage("resource.list.success")),
                 HttpStatus.OK);
     }
@@ -77,12 +88,13 @@ public class ResourceController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getMyResources(
             @ModelAttribute ResourceFilterRequest filterRequest,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable requestedPageable,
             Principal principal) {
+        Pageable pageable = PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
         return new ResponseEntity<>(
                 ApiResponse.success(
-                        resourceService.getMyResources(filterRequest, page, size, principal.getName()),
+                        resourceService.getMyResources(filterRequest, pageable, principal.getName()),
                         messageService.getMessage("resource.list.success")),
                 HttpStatus.OK);
     }

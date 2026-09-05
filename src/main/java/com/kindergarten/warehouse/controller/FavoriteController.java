@@ -24,18 +24,28 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class FavoriteController {
 
+    /** API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay. */
+    private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+            "id", "title", "createdAt", "updatedAt", "viewsCount", "downloadCount", "averageRating");
+
+    private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+            org.springframework.data.domain.Sort.by(
+                    org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
+
     private final ResourceService resourceService;
     private final MessageService messageService;
     private final ViewerResolver viewerResolver;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getFavorites(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable requestedPageable,
             Authentication authentication) {
         Viewer viewer = viewerResolver.resolve(authentication);
+        org.springframework.data.domain.Pageable pageable =
+                com.kindergarten.warehouse.util.PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
         return ResponseEntity.ok(ApiResponse.success(
-                resourceService.getFavoriteResources(page, size, viewer),
+                resourceService.getFavoriteResources(pageable, viewer),
                 messageService.getMessage("resource.list.success")));
     }
 

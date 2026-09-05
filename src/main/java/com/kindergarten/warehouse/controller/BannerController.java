@@ -25,6 +25,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BannerController {
 
+        /** API_CONTRACT_V2 §0.5: whitelist sort RIENG cua endpoint nay. */
+        private static final java.util.Set<String> SORT_FIELDS = java.util.Set.of(
+                        "id", "title", "displayOrder", "visibility", "createdAt", "updatedAt");
+
+        private static final org.springframework.data.domain.Sort DEFAULT_SORT =
+                        org.springframework.data.domain.Sort.by(
+                                        org.springframework.data.domain.Sort.Direction.ASC, "displayOrder");
+
         private final BannerService bannerService;
         private final MessageService messageService;
         private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
@@ -42,12 +50,10 @@ public class BannerController {
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Page<BannerResponse>>> getAllBanners(
                         @RequestParam(value = "platform", required = false) String platform,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "displayOrder") String sortBy,
-                        @RequestParam(defaultValue = "asc") String sortDir) {
+                        @org.springframework.data.web.PageableDefault(size = 10, sort = "displayOrder",
+                                        direction = org.springframework.data.domain.Sort.Direction.ASC) Pageable requestedPageable) {
 
-                Pageable pageable = PageableUtils.createPageable(page, size, sortBy, sortDir);
+                Pageable pageable = PageableUtils.sanitize(requestedPageable, SORT_FIELDS, DEFAULT_SORT);
 
                 return ResponseEntity.ok(
                                 ApiResponse.success(bannerService.getAllBanners(platform, pageable),

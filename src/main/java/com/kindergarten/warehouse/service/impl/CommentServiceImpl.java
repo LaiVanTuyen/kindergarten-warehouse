@@ -63,12 +63,15 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommentResponse> getCommentsByResourceId(String resourceId, int page, int size) {
+    public Page<CommentResponse> getCommentsByResourceId(String resourceId, Pageable pageable,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Resource resource = resourceRepository.findByIdWithDetails(resourceId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-        resourceAccessGuard.requireViewable(resource, com.kindergarten.warehouse.security.Viewer.guest());
+        // Truoc day truyen Viewer.guest() CUNG o day: mot TEACHER da dang nhap se
+        // khong doc duoc binh luan tren tai nguyen INTERNAL ma chinh ho nhin thay.
+        // Quyen phai tinh theo nguoi goi that.
+        resourceAccessGuard.requireViewable(resource, viewer);
 
-        Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
         return commentRepository.findByResourceId(resourceId, pageable)
                 .map(commentMapper::toResponse);
     }
