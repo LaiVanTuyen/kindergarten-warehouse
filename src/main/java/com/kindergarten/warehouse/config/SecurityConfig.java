@@ -91,7 +91,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/topics/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/age-groups/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/banners/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/**").permitAll()
+                        // Resource GET routes are intentionally enumerated (fail-closed).
+                        // Order matters: /me must not be swallowed by the public one-segment slug matcher.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/resources/*/view").permitAll()
                         // Authenticated User Endpoints (Profile)
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()

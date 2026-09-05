@@ -27,6 +27,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Set;
@@ -180,6 +183,49 @@ class ResourceSlugSecurityIntegrationTest {
                 .andExpect(status().isNotFound());
 
         verify(resourceService).getResourceBySlug(SLUG, Viewer.guest());
+    }
+
+    @Test
+    @DisplayName("Danh sách/search của guest truyền Viewer.guest xuống tầng truy vấn")
+    void guestListDelegatesVisibilityToQueryLayer() throws Exception {
+        when(resourceService.getPortalResources(any(), any(Pageable.class), any(Viewer.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(), PageRequest.of(0, 10), 0));
+
+        mockMvc.perform(get("/api/v1/resources").param("keyword", "toan"))
+                .andExpect(status().isOk());
+
+        verify(resourceService).getPortalResources(any(), any(Pageable.class),
+                org.mockito.ArgumentMatchers.eq(Viewer.guest()));
+    }
+
+    @Test
+    @DisplayName("Guest tải PUBLIC nhận mã 6011 từ guard, không bị matcher đổi thành 401 chung")
+    void guestDownloadGetsDedicatedAuthenticationError() throws Exception {
+        when(resourceService.getResourceFileInfo("res-1", Viewer.guest()))
+                .thenThrow(new AppException(ErrorCode.DOWNLOAD_REQUIRES_AUTH));
+
+        mockMvc.perform(get("/api/v1/resources/{id}/file", "res-1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(6011));
+    }
+
+    @Test
+    @DisplayName("Guest đoán id không tồn tại nhận 404 trước kiểm tra đăng nhập")
+    void unknownDownloadIdDoesNotLeakThroughAuthenticationError() throws Exception {
+        when(resourceService.getResourceFileInfo("missing", Viewer.guest()))
+                .thenThrow(new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/resources/{id}/file", "missing"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(6001));
+    }
+
+    @Test
+    @DisplayName("GET resource route mới không được tự động public")
+    void unknownNestedResourceRouteIsFailClosed() throws Exception {
+        mockMvc.perform(get("/api/v1/resources/res-1/future-endpoint"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(1011));
     }
 
     private static ResourceResponse response() {

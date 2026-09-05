@@ -64,11 +64,13 @@ public class ResourceController {
         @GetMapping
         public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getPortalResources(
                         @ModelAttribute ResourceFilterRequest filterRequest,
-                        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable requestedPageable) {
+                        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable requestedPageable,
+                        org.springframework.security.core.Authentication authentication) {
                 Pageable pageable = PageableUtils.sanitize(
                                 requestedPageable, SORT_FIELDS, Sort.by(Sort.Direction.DESC, "createdAt"));
                 return new ResponseEntity<>(
-                                ApiResponse.success(resourceService.getPortalResources(filterRequest, pageable),
+                                ApiResponse.success(resourceService.getPortalResources(
+                                                filterRequest, pageable, viewerResolver.resolve(authentication)),
                                                 messageService.getMessage("resource.list.success")),
                                 HttpStatus.OK);
         }
@@ -121,13 +123,15 @@ public class ResourceController {
         }
 
         @GetMapping("/{id}/file")
-        public ResponseEntity<StreamingResponseBody> downloadResource(@PathVariable String id) throws Exception {
+        public ResponseEntity<StreamingResponseBody> downloadResource(
+                        @PathVariable String id,
+                        org.springframework.security.core.Authentication authentication) throws Exception {
                 // Return type phải là ResponseEntity<StreamingResponseBody> (không phải <?>),
                 // nếu không Spring không route vào StreamingResponseBodyReturnValueHandler ->
                 // cố serialize lambda bằng message converter -> HttpMessageNotWritableException.
                 // Lỗi (không tìm thấy / forbidden / youtube / storage) ném AppException ->
                 // GlobalExceptionHandler trả JSON ApiResponse (theo contract).
-                var fileInfo = resourceService.getResourceFileInfo(id);
+                var fileInfo = resourceService.getResourceFileInfo(id, viewerResolver.resolve(authentication));
                 ContentDisposition contentDisposition = ContentDisposition.attachment()
                                 .filename(fileInfo.getFileName(), StandardCharsets.UTF_8)
                                 .build();

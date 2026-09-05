@@ -89,6 +89,13 @@ public class ResourceAccessGuard {
     public Resource requireDownloadable(Resource resource, Viewer viewer) {
         Resource viewable = requireViewable(resource, viewer);
 
+        // Drafts are never downloadable, including by owner/admin. A draft may
+        // not have a file yet and BUSINESS_RULES §4.2 excludes it absolutely
+        // from every download path.
+        if (viewable.getStatus() == ResourceStatus.DRAFT) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
         if (!viewer.isAuthenticated()) {
             throw new AppException(ErrorCode.DOWNLOAD_REQUIRES_AUTH);
         }

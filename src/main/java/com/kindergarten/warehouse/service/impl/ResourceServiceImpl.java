@@ -237,7 +237,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     private Page<ResourceResponse> executeQueryAndMap(Specification<Resource> spec, Pageable pageable,
-            User currentUser) {
+            Long currentUserId) {
         Page<Resource> resourcePage = resourceRepository.findAll(spec, pageable);
 
         List<String> resourceIds = resourcePage.getContent().stream()
@@ -245,9 +245,9 @@ public class ResourceServiceImpl implements ResourceService {
                 .collect(Collectors.toList());
 
         Set<String> favoritedResourceIds = Collections.emptySet();
-        if (currentUser != null && !resourceIds.isEmpty()) {
+        if (currentUserId != null && !resourceIds.isEmpty()) {
             favoritedResourceIds = favoriteRepository
-                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUser.getId(), resourceIds);
+                    .findFavoritedResourceIdsByUserIdAndResourceIdIn(currentUserId, resourceIds);
         }
 
         Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
@@ -263,30 +263,15 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable) {
+    public Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Specification<Resource> baseSpec = createBaseSpecification(filterRequest);
-        Specification<Resource> portalSpec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
-            predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        Specification<Resource> portalSpec =
+                com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer);
 
         Specification<Resource> finalSpec = Specification.where(portalSpec).and(baseSpec);
 
-        User currentUser = null;
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-        }
-
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable, viewer.userId());
     }
 
     @Override
@@ -316,7 +301,8 @@ public class ResourceServiceImpl implements ResourceService {
             currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
         }
 
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable,
+                currentUser == null ? null : currentUser.getId());
     }
 
     @Override
@@ -340,7 +326,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         Specification<Resource> finalSpec = Specification.where(mySpec).and(baseSpec);
 
-        return executeQueryAndMap(finalSpec, pageable, currentUser);
+        return executeQueryAndMap(finalSpec, pageable, currentUser.getId());
     }
 
     @Override
@@ -810,42 +796,15 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public com.kindergarten.warehouse.dto.response.FileDownloadInfo getResourceFileInfo(String id) throws Exception {
+    public com.kindergarten.warehouse.dto.response.FileDownloadInfo getResourceFileInfo(String id,
+            com.kindergarten.warehouse.security.Viewer viewer) throws Exception {
         // Dùng fetch-join để topic/category được load sẵn: method không chạy trong
         // transaction + OSIV tắt nên truy cập lazy proxy sẽ ném LazyInitializationException.
-        Resource resource = resourceRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        Resource resource = resourceAccessGuard.requireDownloadable(
+                resourceRepository.findByIdWithDetails(id).orElse(null), viewer);
 
-        // Check if deleted
-        if (resource.getIsDeleted()) {
-            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = null;
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            currentUser = userRepository.findByUsername(authentication.getName()).orElse(null);
-        }
-
-        boolean publiclyAccessible = resource.getVisibility() == Visibility.PUBLIC
-                && resource.getStatus() == ResourceStatus.APPROVED
-                && !Boolean.TRUE.equals(resource.getTopic().getIsDeleted())
-                && resource.getTopic().getVisibility() == Visibility.PUBLIC
-                && !Boolean.TRUE.equals(resource.getTopic().getCategory().getIsDeleted())
-                && resource.getTopic().getCategory().getVisibility() == Visibility.PUBLIC;
-
-        if (!publiclyAccessible) {
-            // SEC-4: file chưa public (PENDING/PRIVATE/đã ẩn) chỉ owner hoặc ADMIN được tải.
-            boolean allowed = currentUser != null
-                    && (isAdmin(currentUser) || resource.getCreatedBy().equals(currentUser.getId()));
-            if (!allowed) {
-                throw new AppException(ErrorCode.RESOURCE_FORBIDDEN);
-            }
-        }
-
-        // Cannot download YouTube videos
-        if (resource.getResourceType() == ResourceType.YOUTUBE) {
+        // Only objects stored by this service have a downloadable stream.
+        if (resource.getResourceType() != ResourceType.FILE) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 

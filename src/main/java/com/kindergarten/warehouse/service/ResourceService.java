@@ -17,7 +17,8 @@ import java.util.List;
 public interface ResourceService {
         ResourceResponse uploadResource(ResourceCreationRequest request, String username);
 
-        Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable);
+        Page<ResourceResponse> getPortalResources(ResourceFilterRequest filterRequest, Pageable pageable,
+                        com.kindergarten.warehouse.security.Viewer viewer);
 
         Page<ResourceResponse> getAdminResources(ResourceFilterRequest filterRequest, Pageable pageable);
 
@@ -25,7 +26,7 @@ public interface ResourceService {
 
         ResourceResponse getResourceBySlug(String slug, com.kindergarten.warehouse.security.Viewer viewer);
 
-        FileDownloadInfo getResourceFileInfo(String id) throws Exception;
+        FileDownloadInfo getResourceFileInfo(String id, com.kindergarten.warehouse.security.Viewer viewer) throws Exception;
 
         void incrementViewCount(String id, String ipAddress);
 

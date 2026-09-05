@@ -284,6 +284,18 @@ class ResourceAccessGuardTest {
     class Download {
 
         @Test
+        @DisplayName("DRAFT không tải được kể cả bởi chủ sở hữu")
+        void ownerCannotDownloadDraft() {
+            Resource resource = resource(
+                    Visibility.PUBLIC, Visibility.PUBLIC, Visibility.PRIVATE, ResourceStatus.DRAFT);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> guard.requireDownloadable(resource, owner()));
+
+            assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
         @DisplayName("khách xem được PUBLIC nhưng tải thì nhận 401 mã 6011")
         void guestCannotDownloadPublic() {
             Resource r = approved(Visibility.PUBLIC);
