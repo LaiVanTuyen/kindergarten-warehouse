@@ -150,6 +150,32 @@ FE nào đang sort theo hai trường này phải bỏ. Nếu nghiệp vụ th�
 xếp theo số lượng, phải hiện thực hoá thành cột đếm được cập nhật khi ghi
 (materialized counter), **không** quay lại `@Formula`.
 
+#### Trường audit trong `GET /resources` (list và search)
+
+Endpoint list dùng projection hẹp thay vì entity đầy đủ, nên bốn trường audit
+có ngữ nghĩa khác endpoint chi tiết. **Đây là quyết định có chủ đích, không
+phải hệ quả phụ của tối ưu.**
+
+| Trường | Ở list | Ở detail/admin | Lý do |
+|---|---|---|---|
+| `createdBy` | ✅ **có giá trị** | ✅ có | Màn Admin hiển thị cột "Người tải lên" và **dùng chính endpoint này**, không phải `/admin/resources` |
+| `updatedBy` | ⚠️ **luôn `null`** | ✅ có | Không giao diện nào hiển thị trong danh sách |
+| `topic.createdBy` | ⚠️ **luôn `null`** | ✅ có | `grep` toàn bộ FE không thấy nơi nào đọc |
+| `topic.updatedBy` | ⚠️ **luôn `null`** | ✅ có | Như trên |
+
+Hình dạng JSON **không đổi** — các trường vẫn xuất hiện, chỉ mang giá trị
+`null`. FE không mất trường, nhưng không được dựa vào chúng ở màn danh sách.
+
+`createdBy` lấy bằng một batch query chỉ select `id, full_name`
+(`UserRepository.findDisplayNamesByIds`). Cố ý **không** khai quan hệ
+`creator` trong projection: projection lồng nhau khiến Hibernate nạp cả entity
+`User`, kéo theo `password`, `token_version` và `original_email` vào bộ nhớ
+ứng dụng trên một endpoint công khai.
+
+Ràng buộc này được khoá bằng [`perf/check-query-count.sh`](../perf/check-query-count.sh):
+tối đa một truy vấn chạm `users`, và không truy vấn nào select ba cột nhạy cảm
+kể trên.
+
 ### 0.6 Xác thực
 
 JWT trong cookie HttpOnly. CSRF qua cookie `XSRF-TOKEN`.

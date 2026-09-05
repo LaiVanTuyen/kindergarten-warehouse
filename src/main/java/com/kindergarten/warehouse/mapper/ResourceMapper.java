@@ -30,10 +30,15 @@ public class ResourceMapper {
      * hai đều có chủ đích:
      *
      * <ul>
-     *   <li><strong>Không có</strong> {@code createdBy}/{@code updatedBy}.
-     *       Card của Portal không hiển thị tên người đăng, nên projection
-     *       không join bảng {@code users}. Đây là thay đổi contract của riêng
-     *       endpoint list — xem API_CONTRACT_V2 §0.5.</li>
+     *   <li>{@code createdBy} truyền vào từ batch query chỉ select
+     *       {@code id, full_name}, <strong>không</strong> hydrate entity
+     *       {@code User}. Trường này cần cho cột "Người tải lên" của màn Admin
+     *       — màn đó gọi chính endpoint list này, không phải
+     *       {@code /admin/resources}.</li>
+     *   <li>{@code updatedBy} và {@code topic.createdBy}/{@code topic.updatedBy}
+     *       <strong>luôn null</strong> ở list. Đã kiểm tra: không giao diện nào
+     *       hiển thị chúng trong danh sách. Đây là quyết định có chủ đích, ghi
+     *       ở API_CONTRACT_V2 §0.5 — không phải hệ quả ngẫu nhiên.</li>
      *   <li>{@code ageGroups} truyền vào từ batch query riêng, không lazy-load
      *       theo từng dòng.</li>
      * </ul>
@@ -42,6 +47,7 @@ public class ResourceMapper {
             com.kindergarten.warehouse.repository.projection.ResourceListView view,
             java.util.List<com.kindergarten.warehouse.dto.response.AgeGroupResponse> ageGroups,
             Long topicResourceCount,
+            String creatorName,
             boolean isFavorited, long pendingViews, long pendingDownloads) {
         if (view == null) {
             return null;
@@ -74,6 +80,7 @@ public class ResourceMapper {
                 .isFavorited(isFavorited)
                 .createdAt(view.getCreatedAt())
                 .updatedAt(view.getUpdatedAt())
+                .createdBy(creatorName)
                 .build();
     }
 

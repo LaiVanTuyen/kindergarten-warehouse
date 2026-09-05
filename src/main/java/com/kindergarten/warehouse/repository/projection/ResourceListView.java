@@ -72,6 +72,17 @@ public interface ResourceListView {
 
     LocalDateTime getUpdatedAt();
 
+    /**
+     * <strong>Id</strong> của người tạo, không phải tên.
+     *
+     * <p>Tên hiển thị được lấy bằng một batch query riêng chỉ select
+     * {@code id, full_name} ({@code UserRepository.findDisplayNamesByIds}).
+     * Cố ý không khai quan hệ {@code creator} ở đây: projection lồng nhau sẽ
+     * khiến Hibernate nạp cả entity {@code User}, kéo theo {@code password},
+     * {@code token_version} và {@code original_email} vào bộ nhớ ứng dụng.
+     */
+    Long getCreatedBy();
+
     TopicView getTopic();
 
     /** Chỉ id, tên, slug và visibility — đủ cho thẻ và điều hướng. */

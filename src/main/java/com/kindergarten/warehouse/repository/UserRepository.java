@@ -70,4 +70,19 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Modifying
     @Query("UPDATE User u SET u.lastActive = :lastActive WHERE u.id IN :ids")
     void batchUpdateLastActive(@Param("ids") List<Long> ids, @Param("lastActive") LocalDateTime lastActive);
+
+    /**
+     * Lấy tên hiển thị của nhiều người dùng bằng MỘT truy vấn, chỉ select
+     * {@code id} và {@code full_name}.
+     *
+     * <p>Dùng cho đường list Portal, nơi cần {@code createdBy} (cột "Người tải
+     * lên" của Admin) nhưng <strong>tuyệt đối không được hydrate entity
+     * {@code User}</strong> — nó kéo theo {@code password},
+     * {@code token_version} và {@code original_email} vào bộ nhớ ứng dụng trên
+     * một endpoint công khai.
+     *
+     * <p>Trả {@code [id, fullName]}; service gom thành map.
+     */
+    @Query("SELECT u.id, u.fullName FROM User u WHERE u.id IN :ids")
+    List<Object[]> findDisplayNamesByIds(@Param("ids") java.util.Collection<Long> ids);
 }
