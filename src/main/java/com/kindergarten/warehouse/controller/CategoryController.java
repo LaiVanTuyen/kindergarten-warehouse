@@ -29,7 +29,7 @@ import java.util.Set;
 public class CategoryController {
 
         private static final Set<String> SORT_FIELDS = Set.of(
-                        "id", "name", "slug", "visibility", "topicCount", "createdAt", "updatedAt");
+                        "id", "name", "slug", "visibility", "createdAt", "updatedAt");
 
         private final CategoryService categoryService;
         private final MessageService messageService;

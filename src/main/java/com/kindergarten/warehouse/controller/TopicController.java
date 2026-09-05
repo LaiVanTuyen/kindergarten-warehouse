@@ -26,7 +26,7 @@ import java.util.Set;
 public class TopicController {
 
         private static final Set<String> SORT_FIELDS = Set.of(
-                        "id", "name", "slug", "visibility", "resourceCount", "createdAt", "updatedAt");
+                        "id", "name", "slug", "visibility", "createdAt", "updatedAt");
 
         private final TopicService topicService;
         private final MessageService messageService;

@@ -63,7 +63,15 @@ public class CategoryServiceImpl implements CategoryService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return categoryRepository.findAll(spec, pageable).map(categoryMapper::toResponse);
+        Page<Category> page = categoryRepository.findAll(spec, pageable);
+        java.util.List<Long> ids = page.getContent().stream().map(Category::getId).toList();
+        java.util.Map<Long, Long> counts = ids.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : categoryRepository.countActiveTopicsByCategoryIds(ids).stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                row -> (Long) row[0], row -> (Long) row[1]));
+        page.forEach(category -> category.setTopicCount(counts.getOrDefault(category.getId(), 0L)));
+        return page.map(categoryMapper::toResponse);
     }
 
     @Override

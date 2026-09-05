@@ -72,7 +72,15 @@ public class TopicServiceImpl implements TopicService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return topicRepository.findAll(spec, pageable).map(topicMapper::toResponse);
+        Page<Topic> page = topicRepository.findAll(spec, pageable);
+        java.util.List<Long> ids = page.getContent().stream().map(Topic::getId).toList();
+        java.util.Map<Long, Long> counts = ids.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : topicRepository.countActiveResourcesByTopicIds(ids).stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                row -> (Long) row[0], row -> (Long) row[1]));
+        page.forEach(topic -> topic.setResourceCount(counts.getOrDefault(topic.getId(), 0L)));
+        return page.map(topicMapper::toResponse);
     }
 
     @Override

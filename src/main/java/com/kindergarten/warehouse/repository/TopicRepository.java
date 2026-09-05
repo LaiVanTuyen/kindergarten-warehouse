@@ -37,4 +37,13 @@ public interface TopicRepository extends JpaRepository<Topic, Long>,
 
         // Duplicate validation methods
         boolean existsByNameAndIsDeletedFalse(String name);
+
+        @org.springframework.data.jpa.repository.Query("""
+                SELECT r.topic.id, COUNT(r)
+                FROM Resource r
+                WHERE r.isDeleted = false AND r.topic.id IN :topicIds
+                GROUP BY r.topic.id
+                """)
+        java.util.List<Object[]> countActiveResourcesByTopicIds(
+                @org.springframework.data.repository.query.Param("topicIds") java.util.Collection<Long> topicIds);
 }

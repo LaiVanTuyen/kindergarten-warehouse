@@ -46,7 +46,7 @@ public class Category extends BaseEntity {
     @ToString.Exclude
     private List<Topic> topics;
 
-    @org.hibernate.annotations.Formula("(SELECT COUNT(*) FROM topics t WHERE t.category_id = id AND t.is_deleted = false)")
+    @Transient
     private Long topicCount;
 
     @Builder.Default

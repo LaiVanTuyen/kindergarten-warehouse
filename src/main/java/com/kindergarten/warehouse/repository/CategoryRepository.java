@@ -43,4 +43,13 @@ public interface CategoryRepository extends JpaRepository<Category, Long>,
 
     java.util.List<com.kindergarten.warehouse.repository.projection.CategoryIconProjection> findAllProjectedByIdIn(
             java.util.List<Long> ids);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT t.category.id, COUNT(t)
+            FROM Topic t
+            WHERE t.isDeleted = false AND t.category.id IN :categoryIds
+            GROUP BY t.category.id
+            """)
+    java.util.List<Object[]> countActiveTopicsByCategoryIds(
+            @org.springframework.data.repository.query.Param("categoryIds") java.util.Collection<Long> categoryIds);
 }
