@@ -28,9 +28,10 @@ public interface ResourceService {
 
     FileDownloadInfo getResourceFileInfo(String id, com.kindergarten.warehouse.security.Viewer viewer) throws Exception;
 
-    Page<ResourceResponse> getFavoriteResources(int page, int size, String username);
+    Page<ResourceResponse> getFavoriteResources(int page, int size,
+            com.kindergarten.warehouse.security.Viewer viewer);
 
-    List<String> getFavoriteResourceIds(String username);
+    List<String> getFavoriteResourceIds(com.kindergarten.warehouse.security.Viewer viewer);
 
     void incrementViewCount(String id, String ipAddress);
 

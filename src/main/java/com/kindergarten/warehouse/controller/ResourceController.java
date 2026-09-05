@@ -87,25 +87,6 @@ public class ResourceController {
                 HttpStatus.OK);
     }
 
-    @GetMapping("/me/favorites")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Page<ResourceResponse>>> getFavoriteResources(
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
-            Principal principal) {
-        return ResponseEntity.ok(ApiResponse.success(
-                resourceService.getFavoriteResources(page, size, principal.getName()),
-                messageService.getMessage("resource.list.success")));
-    }
-
-    @GetMapping("/me/favorites/ids")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<List<String>>> getFavoriteResourceIds(Principal principal) {
-        return ResponseEntity.ok(ApiResponse.success(
-                resourceService.getFavoriteResourceIds(principal.getName()),
-                messageService.getMessage("resource.list.success")));
-    }
-
     @GetMapping("/{slug}")
     public ResponseEntity<ApiResponse<ResourceResponse>> getResourceBySlug(
             @PathVariable String slug,

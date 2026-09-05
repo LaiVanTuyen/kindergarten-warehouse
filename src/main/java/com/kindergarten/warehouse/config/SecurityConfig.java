@@ -94,8 +94,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/banners").permitAll()
                         // Resource routes are enumerated so newly-added paths fail closed.
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/me/favorites").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/me/favorites/ids").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/favorites", "/api/v1/favorites/ids").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/file").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*").permitAll()

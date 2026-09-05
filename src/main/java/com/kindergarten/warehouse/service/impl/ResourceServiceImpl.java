@@ -329,10 +329,10 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResourceResponse> getFavoriteResources(int page, int size, String username) {
+    public Page<ResourceResponse> getFavoriteResources(int page, int size,
+            com.kindergarten.warehouse.security.Viewer viewer) {
         Pageable pageable = PageableUtils.createPageable(page, size, "createdAt", "desc");
-        User currentUser = getUserOrThrow(username);
-        List<Resource> resources = getVisibleFavoriteResources(currentUser);
+        List<Resource> resources = getVisibleFavoriteResources(viewer);
 
         int start = Math.toIntExact(Math.min(pageable.getOffset(), resources.size()));
         int end = Math.min(start + pageable.getPageSize(), resources.size());
@@ -355,9 +355,8 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<String> getFavoriteResourceIds(String username) {
-        User currentUser = getUserOrThrow(username);
-        return getVisibleFavoriteResources(currentUser).stream()
+    public List<String> getFavoriteResourceIds(com.kindergarten.warehouse.security.Viewer viewer) {
+        return getVisibleFavoriteResources(viewer).stream()
                 .map(Resource::getId)
                 .collect(Collectors.toList());
     }
@@ -697,24 +696,19 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
 
-    private List<Resource> getVisibleFavoriteResources(User user) {
-        List<String> favoriteIds = favoriteRepository.findResourceIdsByUserId(user.getId());
+    private List<Resource> getVisibleFavoriteResources(com.kindergarten.warehouse.security.Viewer viewer) {
+        if (!viewer.isAuthenticated()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        List<String> favoriteIds = favoriteRepository.findResourceIdsByUserId(viewer.userId());
         if (favoriteIds.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Specification<Resource> visibleFavoriteSpec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            predicates.add(root.get("id").in(favoriteIds));
-            predicates.add(cb.equal(root.get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
-            predicates.add(cb.equal(root.get("topic").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC));
-            predicates.add(cb.equal(root.get("topic").get("category").get("isDeleted"), false));
-            predicates.add(cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        Specification<Resource> favoriteIdsSpec = (root, query, cb) -> root.get("id").in(favoriteIds);
+        Specification<Resource> visibleFavoriteSpec = Specification
+                .where(com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer))
+                .and(favoriteIdsSpec);
 
         Map<String, Integer> order = new HashMap<>();
         for (int i = 0; i < favoriteIds.size(); i++) {
