@@ -1,0 +1,154 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/auth-read.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 150 max VUs, 50s max duration (incl. graceful stop):
+              * authList: 100 looping VUs for 20s (exec: authList, gracefulStop: 30s)
+              * myResources: 50 looping VUs for 20s (exec: myResources, gracefulStop: 30s)
+
+
+running (00.9s), 150/150 VUs, 9 complete and 0 interrupted iterations
+authList      [   4% ] 100 VUs  00.7s/20s
+myResources   [   4% ] 50 VUs   00.7s/20s
+
+running (02.0s), 150/150 VUs, 38 complete and 0 interrupted iterations
+authList      [   9% ] 100 VUs  01.7s/20s
+myResources   [   9% ] 50 VUs   01.7s/20s
+
+running (02.9s), 150/150 VUs, 98 complete and 0 interrupted iterations
+authList      [  14% ] 100 VUs  02.7s/20s
+myResources   [  14% ] 50 VUs   02.7s/20s
+
+running (04.0s), 150/150 VUs, 128 complete and 0 interrupted iterations
+authList      [  19% ] 100 VUs  03.8s/20s
+myResources   [  19% ] 50 VUs   03.8s/20s
+
+running (04.9s), 150/150 VUs, 163 complete and 0 interrupted iterations
+authList      [  24% ] 100 VUs  04.7s/20s
+myResources   [  24% ] 50 VUs   04.7s/20s
+
+running (05.9s), 150/150 VUs, 233 complete and 0 interrupted iterations
+authList      [  29% ] 100 VUs  05.7s/20s
+myResources   [  29% ] 50 VUs   05.7s/20s
+
+running (06.9s), 150/150 VUs, 279 complete and 0 interrupted iterations
+authList      [  34% ] 100 VUs  06.7s/20s
+myResources   [  34% ] 50 VUs   06.7s/20s
+
+running (07.9s), 150/150 VUs, 343 complete and 0 interrupted iterations
+authList      [  39% ] 100 VUs  07.7s/20s
+myResources   [  39% ] 50 VUs   07.7s/20s
+
+running (08.9s), 150/150 VUs, 401 complete and 0 interrupted iterations
+authList      [  44% ] 100 VUs  08.7s/20s
+myResources   [  44% ] 50 VUs   08.7s/20s
+
+running (09.9s), 150/150 VUs, 437 complete and 0 interrupted iterations
+authList      [  49% ] 100 VUs  09.7s/20s
+myResources   [  49% ] 50 VUs   09.7s/20s
+
+running (11.0s), 150/150 VUs, 475 complete and 0 interrupted iterations
+authList      [  54% ] 100 VUs  10.7s/20s
+myResources   [  54% ] 50 VUs   10.8s/20s
+
+running (11.9s), 150/150 VUs, 547 complete and 0 interrupted iterations
+authList      [  59% ] 100 VUs  11.7s/20s
+myResources   [  59% ] 50 VUs   11.7s/20s
+
+running (12.9s), 150/150 VUs, 620 complete and 0 interrupted iterations
+authList      [  64% ] 100 VUs  12.7s/20s
+myResources   [  64% ] 50 VUs   12.7s/20s
+
+running (13.9s), 150/150 VUs, 703 complete and 0 interrupted iterations
+authList      [  69% ] 100 VUs  13.7s/20s
+myResources   [  69% ] 50 VUs   13.7s/20s
+
+running (14.9s), 150/150 VUs, 753 complete and 0 interrupted iterations
+authList      [  74% ] 100 VUs  14.7s/20s
+myResources   [  74% ] 50 VUs   14.7s/20s
+
+running (16.0s), 150/150 VUs, 803 complete and 0 interrupted iterations
+authList      [  79% ] 100 VUs  15.7s/20s
+myResources   [  79% ] 50 VUs   15.7s/20s
+
+running (16.9s), 150/150 VUs, 857 complete and 0 interrupted iterations
+authList      [  84% ] 100 VUs  16.7s/20s
+myResources   [  84% ] 50 VUs   16.7s/20s
+
+running (17.9s), 150/150 VUs, 885 complete and 0 interrupted iterations
+authList      [  89% ] 100 VUs  17.7s/20s
+myResources   [  89% ] 50 VUs   17.7s/20s
+
+running (18.9s), 150/150 VUs, 926 complete and 0 interrupted iterations
+authList      [  94% ] 100 VUs  18.7s/20s
+myResources   [  94% ] 50 VUs   18.7s/20s
+
+running (19.9s), 150/150 VUs, 993 complete and 0 interrupted iterations
+authList      [  99% ] 100 VUs  19.7s/20s
+myResources   [  99% ] 50 VUs   19.7s/20s
+
+running (20.9s), 092/150 VUs, 1065 complete and 0 interrupted iterations
+authList    ↓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+running (21.9s), 003/150 VUs, 1154 complete and 0 interrupted iterations
+authList    ✓ [ 100% ] 100 VUs  20s
+myResources ↓ [ 100% ] 50 VUs   20s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    t_auth_list
+    ✗ 'p(95)<500' p(95)=5.29s
+
+    t_my_resources
+    ✗ 'p(95)<500' p(95)=5.33s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1157    52.671275/s
+    checks_succeeded...: 100.00% 1157 out of 1157
+    checks_failed......: 0.00%   0 out of 1157
+
+    ✓ auth list 200
+    ✓ me 200
+
+    CUSTOM
+    t_auth_list....................: avg=2.56s min=66.55ms  med=2.51s p(50)=2.51s p(95)=5.29s p(99)=6.76s max=9.76s
+    t_my_resources.................: avg=3.03s min=329.93ms med=3.01s p(50)=3.01s p(95)=5.33s p(99)=5.97s max=8.23s
+
+    HTTP
+    http_req_duration..............: avg=2.7s  min=66.55ms  med=2.67s p(50)=2.67s p(95)=5.3s  p(99)=6.71s max=9.76s
+      { expected_response:true }...: avg=2.7s  min=66.55ms  med=2.67s p(50)=2.67s p(95)=5.3s  p(99)=6.71s max=9.76s
+    http_req_failed................: 0.00%  0 out of 1158
+    http_reqs......................: 1158   52.716799/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.7s  min=81.49ms  med=2.67s p(50)=2.67s p(95)=5.3s  p(99)=6.74s max=9.77s
+    iterations.....................: 1157   52.671275/s
+    vus............................: 4      min=4         max=150
+    vus_max........................: 150    min=150       max=150
+
+    NETWORK
+    data_received..................: 19 MB  883 kB/s
+    data_sent......................: 419 kB 19 kB/s
+
+
+
+
+running (22.0s), 000/150 VUs, 1157 complete and 0 interrupted iterations
+authList    ✓ [ 100% ] 100 VUs  20s
+myResources ✓ [ 100% ] 50 VUs   20s
+time="2026-09-05T13:43:33Z" level=error msg="thresholds on metrics 't_auth_list, t_my_resources' have been crossed"
