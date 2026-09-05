@@ -142,21 +142,28 @@ Toàn bộ validate trường bắt buộc dồn về `submit` (BUSINESS_RULES �
 xác nhận bản quyền còn hiệu lực (§9.3). Thiếu bản quyền thì đưa thẳng về bước
 xác nhận, không bắt người dùng dò cả form.
 
-**Hai chỗ trong code hiện tại chặn flow này:**
+**Ba chỗ chặn flow này — nặng nhất nằm ở database:**
 
 | Vị trí | Vấn đề |
 |---|---|
+| **Schema** | `title`, `slug`, `file_url`, `topic_id` đều `NOT NULL` → **không lưu nổi** bản nháp dở dang. Cần migration: BUSINESS_RULES §4.2.1 |
 | `ResourceCreationRequest` | `title` có `@NotBlank`, `topicId` có `@NotNull` → không tạo được draft rỗng |
 | `ResourceServiceImpl:481` | Non-admin sửa tài liệu là **luôn** bị ép `setStatus(PENDING)` |
 
-Chỗ thứ hai tinh vi hơn và dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt
+Chỗ đầu là blocker cứng: sửa validation ở tầng request mà không nới ràng buộc
+database thì `POST /resources/draft` chết ngay ở lệnh `INSERT`.
+
+Chỗ thứ ba tinh vi và dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt
 ("ZERO TRUST": uploader sửa nội dung thì phải duyệt lại), nhưng khi có `DRAFT`
 nó sẽ khiến **mỗi lần lưu nháp lại vô tình gửi duyệt**. Quy tắc mới:
 
-- Đang `DRAFT` → sửa vẫn giữ `DRAFT`. Chỉ `submit` mới chuyển sang `PENDING`.
-- Đang `APPROVED`/`REJECTED` → giữ nguyên hành vi hiện tại (về `PENDING`).
+| Trạng thái đang có | `PATCH` sửa nội dung |
+|---|---|
+| `DRAFT` | Giữ `DRAFT` |
+| `REJECTED` | **Giữ `REJECTED`** — chỉ `submit` mới gửi lại |
+| `APPROVED` | Về `PENDING` (§5.2), trừ khi chỉ đổi `visibility` |
 
-Nếu không sửa cả hai chỗ, wizard chỉ chạy được như một form dài trá hình.
+Nếu không sửa cả ba chỗ, wizard chỉ chạy được như một form dài trá hình.
 
 ### 3.2 Theo dõi qua tab
 
