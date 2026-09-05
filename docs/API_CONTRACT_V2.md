@@ -111,10 +111,44 @@ Content-Disposition: attachment;
 tiếp nguyên vẹn header do Spring đặt, không được để header từ MinIO đè lên.
 Chi tiết: BUSINESS_RULES §8.5.
 
-### 0.5 Phân trang
+### 0.5 Phân trang và sắp xếp
 
 Query: `page` (1-based ở FE, BE trừ 1), `size`, `sort`.
-`PageableUtils.sanitize` giới hạn field sort theo whitelist. ✅
+`PageableUtils.sanitize` giới hạn field sort theo whitelist **riêng của từng
+endpoint** (hằng số `SORT_FIELDS` trong mỗi controller). ✅
+
+#### Field sort không hợp lệ → 400
+
+Đây **không** phải fallback âm thầm. `PageableUtils.sanitizeSort` ném
+`AppException(ErrorCode.INVALID_REQUEST)`:
+
+| Tình huống | HTTP | Code |
+|---|---|---|
+| `sort` trỏ field ngoài whitelist | **400** | 9001 `INVALID_REQUEST` |
+| `sort` để trống | 200 | dùng `defaultSort` của endpoint |
+
+**Đề xuất chờ quyết định:** tách mã riêng `INVALID_SORT_FIELD` thay cho 9001
+để FE chẩn đoán được ngay là sai tên field, thay vì lẫn với mọi lỗi request
+khác. Chưa làm vì đây là **đổi mã lỗi FE đang nhận** — nếu FE đang bắt 9001
+thì sẽ hỏng. Cần chốt và đổi cùng lúc ở cả hai phía.
+
+#### ⚠️ `topicCount` và `resourceCount` KHÔNG còn sort được
+
+Hai trường này trước đây là `@Formula` (subquery tương quan trên `Category`
+và `Topic`), nên sort được ở tầng SQL. Chúng đã bị gỡ vì làm MySQL bão hoà —
+xem [PERF_BASELINE.md](PERF_BASELINE.md) §4.2.
+
+Hiện trạng:
+
+- Chúng là `@Transient`, tính bằng **một truy vấn gom nhóm cho cả trang**.
+- **Vẫn có trong response** `CategoryResponse` và `TopicResponse` — hợp đồng
+  đọc không đổi.
+- **Đã bỏ khỏi `SORT_FIELDS`**, nên `?sort=topicCount` hay
+  `?sort=resourceCount` trả **400**.
+
+FE nào đang sort theo hai trường này phải bỏ. Nếu nghiệp vụ thật sự cần sắp
+xếp theo số lượng, phải hiện thực hoá thành cột đếm được cập nhật khi ghi
+(materialized counter), **không** quay lại `@Formula`.
 
 ### 0.6 Xác thực
 
@@ -344,6 +378,21 @@ cần đổi.
 CRUD của Category/Topic (ADMIN) đã có đủ ✅ — xem `CategoryController`,
 `TopicController`. Bốn taxonomy mới ở V1 **chỉ đọc**, dữ liệu cố định bằng
 seeder, chưa có màn quản trị.
+
+### 9.1 Hai trường đếm trong Category và Topic
+
+| Trường | Nằm ở | Trong response? | Sort được? |
+|---|---|---|---|
+| `topicCount` | `CategoryResponse` | ✅ có | ❌ **không** — trả 400 |
+| `resourceCount` | `TopicResponse` | ✅ có | ❌ **không** — trả 400 |
+
+Chi tiết và lý do: §0.5. Tóm tắt: hai `@Formula` cũ chạy như subquery tương
+quan **trên từng dòng trả về** nên làm MySQL bão hoà; nay thay bằng một truy
+vấn gom nhóm cho cả trang. Giá trị vẫn trả về đầy đủ, chỉ mất khả năng sort.
+
+Cả hai endpoint danh sách Category và Topic đều đã áp visibility phân tầng và
+lọc theo người xem — Category/Topic `INTERNAL` không hiện với khách
+(BUSINESS_RULES §3.5, §3.6.1).
 
 ---
 
