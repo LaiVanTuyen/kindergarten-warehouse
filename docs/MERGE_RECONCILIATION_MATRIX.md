@@ -235,9 +235,8 @@ hơn.** Nhưng cũng không có điểm nào được phép bỏ develop mà kh�
 - [x] Kiểm FE có gọi `/categories/{...}` không; các route đọc cần thiết đã được liệt kê tường minh (§1.4)
 - [x] Favorites: đổi path theo contract §4 **và** bọc `portalVisibleTo`
 - [x] Mang `buildDownloadFileName` vào luồng download của feature
-- [ ] Test mới: Guest `GET /comments` → 200 và tên file tải về với tiêu đề chứa
-      `/` và `"` đã có; ca favorites đổi sang `PRIVATE` còn phải xác nhận trong
-      Testcontainers IT.
+- [x] Test mới: Guest `GET /comments` → 200; favorites không trả tài nguyên đã
+      chuyển `PRIVATE`; tên file tải về với tiêu đề chứa `/` và `"`.
 - [ ] `mvn test` (đã đạt 124 test sau khi thêm test tên file) và
       `mvn verify -Pintegration-test` (chờ CI có Docker thật xác nhận 19 test)
 - [ ] Đo lại k6 ngắn: xác nhận projection còn nguyên tác dụng sau khi hoà

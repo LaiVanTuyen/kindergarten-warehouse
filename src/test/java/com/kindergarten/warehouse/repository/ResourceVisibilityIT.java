@@ -4,6 +4,7 @@ import com.kindergarten.warehouse.config.DataSeeder;
 import com.kindergarten.warehouse.dto.request.ResourceFilterRequest;
 import com.kindergarten.warehouse.dto.response.ResourceResponse;
 import com.kindergarten.warehouse.entity.Category;
+import com.kindergarten.warehouse.entity.Favorite;
 import com.kindergarten.warehouse.entity.Resource;
 import com.kindergarten.warehouse.entity.ResourceStatus;
 import com.kindergarten.warehouse.entity.Role;
@@ -176,11 +177,15 @@ class ResourceVisibilityIT {
     @Autowired TopicRepository topicRepository;
     @Autowired CategoryRepository categoryRepository;
     @Autowired UserRepository userRepository;
+    @Autowired FavoriteRepository favoriteRepository;
 
     private Long topicId;
     private Long ownerId;
     private Long otherTeacherId;
     private Long normalUserId;
+    private String publicResourceId;
+    private String privateOwnerResourceId;
+    private String privateOtherResourceId;
 
     private static final Pageable PAGE_12 =
             PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -210,10 +215,10 @@ class ResourceVisibilityIT {
         topicId = topicRepository.save(topic).getId();
 
         // Bo du lieu toi thieu phu ma tran
-        newResource("pub", Visibility.PUBLIC, ResourceStatus.APPROVED, ownerId, topic);
+        publicResourceId = newResource("pub", Visibility.PUBLIC, ResourceStatus.APPROVED, ownerId, topic).getId();
         newResource("int", Visibility.INTERNAL, ResourceStatus.APPROVED, ownerId, topic);
-        newResource("priv-owner", Visibility.PRIVATE, ResourceStatus.APPROVED, ownerId, topic);
-        newResource("priv-other", Visibility.PRIVATE, ResourceStatus.APPROVED, otherTeacherId, topic);
+        privateOwnerResourceId = newResource("priv-owner", Visibility.PRIVATE, ResourceStatus.APPROVED, ownerId, topic).getId();
+        privateOtherResourceId = newResource("priv-other", Visibility.PRIVATE, ResourceStatus.APPROVED, otherTeacherId, topic).getId();
         newResource("pending", Visibility.PUBLIC, ResourceStatus.PENDING, ownerId, topic);
         newResource("rejected", Visibility.PUBLIC, ResourceStatus.REJECTED, ownerId, topic);
         newResource("draft", Visibility.PUBLIC, ResourceStatus.DRAFT, ownerId, topic);
@@ -492,6 +497,18 @@ class ResourceVisibilityIT {
         assertThat(portalResources(filter, PAGE_12, guest())
                 .getTotalElements())
                 .isZero();
+    }
+
+    @Test
+    @DisplayName("Favorites chỉ trả tài nguyên còn xem được tại thời điểm đọc")
+    void favoritesAreFilteredByCurrentVisibility() {
+        favoriteRepository.save(Favorite.builder().userId(ownerId).resourceId(publicResourceId).build());
+        favoriteRepository.save(Favorite.builder().userId(ownerId).resourceId(privateOwnerResourceId).build());
+        favoriteRepository.save(Favorite.builder().userId(ownerId).resourceId(privateOtherResourceId).build());
+
+        assertThat(resourceService.getFavoriteResourceIds(owner()))
+                .contains(publicResourceId, privateOwnerResourceId)
+                .doesNotContain(privateOtherResourceId);
     }
 
     // =====================================================================
