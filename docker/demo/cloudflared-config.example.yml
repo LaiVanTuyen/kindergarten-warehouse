@@ -1,0 +1,41 @@
+# ===========================================================
+# Cloudflare NAMED TUNNEL cho môi trường demo
+# ===========================================================
+# Khác Quick Tunnel: hostname CỐ ĐỊNH, restart không đổi URL.
+# Nhờ vậy .env.demo không còn phụ thuộc vào URL ngẫu nhiên, và không phải
+# sửa CORS/MINIO_PUBLIC_ENDPOINT rồi restart backend mỗi lần bật lại.
+#
+# Chỉ public HAI hostname frontend. Backend, MinIO, MySQL, Redis nằm trong
+# docker network và chỉ nghe trên 127.0.0.1 — không có đường vào từ Internet.
+#
+# --- Cài đặt một lần ------------------------------------------------------
+#   cloudflared tunnel login
+#   cloudflared tunnel create warehouse-demo
+#   cloudflared tunnel route dns warehouse-demo demo.programmingwithtuyen.com
+#   cloudflared tunnel route dns warehouse-demo admin-demo.programmingwithtuyen.com
+#
+# Lệnh `create` in ra Tunnel ID và đường dẫn file credentials .json.
+# Chép file này thành  C:\Users\<user>\.cloudflared\config.yml
+# rồi điền hai giá trị đó vào bên dưới.
+#
+# --- Chạy -----------------------------------------------------------------
+#   cloudflared tunnel run warehouse-demo
+# Hoặc cài thành dịch vụ Windows để tự chạy khi khởi động máy:
+#   cloudflared service install
+# ===========================================================
+
+tunnel: <TUNNEL_ID>
+credentials-file: C:\Users\<user>\.cloudflared\<TUNNEL_ID>.json
+
+# Thứ tự có ý nghĩa: cloudflared duyệt từ trên xuống, mục cuối là catch-all.
+ingress:
+  # Portal demo → nginx portal (PORTAL_PORT_HOST trong .env.demo)
+  - hostname: demo.programmingwithtuyen.com
+    service: http://127.0.0.1:4301
+
+  # Admin demo → nginx admin (ADMIN_PORT_HOST trong .env.demo)
+  - hostname: admin-demo.programmingwithtuyen.com
+    service: http://127.0.0.1:4300
+
+  # Bắt buộc phải có: mọi hostname khác đều bị từ chối.
+  - service: http_status:404

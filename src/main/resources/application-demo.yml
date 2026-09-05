@@ -1,0 +1,19 @@
+# ==========================================
+# DEMO CONFIGURATION
+# ==========================================
+# Kích hoạt KÈM prod: SPRING_PROFILES_ACTIVE=prod,demo
+# Profile đứng sau thắng, nên file này kế thừa toàn bộ application-prod.yml
+# (Flyway + ddl-auto=validate, tắt swagger, tắt show-sql) và chỉ ghi đè
+# đúng những điểm demo khác production. application-prod.yml giữ nguyên.
+
+app:
+  cookie:
+    # Portal/Admin demo được nginx phục vụ same-origin với /api,
+    # nên không cần SameSite=None. Lax vẫn chạy và chống CSRF tốt hơn.
+    secure: ${COOKIE_SECURE:true}
+    same-site: ${COOKIE_SAME_SITE:Lax}
+
+rollbar:
+  # Demo không báo lỗi lên Rollbar (token để trống trong .env.demo).
+  enabled: ${ROLLBAR_ENABLED:false}
+  environment: ${ROLLBAR_ENV:demo}
