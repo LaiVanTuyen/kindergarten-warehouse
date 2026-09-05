@@ -79,16 +79,26 @@ Bình luận  (nhiều lần)
 Báo cáo nếu nội dung có vấn đề
 ```
 
-**Rating và bình luận là hai thao tác độc lập.** Cụ thể:
+**Rating và bình luận độc lập về nghiệp vụ, dữ liệu và API** — nhưng **không**
+bắt buộc tách rời trên giao diện.
 
-- Đánh giá được mà không cần bình luận.
-- Bình luận được mà không cần đánh giá.
-- Xoá bình luận **không** làm mất đánh giá.
-- Mỗi người **một** đánh giá trên một tài liệu, sửa được điểm.
+Giao diện **được phép** đặt "đánh giá" và "nhận xét" cạnh nhau trong cùng một
+khu vực, vì đó là trải nghiệm tự nhiên. Điều kiện là bốn ràng buộc sau phải giữ
+nguyên:
 
-Giao diện không được gộp hai thứ này vào một form gửi chung, vì như vậy sẽ tái
-tạo đúng mô hình dữ liệu sai mà V1 đang gỡ bỏ
-([MIGRATION_RATINGS_DESIGN.md](MIGRATION_RATINGS_DESIGN.md)).
+| Ràng buộc | Nghĩa |
+|---|---|
+| Request riêng | Rating gọi `PUT /resources/{id}/rating`; comment gọi `POST /comments`. Không có endpoint gộp |
+| Gửi lẻ được | Người dùng chỉ đánh giá, hoặc chỉ bình luận, đều hợp lệ |
+| Không rollback chéo | Một request lỗi **không** làm hỏng request còn lại — báo lỗi đúng phần đó, giữ phần đã thành công |
+| Xoá độc lập | Xoá bình luận **không** làm mất đánh giá |
+
+Thêm: mỗi người **một** đánh giá trên một tài liệu, sửa được điểm.
+
+Điều phải tránh là **một endpoint gộp** nhận cả nội dung lẫn điểm — vì như vậy
+sẽ tái tạo đúng mô hình dữ liệu sai mà V1 đang gỡ bỏ
+([MIGRATION_RATINGS_DESIGN.md](MIGRATION_RATINGS_DESIGN.md)). Đặt chung khu vực
+hiển thị thì không sao; gộp chung một lần ghi thì không được.
 
 ---
 
@@ -117,9 +127,36 @@ Tài liệu của tôi
 Bước 6 có **hai** lối ra. "Lưu nháp" phải dùng được ở **bất kỳ bước nào**, không
 chỉ bước cuối — nếu không, người dùng mất hết khi bỏ dở.
 
-Gửi duyệt yêu cầu đủ trường bắt buộc **và** xác nhận bản quyền còn hiệu lực
-(BUSINESS_RULES §6.1, §9.3). Thiếu bản quyền thì đưa thẳng về bước xác nhận,
-không bắt người dùng dò cả form.
+### 3.1.1 Hệ quả bắt buộc: API draft phải nhận dữ liệu chưa đầy đủ
+
+"Lưu nháp ở mọi bước" không phải yêu cầu giao diện — nó là **ràng buộc API**.
+Hợp đồng phải là:
+
+```
+POST  /api/v1/resources/draft        → tạo draft tối thiểu, trả resourceId
+PATCH /api/v1/resources/{id}         → lưu từng bước, mọi trường đều optional
+POST  /api/v1/resources/{id}/submit  → CHỈ ở đây mới validate toàn bộ
+```
+
+Toàn bộ validate trường bắt buộc dồn về `submit` (BUSINESS_RULES §6.1), gồm cả
+xác nhận bản quyền còn hiệu lực (§9.3). Thiếu bản quyền thì đưa thẳng về bước
+xác nhận, không bắt người dùng dò cả form.
+
+**Hai chỗ trong code hiện tại chặn flow này:**
+
+| Vị trí | Vấn đề |
+|---|---|
+| `ResourceCreationRequest` | `title` có `@NotBlank`, `topicId` có `@NotNull` → không tạo được draft rỗng |
+| `ResourceServiceImpl:481` | Non-admin sửa tài liệu là **luôn** bị ép `setStatus(PENDING)` |
+
+Chỗ thứ hai tinh vi hơn và dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt
+("ZERO TRUST": uploader sửa nội dung thì phải duyệt lại), nhưng khi có `DRAFT`
+nó sẽ khiến **mỗi lần lưu nháp lại vô tình gửi duyệt**. Quy tắc mới:
+
+- Đang `DRAFT` → sửa vẫn giữ `DRAFT`. Chỉ `submit` mới chuyển sang `PENDING`.
+- Đang `APPROVED`/`REJECTED` → giữ nguyên hành vi hiện tại (về `PENDING`).
+
+Nếu không sửa cả hai chỗ, wizard chỉ chạy được như một form dài trá hình.
 
 ### 3.2 Theo dõi qua tab
 

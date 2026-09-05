@@ -56,6 +56,25 @@ với V1, cần dọn khi FE chuyển hẳn sang `result`.
 | 2003 | 404 | Không tìm thấy |
 | 9999 | 500 | Lỗi không phân loại |
 
+`GlobalExceptionHandler` đã có 12 handler phủ các trường hợp trên. ✅
+
+**⚠️ Một nguồn sai mã lỗi đã xác định.** `IllegalArgumentException` được map
+sang `INVALID_REQUEST` → **400**. Nhưng một số service dùng chính exception này
+để báo "không tìm thấy", ví dụ `CommentServiceImpl:66`:
+
+```java
+.orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+```
+
+Kết quả: `DELETE /comments/{id}` với id không tồn tại trả **400 thay vì 404**.
+
+Đã rà toàn bộ `src/main/java` ngày 2026-09-05: **chỉ duy nhất chỗ này**. Sửa
+thành `AppException(ErrorCode.*_NOT_FOUND)` là xong. Giữ
+`IllegalArgumentException` cho đúng nghĩa "tham số sai".
+
+Quy ước từ V2 trở đi: không dùng `IllegalArgumentException` để báo "không tìm
+thấy". Thêm một test cho quy ước này để không tái diễn.
+
 ### 0.3 Mã lỗi mới phải thêm vào `ErrorCode`
 
 Dải resource hiện dùng tới 6009, nên ba mã mới lấy tiếp từ 6010:
@@ -91,25 +110,6 @@ Content-Disposition: attachment;
 Áp dụng cho cả chế độ `stream` và `accel`. Ở chế độ `accel`, nginx phải chuyển
 tiếp nguyên vẹn header do Spring đặt, không được để header từ MinIO đè lên.
 Chi tiết: BUSINESS_RULES §8.5.
-
-`GlobalExceptionHandler` đã có 12 handler phủ các trường hợp trên. ✅
-
-**⚠️ Một nguồn sai mã lỗi đã xác định.** `IllegalArgumentException` được map
-sang `INVALID_REQUEST` → **400**. Nhưng một số service dùng chính exception này
-để báo "không tìm thấy", ví dụ `CommentServiceImpl:66`:
-
-```java
-.orElseThrow(() -> new IllegalArgumentException("Comment not found"));
-```
-
-Kết quả: `DELETE /comments/{id}` với id không tồn tại trả **400 thay vì 404**.
-
-Đã rà toàn bộ `src/main/java` ngày 2026-09-05: **chỉ duy nhất chỗ này**. Sửa
-thành `AppException(ErrorCode.*_NOT_FOUND)` là xong. Giữ
-`IllegalArgumentException` cho đúng nghĩa "tham số sai".
-
-Quy ước từ V2 trở đi: không dùng `IllegalArgumentException` để báo "không tìm
-thấy". Thêm một test cho quy ước này để không tái diễn.
 
 ### 0.5 Phân trang
 
@@ -178,7 +178,9 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 | POST | `/bulk-delete` | ADMIN, TEACHER | ✅ | Body `{ids: []}` |
 | PATCH | `/{id}/restore` | ADMIN, TEACHER | ✅ | |
 | PATCH | `/bulk-restore` | ADMIN, TEACHER | ✅ | |
-| POST | `/{id}/submit` | TEACHER (chủ sở hữu) | ❌ | Gửi duyệt: `DRAFT`/`REJECTED` → `PENDING`. Kiểm tra đủ trường bắt buộc **và** xác nhận bản quyền còn hiệu lực → thiếu thì **400** `COPYRIGHT_NOT_CONFIRMED` |
+| POST | `/draft` | ADMIN, TEACHER | ❌ | Tạo draft **tối thiểu**, trả `resourceId`. Không validate trường bắt buộc |
+| PATCH | `/{id}` | ADMIN, TEACHER (chủ sở hữu) | ❌ | Lưu từng bước wizard. **Mọi trường optional.** Đang `DRAFT` thì giữ `DRAFT` |
+| POST | `/{id}/submit` | TEACHER (chủ sở hữu) | ❌ | Gửi duyệt: `DRAFT`/`REJECTED` → `PENDING`. **Chỉ ở đây** mới kiểm tra đủ trường bắt buộc **và** xác nhận bản quyền còn hiệu lực → thiếu thì **400** `COPYRIGHT_NOT_CONFIRMED` |
 | PATCH | `/{id}/archive` | ADMIN | ❌ | `APPROVED` → `ARCHIVED`. Sau đó `GET /{slug}` trả **410** |
 
 ### 3.1 Lưu ý về `/resources/me`
@@ -186,6 +188,24 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 Đường dẫn đúng là **`/api/v1/resources/me`**. FE trước đây gọi
 `/api/v1/me/resources` và luôn nhận 404 — đã sửa ngày 2026-09-05 tại
 `resource.service.ts:163`. Không tạo alias `/me/resources`.
+
+### 3.1b Hai chỗ trong code chặn luồng draft
+
+Wizard "lưu nháp ở mọi bước" (USER_FLOWS §3.1.1) không triển khai được nếu
+không sửa hai chỗ sau:
+
+| Vị trí | Hiện tại | Phải thành |
+|---|---|---|
+| `ResourceCreationRequest` | `title` `@NotBlank`, `topicId` `@NotNull` | Bỏ ràng buộc khỏi đường tạo draft. Validate dồn về `submit` |
+| `ResourceServiceImpl:481` | Non-admin sửa → **luôn** `setStatus(PENDING)` | Đang `DRAFT` thì giữ `DRAFT`; `APPROVED`/`REJECTED` giữ hành vi cũ |
+
+Chỗ thứ hai dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt — comment
+trong code ghi rõ "ZERO TRUST": uploader sửa nội dung thì phải duyệt lại. Nhưng
+khi thêm `DRAFT`, đúng dòng đó sẽ khiến **mỗi lần lưu nháp trở thành một lần
+gửi duyệt ngoài ý muốn**.
+
+Trường `status` do client gửi trong `ResourceUpdateRequest` **đã được chặn đúng**
+(chỉ ADMIN đổi được) — giữ nguyên cơ chế đó khi thêm `DRAFT`.
 
 ### 3.2 Trường metadata bổ sung
 
@@ -370,8 +390,8 @@ mẫu"** — không được để người xem demo hiểu nhầm là số li�
 |---|---|
 | ✅ Giữ nguyên | 30 |
 | ⚠️ Phải sửa | 24 |
-| ❌ Viết mới | 19 |
-| **Tổng** | **73** |
+| ❌ Viết mới | 21 |
+| **Tổng** | **75** |
 
 Phân bố theo nhóm:
 
@@ -379,7 +399,7 @@ Phân bố theo nhóm:
 |---|---|---|---|
 | Auth | 3 | 4 | 0 |
 | Users | 12 | 0 | 0 |
-| Resources | 6 | 9 | 2 |
+| Resources | 6 | 9 | 4 |
 | Favorites | 0 | 0 | 2 |
 | Ratings | 0 | 0 | 3 |
 | Comments | 0 | 3 | 0 |

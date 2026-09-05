@@ -101,9 +101,32 @@ Khi thêm `INTERNAL`, mọi chỗ đó phải đổi sang so sánh theo thứ b�
 Bỏ sót một chỗ sẽ dẫn tới **lộ nội dung nội bộ cho khách** hoặc **làm biến
 mất nội dung công khai**. Vì vậy:
 
-- Phải có **một hàm duy nhất** tính visibility hiệu lực; mọi nơi gọi vào đó.
-  Không lặp lại logic so sánh rải rác.
-- Phải có integration test cho **từng ô** của bảng 3.3 trước khi merge.
+**Không sửa thủ công 22 biểu thức `== PUBLIC`.** Sửa tay từng chỗ gần như chắc
+chắn sẽ sót, và chỗ sót là lỗ hổng. Cách làm:
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 1 | Một **policy/evaluator duy nhất** định nghĩa thứ tự `PUBLIC < INTERNAL < PRIVATE` | Mọi nơi gọi vào đó; không lặp lại logic so sánh |
+| 2 | Repository query dùng chung **specification/predicate** sinh từ policy đó | Không tự viết predicate visibility ở từng service |
+| 3 | **Unit test** phủ toàn bộ bảng visibility (§3.2 + §3.3) | Nhanh, chạy mọi lần build |
+| 4 | **Integration test** cho bốn vai: Guest / User / Owner / Admin | Đi qua HTTP thật, không mock |
+| 5 | **Security test** bảo đảm endpoint mới **fail-closed** | Gắn với §3.7 |
+
+### 3.6.1 Bốn đường rò rỉ phải kiểm tra riêng
+
+Lọc đúng ở `GET /resources` là chưa đủ. Một tài nguyên `INTERNAL`/`PRIVATE` có
+thể lộ qua đường khác, mỗi đường cần test riêng:
+
+| Đường | Phải kiểm |
+|---|---|
+| **Slug** | `GET /resources/{slug}` trực tiếp, không qua danh sách |
+| **Search** | Kết quả tìm kiếm và mọi bộ lọc |
+| **Related** | Khối "tài liệu liên quan" ở trang chi tiết |
+| **Download** | `GET /resources/{id}/file` — kể cả khi đoán đúng id |
+
+Riêng Category và Topic: khi mang `INTERNAL`/`PRIVATE` thì phải **ẩn khỏi menu
+điều hướng** với người không đủ quyền, không chỉ ẩn tài nguyên bên trong. Tên
+danh mục cũng là thông tin.
 
 ### 3.7 Thu hẹp matcher trong SecurityConfig — việc của Tuần 2
 
