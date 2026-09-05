@@ -170,6 +170,33 @@ Không nên tiếp tục giữ `GET /resources/**` → `permitAll` lâu dài.
 Vẫn giữ `@PreAuthorize` ở tầng method như lớp phòng thủ thứ hai — hai lớp
 độc lập, không thay thế nhau.
 
+### 3.7.1 Bắt buộc có test chạy qua SecurityFilterChain thật
+
+Test dạng `standaloneSetup` **không đủ** để bảo vệ phần này. Nó dựng một
+`DispatcherServlet` tối giản nên bỏ qua `SecurityFilterChain`,
+`JwtAuthenticationFilter`, method security, và cấu hình exception handling
+thật.
+
+Hệ quả cụ thể: nếu ai đó đổi `/resources/**` thành `.authenticated()`, test
+wiring vẫn xanh trong khi khách thật nhận **401 thay vì 404/410** — đúng cái
+lỗi §8.4 cảnh báo với mã 6011.
+
+Phải có thêm một test `@SpringBootTest` + `@AutoConfigureMockMvc` phủ:
+
+| # | Ca | Kỳ vọng |
+|---|---|---|
+| 1 | Khách + `PUBLIC` | 200 |
+| 2 | Khách + `INTERNAL` / `PRIVATE` | 404 |
+| 3 | Giáo viên khác + `PRIVATE` | 404 |
+| 4 | Chủ sở hữu + `PRIVATE` | 200 |
+| 5 | Người có quyền + `ARCHIVED` | 410 |
+| 6 | **Endpoint slug đi qua matcher công khai rồi guard mới quyết** | 404/410 nghiệp vụ, **không** phải 401 từ Spring Security |
+
+Ca 6 là ca quan trọng nhất và dễ bị bỏ sót: nó xác nhận `SecurityConfig`
+**không chặn request trước khi** mã 404/410 nghiệp vụ kịp sinh ra. Năm ca đầu
+có thể xanh nhờ logic guard đúng, nhưng chỉ ca 6 mới khoá được ranh giới giữa
+tầng bảo mật và tầng nghiệp vụ.
+
 ---
 
 ## 4. Vòng đời tài nguyên
