@@ -189,20 +189,27 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 `/api/v1/me/resources` và luôn nhận 404 — đã sửa ngày 2026-09-05 tại
 `resource.service.ts:163`. Không tạo alias `/me/resources`.
 
-### 3.1b Hai chỗ trong code chặn luồng draft
+### 3.1b Ba chỗ chặn luồng draft
 
 Wizard "lưu nháp ở mọi bước" (USER_FLOWS §3.1.1) không triển khai được nếu
-không sửa hai chỗ sau:
+không sửa **cả ba** chỗ sau:
 
 | Vị trí | Hiện tại | Phải thành |
 |---|---|---|
+| **Schema** | `title`, `slug`, `file_url`, `topic_id` đều `NOT NULL`; `slug` còn UNIQUE | Migration nới `NULL` + thêm `CHECK` giữ bất biến — BUSINESS_RULES §4.2.1 |
 | `ResourceCreationRequest` | `title` `@NotBlank`, `topicId` `@NotNull` | Bỏ ràng buộc khỏi đường tạo draft. Validate dồn về `submit` |
-| `ResourceServiceImpl:481` | Non-admin sửa → **luôn** `setStatus(PENDING)` | Đang `DRAFT` thì giữ `DRAFT`; `APPROVED`/`REJECTED` giữ hành vi cũ |
+| `ResourceServiceImpl:481` | Non-admin sửa → **luôn** `setStatus(PENDING)` | `DRAFT` giữ `DRAFT`; `REJECTED` giữ `REJECTED`; `APPROVED` → `PENDING` |
 
-Chỗ thứ hai dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt — comment
+Chỗ đầu là blocker cứng ở tầng database — không nới thì `POST /resources/draft`
+chết ngay ở `INSERT`, bất kể request đã bỏ validation.
+
+Chỗ thứ ba dễ bỏ sót. Logic hiện tại đúng cho tài liệu đã duyệt — comment
 trong code ghi rõ "ZERO TRUST": uploader sửa nội dung thì phải duyệt lại. Nhưng
 khi thêm `DRAFT`, đúng dòng đó sẽ khiến **mỗi lần lưu nháp trở thành một lần
-gửi duyệt ngoài ý muốn**.
+gửi duyệt ngoài ý muốn**, và mỗi lần sửa sau khi bị từ chối cũng vậy.
+
+`slug` sinh **khi submit**, không sinh lúc tạo nháp. Không dùng giá trị giả như
+`"Untitled"` hay slug tạm.
 
 Trường `status` do client gửi trong `ResourceUpdateRequest` **đã được chặn đúng**
 (chỉ ADMIN đổi được) — giữ nguyên cơ chế đó khi thêm `DRAFT`.

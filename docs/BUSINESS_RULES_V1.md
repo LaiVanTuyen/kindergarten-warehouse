@@ -207,6 +207,90 @@ V1 bổ sung `DRAFT` và `ARCHIVED`.
 Tài nguyên tạo qua wizard mặc định `DRAFT`. Cột DB hiện đang
 `DEFAULT 'PENDING'` (migration V7) nên cần đổi default kèm migration.
 
+### 4.2.1 Schema hiện tại **chặn** việc tạo nháp
+
+Sửa validation ở request và giữ trạng thái `DRAFT` là **chưa đủ**. Bốn cột đang
+`NOT NULL` ở tầng database, nên không thể lưu một bản nháp dở dang:
+
+| Cột | Ràng buộc | Nguồn |
+|---|---|---|
+| `title` | `NOT NULL` | V1 |
+| `file_url` | `NOT NULL` | V1 |
+| `topic_id` | `NOT NULL` + FK `fk_resource_topic` | V1 |
+| `slug` | `NOT NULL` + UNIQUE `uk_resources_slug` | V5 |
+
+Cùng ràng buộc đó lặp lại ở `Resource.java` (`@Column(nullable = false)` và
+`@JoinColumn(name = "topic_id", nullable = false)`). Phải sửa **cả hai nơi**.
+
+**Migration cần thiết:**
+
+```sql
+ALTER TABLE resources
+    MODIFY COLUMN title    VARCHAR(255) NULL,
+    MODIFY COLUMN slug     VARCHAR(255) NULL,
+    MODIFY COLUMN file_url VARCHAR(500) NULL,
+    MODIFY COLUMN topic_id BIGINT       NULL;
+```
+
+Hai ràng buộc còn lại **giữ nguyên**, không cần gỡ:
+
+- `uk_resources_slug` — MySQL cho phép **nhiều dòng NULL** trong unique index,
+  nên nhiều bản nháp chưa có slug vẫn cùng tồn tại.
+- `fk_resource_topic` — khoá ngoại chấp nhận NULL.
+
+**Giữ bất biến ở tầng database**, đừng chỉ dựa vào code:
+
+```sql
+ALTER TABLE resources
+ADD CONSTRAINT ck_resources_complete_unless_draft CHECK (
+    status = 'DRAFT'
+    OR (title    IS NOT NULL
+    AND slug     IS NOT NULL
+    AND file_url IS NOT NULL
+    AND topic_id IS NOT NULL)
+);
+```
+
+MySQL 8.0.16 trở lên **thực thi** `CHECK` thật sự. Ràng buộc này khiến database
+từ chối đưa một bản ghi thiếu dữ liệu ra khỏi `DRAFT` — kể cả khi code có bug.
+Nới lỏng `NOT NULL` mà không thêm `CHECK` là đánh đổi an toàn dữ liệu lấy tính
+linh hoạt của nháp; có `CHECK` thì được cả hai.
+
+### 4.2.2 Quy tắc bản nháp
+
+| # | Quy tắc |
+|---|---|
+| 1 | **Không dùng giá trị giả.** Không `"Untitled"`, không slug tạm kiểu `draft-xxx`. Thiếu thì để `NULL` |
+| 2 | **Slug sinh khi `submit`**, không sinh lúc tạo nháp |
+| 3 | `POST /resources/draft` chỉ tạo: chủ sở hữu, `status=DRAFT`, `visibility=PRIVATE`, và `resourceType` nếu bước 1 đã chọn |
+| 4 | `PATCH` tài liệu đang `DRAFT` hoặc `REJECTED` → **giữ nguyên trạng thái**, không tự sang `PENDING` |
+| 5 | Chỉ `POST /{id}/submit` mới chuyển sang `PENDING`, sau khi kiểm tra đủ trường bắt buộc, **tệp tồn tại thật**, và xác nhận bản quyền (§9.3) |
+| 6 | Tài liệu `DRAFT` bị loại **tuyệt đối** khỏi list công khai, tra theo slug, search, related và download |
+| 7 | Tài liệu `APPROVED` bị giáo viên sửa → vẫn về `PENDING` theo §5.2; riêng `visibility` được miễn |
+| 8 | **Không nhận `status` từ giáo viên.** Giữ nguyên cơ chế zero-trust hiện có ở `ResourceServiceImpl` |
+
+Quy tắc 4 khác với hành vi hiện tại: `ResourceServiceImpl:481` đang ép **mọi**
+lần sửa của non-admin về `PENDING`. Logic đó đúng cho `APPROVED` nhưng sẽ biến
+mỗi lần lưu nháp — và mỗi lần sửa sau khi bị từ chối — thành một lần gửi duyệt
+ngoài ý muốn.
+
+Quy tắc 6 nối thẳng với §3.6.1: `DRAFT` phải kiểm cùng bốn đường rò rỉ như
+`INTERNAL`/`PRIVATE`, vì bản nháp thường chứa nội dung chưa hoàn chỉnh mà chủ
+sở hữu không muốn ai thấy.
+
+### 4.2.3 Vòng đời tệp của nháp bị bỏ dở — backlog vận hành
+
+Người dùng tạo nháp, tải tệp lên MinIO, rồi bỏ ngang. Bản ghi `DRAFT` và tệp
+nằm lại vô thời hạn.
+
+**Chưa làm ở Tuần 2.** Ghi vào backlog vận hành, cần quyết định sau:
+
+- Thêm `draft_expires_at`, hoặc job định kỳ dọn `DRAFT` quá hạn.
+- Dọn cả **tệp mồ côi** trong MinIO — tệp đã tải lên nhưng bản ghi đã bị xoá.
+- Chốt thời hạn (30 hay 90 ngày) và có báo cho chủ sở hữu trước khi xoá không.
+
+Không xử lý thì kho MinIO phình dần theo thời gian mà không ai biết.
+
 ### 4.3 Mã trạng thái khi tài nguyên không khả dụng
 
 Ba tình huống khác nhau, **không được gộp thành một mã**:
