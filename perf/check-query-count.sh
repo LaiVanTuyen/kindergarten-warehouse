@@ -67,21 +67,56 @@ echo
 # Nếu app chưa sẵn sàng (vd. nginx tra 502 trong lúc container khoi dong lai),
 # moi phep dem se ra 0 query va CAC KIEM TRA SE BAO OK TREN DU LIEU RONG —
 # tuc la pass gia, nguy hiem hon la fail. Phai chan ngay tu dau.
-http_code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/v1/resources?page=0&size=1")
+# EXIT CODE — CI phan biet duoc hai loai that bai:
+#   exit 2 = moi truong chua san sang (app chua len, dataset chua seed)
+#   exit 1 = query regression that su
+CURL="curl -s --connect-timeout 5 --max-time 20"
+
+probe=$($CURL -o /tmp/qg_probe.json -w '%{http_code}|%{content_type}' \
+    "$BASE/api/v1/resources?page=0&size=1") || {
+    echo "  [DUNG] curl that bai khi goi $BASE — app chua len hoac sai BASE_URL."
+    exit 2
+}
+http_code="${probe%%|*}"
+ctype="${probe#*|}"
+
 if [ "$http_code" != "200" ]; then
     echo "  [DUNG] Endpoint list tra HTTP $http_code, khong phai 200."
-    echo "         App chua san sang — do bay gio se cho ket qua vo nghia."
+    echo "         Do bay gio se cho ket qua vo nghia (moi phep dem ra 0 query"
+    echo "         va MOI KIEM TRA SE BAO OK TREN DU LIEU RONG)."
     exit 2
 fi
 
-n_check=$(curl -s "$BASE/api/v1/resources?page=0&size=1" \
-    | grep -o '"totalElements":[0-9]*' | cut -d: -f2)
+case "$ctype" in
+    application/json*) ;;
+    *) echo "  [DUNG] Content-Type la '$ctype', khong phai application/json."
+       echo "         Nhieu kha nang dang nhan trang loi HTML tu nginx."
+       exit 2 ;;
+esac
+
+if ! grep -q '"content"' /tmp/qg_probe.json; then
+    echo "  [DUNG] Body khong co result.content — response khong dung dang mong doi."
+    exit 2
+fi
+
+n_check=$(grep -o '"totalElements":[0-9]*' /tmp/qg_probe.json | cut -d: -f2)
 if [ -z "$n_check" ] || [ "$n_check" -eq 0 ]; then
     echo "  [DUNG] Dataset rong (totalElements=${n_check:-khong doc duoc})."
     echo "         Chay perf/seed-baseline.sql truoc."
     exit 2
 fi
-echo "  tien quyet OK: HTTP 200, totalElements=$n_check"
+
+# Kiem MARKER cua perf seed, khong chi kiem tong > 0. Mot database that co
+# du lieu nhung khac dataset se cho so do khong so sanh duoc voi lan truoc.
+if ! $CURL "$BASE/api/v1/resources?page=0&size=1&keyword=0042" \
+        | grep -q 'perf-seed-0042'; then
+    echo "  [DUNG] Khong tim thay marker 'perf-seed-0042'."
+    echo "         Dataset khong phai bo seed cua perf/seed-baseline.sql."
+    exit 2
+fi
+
+rm -f /tmp/qg_probe.json
+echo "  tien quyet OK: HTTP 200, JSON hop le, totalElements=$n_check, co marker perf-seed"
 echo
 
 # Làm nóng, tránh tính cả chi phí khởi tạo lần đầu
