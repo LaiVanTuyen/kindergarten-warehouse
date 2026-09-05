@@ -1,0 +1,52 @@
+# ===========================================================
+# Overlay DEMO — dùng KÈM docker-compose.yml, không thay thế nó
+# ===========================================================
+#   docker compose -p warehouse_demo --env-file .env.demo \
+#     -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# File này chỉ THÊM hai nginx phục vụ Angular static và proxy same-origin.
+# MySQL / Redis / MinIO / app vẫn dùng nguyên định nghĩa ở docker-compose.yml;
+# chúng tách khỏi Local nhờ .env.demo (STACK_PREFIX + các *_PORT_HOST) và
+# nhờ project name `-p warehouse_demo` (tách volume).
+#
+# Lưu ý: Compose GỘP danh sách `ports` giữa các file thay vì ghi đè, nên
+# không thể bỏ port ở đây — đó là lý do port host được tham số hoá bằng biến
+# môi trường trong docker-compose.yml.
+#
+# Trước khi chạy, phải build FE:
+#   cd ../kindergarten-warehouse-angular
+#   npx nx run-many -t build -p portal admin -c demo
+# ===========================================================
+
+services:
+  portal:
+    image: nginx:1.27-alpine
+    container_name: ${STACK_PREFIX:-warehouse}_portal
+    restart: always
+    ports:
+      # Cloudflare Named Tunnel trỏ vào cổng này. Chỉ bind loopback:
+      # cloudflared chạy trên chính máy này nên không cần mở ra LAN.
+      - "${PORTAL_BIND:-127.0.0.1}:${PORTAL_PORT_HOST:-4301}:80"
+    volumes:
+      - ${ANGULAR_DIST:-../kindergarten-warehouse-angular/dist/apps}/portal/browser:/usr/share/nginx/html:ro
+      - ./docker/demo/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - warehouse-network
+
+  admin-ui:
+    image: nginx:1.27-alpine
+    container_name: ${STACK_PREFIX:-warehouse}_admin
+    restart: always
+    ports:
+      - "${ADMIN_BIND:-127.0.0.1}:${ADMIN_PORT_HOST:-4300}:80"
+    volumes:
+      - ${ANGULAR_DIST:-../kindergarten-warehouse-angular/dist/apps}/admin/browser:/usr/share/nginx/html:ro
+      - ./docker/demo/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - warehouse-network
