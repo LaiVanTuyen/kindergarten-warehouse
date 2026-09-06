@@ -237,6 +237,55 @@ hơn.** Nhưng cũng không có điểm nào được phép bỏ develop mà kh�
 - [x] Mang `buildDownloadFileName` vào luồng download của feature
 - [x] Test mới: Guest `GET /comments` → 200; favorites không trả tài nguyên đã
       chuyển `PRIVATE`; tên file tải về với tiêu đề chứa `/` và `"`.
-- [ ] `mvn test` (đã đạt 124 test sau khi thêm test tên file) và
-      `mvn verify -Pintegration-test` (chờ CI có Docker thật xác nhận 19 test)
+- [x] `mvn test` — **138/138** (thêm `PageableUtilsTest` 8 case và
+      `ErrorCodeMessageKeyTest` 3 case)
+- [ ] `mvn verify -Pintegration-test` — chờ CI có Docker thật xác nhận 20 test
+      Testcontainers (đã chạy 20/20 trên MySQL 8.0.46 thật qua probe tạm, nhưng
+      đó là DB có sẵn schema nên **không** chứng minh Flyway-from-empty)
 - [ ] Đo lại k6 ngắn: xác nhận projection còn nguyên tác dụng sau khi hoà
+
+---
+
+## 10. Kiểm chứng end-to-end trên stack demo — 2026-09-06
+
+Ba lát cuối (sort, view/download, xử lý lỗi) đã chạy thật trên demo với MySQL,
+Redis và MinIO thật, dữ liệu tự dựng phủ đủ ba tầng visibility. Dữ liệu thử đã
+được xoá sau khi đo.
+
+| Kiểm chứng | Kỳ vọng | Kết quả |
+|---|---|---|
+| Khách gọi `GET /resources` | chỉ thấy PUBLIC | ✅ chỉ `smoke-public` |
+| Admin gọi `GET /resources` | thấy cả 3 tầng | ✅ public + internal + private |
+| Khách `GET /{slug}` INTERNAL | 404, không lộ tồn tại | ✅ 404 |
+| Admin `GET /{slug}` INTERNAL | 200 | ✅ |
+| Khách `GET /{id}/file` PUBLIC | **401** code 6011 | ✅ `Please sign in to download` |
+| Khách `GET /{id}/file` INTERNAL | **404**, không phải 401 | ✅ code 6001 |
+| Admin tải PUBLIC / INTERNAL / PRIVATE | 200 | ✅ cả ba |
+| `POST /{id}/view` | 200 | ✅ (trước khi sửa: **405**) |
+| Lặp lại `POST /{id}/view` | 429 rate limit | ✅ |
+| `sort=viewsCount,desc` | 200 | ✅ |
+| `sort=passwordHash` / `topicCount` | **400** 9001 | ✅ |
+| `?sort=xyz` trên `/categories` | **400** | ✅ |
+
+### Hai điểm quan trọng nhất
+
+**Đếm lượt tải đã đúng 1:1.** Ba lần gọi `/file` cho
+`kindergarten:downloads:smoke-public = 3`. Trước khi bỏ `PUT /{id}/download` thì
+FE gọi cả hai endpoint nên cùng ba lượt đó sẽ ra **6**.
+
+**`Content-Disposition` đủ hai tham số** theo §0.4, và tên file đã được làm
+sạch. Tiêu đề `Bài giảng "Toán/Hình" lớp Lá` cho ra:
+
+```
+attachment; filename="=?UTF-8?Q?B=C3=A0i_gi=E1=BA=A3ng_=5FTo=C3=A1n=5FH=C3=ACnh=5F_l=E1=BB=9Bp_L=C3=A1.pdf?=";
+            filename*=UTF-8''B%C3%A0i%20gi%E1%BA%A3ng%20_To%C3%A1n_H%C3%ACnh_%20l%E1%BB%9Bp%20L%C3%A1.pdf
+```
+
+Dấu `"` và `/` thành `_` — đây là `buildDownloadFileName` mang từ develop sang
+(§3 #11) đang chạy. Nội dung tải về đúng 51 byte, `Content-Type: application/pdf`,
+qua `StreamingResponseBody`.
+
+### Còn nợ sau vòng này
+
+Demo DB hiện **0 resource**. Bộ kiểm trên dựng dữ liệu tạm rồi xoá, nên chưa có
+dữ liệu thường trực để đo hiệu năng hay để người khác thử tay.
