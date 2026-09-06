@@ -71,14 +71,32 @@ import static org.mockito.Mockito.when;
  * <p>Yêu cầu môi trường: <strong>JDK 17 và Docker chạy trực tiếp trên máy
  * host</strong>.
  *
- * <p><strong>CHƯA CHẠY ĐƯỢC TRÊN MÁY DEV HIỆN TẠI</strong> (2026-09-05). Máy
- * chỉ có JDK 8 nên Maven phải chạy trong container, mà Testcontainers không
- * khởi động được container anh em qua Docker Desktop trên Windows: socket mount
- * vào container trả {@code HTTP 400} cho endpoint {@code /info}, với nhãn
- * {@code com.docker.desktop.address=npipe://...}. Cổng TCP 2375 cũng đóng.
+ * <p><strong>CHƯA CHẠY ĐƯỢC TRÊN MÁY DEV HIỆN TẠI</strong> (kiểm lại
+ * 2026-09-06).
  *
- * <p>Đây là hạn chế môi trường, không phải lỗi của test. Trên CI hoặc máy có
- * JDK 17 + Docker thì chạy bình thường.
+ * <p>Chẩn đoán cũ ghi ở đây — "máy chỉ có JDK 8 nên Maven phải chạy trong
+ * container, mà Testcontainers không khởi động được container anh em" — là
+ * <strong>SAI</strong>. Đã kiểm chứng lại: tải Temurin 17 về, Maven thì máy đã
+ * có sẵn, rồi chạy {@code mvn verify -Pintegration-test} <em>trực tiếp trên
+ * host</em>. Vẫn hỏng, cùng một kiểu.
+ *
+ * <p>Nguyên nhân thật: Docker Desktop trên máy này trả {@code HTTP 400} cho
+ * {@code /info} với mọi named pipe mà docker-java thử —
+ * {@code dockerDesktopLinuxEngine} lẫn {@code docker_engine} — và body trả về
+ * là một stub rỗng mang nhãn
+ * {@code com.docker.desktop.address=npipe://\\.\pipe\docker_cli}. Docker CLI
+ * thì chạy bình thường, nên đây là vấn đề riêng của đường API mà client Java
+ * dùng, không phải "đang ở trong container".
+ *
+ * <p>Cách gỡ (cần người dùng quyết vì là đổi cấu hình Docker Desktop): bật
+ * <em>Expose daemon on tcp://localhost:2375</em> rồi đặt
+ * {@code DOCKER_HOST=tcp://localhost:2375}.
+ *
+ * <p>Bằng chứng gián tiếp là test đúng: cùng bộ 20 test này chạy
+ * <strong>20/20 pass trên MySQL 8.0.46 thật</strong> qua một probe tạm trỏ
+ * datasource vào stack demo. Nhưng DB đó đã có sẵn schema, nên probe
+ * <strong>không</strong> chứng minh được Flyway-from-empty — đúng thứ mà
+ * Testcontainers sinh ra để kiểm. CI vẫn là nơi duy nhất khẳng định được.
  *
  * <p>Quan trọng: Failsafe <strong>FAIL</strong> khi không có Docker, không
  * skip — đã kiểm chứng. Nghĩa là CI sẽ báo đỏ chứ không cho pass giả.
