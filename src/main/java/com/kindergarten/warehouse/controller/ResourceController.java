@@ -168,11 +168,17 @@ public class ResourceController {
             }
         };
 
-        return ResponseEntity.ok()
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
-                .contentType(MediaType.parseMediaType(fileInfo.getContentType()))
-                .contentLength(fileInfo.getFileSize())
-                .body(stream);
+                .contentType(MediaType.parseMediaType(fileInfo.getContentType()));
+
+        // Chỉ khai Content-Length khi biết chắc. Khai 0 cho một tệp có nội dung
+        // còn tệ hơn không khai: client tin header và dừng đọc ngay.
+        if (fileInfo.getFileSize() > 0) {
+            builder.contentLength(fileInfo.getFileSize());
+        }
+
+        return builder.body(stream);
     }
 
     @DeleteMapping("/{id}")

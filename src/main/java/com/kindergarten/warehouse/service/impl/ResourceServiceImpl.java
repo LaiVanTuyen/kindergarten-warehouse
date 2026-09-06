@@ -962,12 +962,47 @@ public class ResourceServiceImpl implements ResourceService {
         String contentType = getContentTypeByExtension(extension);
         var inputStream = minioStorageService.getObject(resource.getFileUrl());
 
+        // Content-Length phải lấy từ OBJECT ĐANG STREAM, không lấy từ cột
+        // `resources.file_size`.
+        //
+        // Hai nguồn này có thể lệch nhau: tải lên đè bằng tệp khác kích thước,
+        // một lần cập nhật hỏng giữa chừng, khôi phục backup lệch pha giữa DB và
+        // storage. Khi lệch, server khai một đằng gửi một nẻo: client treo chờ
+        // phần byte không bao giờ tới, hoặc lưu ra tệp hỏng. Đã gặp thật ngày
+        // 2026-09-06 — khai 1.298.464 byte trong khi chỉ gửi 880.000.
+        //
+        // S3 client trả về ResponseInputStream mang sẵn contentLength của chính
+        // object vừa mở, nên đây là con số đáng tin duy nhất ở đây.
+        long fileSize = resolveStreamLength(inputStream, resource);
+
         return FileDownloadInfo.builder()
                 .inputStream(inputStream)
                 .fileName(fileName)
                 .contentType(contentType)
-                .fileSize(resource.getFileSize() != null ? resource.getFileSize() : 0L)
+                .fileSize(fileSize)
                 .build();
+    }
+
+    /**
+     * Độ dài thật của luồng đang mở, lấy từ metadata của object trong storage.
+     *
+     * @return số byte của object; nếu storage không cho biết thì trả về giá trị
+     *         trong DB, và {@code 0} khi cả hai đều không có — controller sẽ bỏ
+     *         header {@code Content-Length} thay vì khai một con số sai.
+     */
+    private long resolveStreamLength(java.io.InputStream inputStream, Resource resource) {
+        if (inputStream instanceof software.amazon.awssdk.core.ResponseInputStream<?> response
+                && response.response() instanceof software.amazon.awssdk.services.s3.model.GetObjectResponse object
+                && object.contentLength() != null) {
+            long fromStorage = object.contentLength();
+            Long fromDatabase = resource.getFileSize();
+            if (fromDatabase != null && fromDatabase != fromStorage) {
+                log.warn("file_size lệch với storage cho resource {}: DB={} storage={}. "
+                        + "Dùng số của storage.", resource.getId(), fromDatabase, fromStorage);
+            }
+            return fromStorage;
+        }
+        return resource.getFileSize() != null ? resource.getFileSize() : 0L;
     }
 
     private String getContentTypeByExtension(String extension) {
