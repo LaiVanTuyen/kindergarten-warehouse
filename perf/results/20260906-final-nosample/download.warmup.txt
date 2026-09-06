@@ -1,0 +1,125 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/download.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 50s max duration (incl. graceful stop):
+              * download: 50 looping VUs for 20s (gracefulStop: 30s)
+
+
+running (01.0s), 50/50 VUs, 1 complete and 0 interrupted iterations
+download   [   3% ] 50 VUs  00.6s/20s
+
+running (02.0s), 50/50 VUs, 12 complete and 0 interrupted iterations
+download   [   8% ] 50 VUs  01.6s/20s
+
+running (03.0s), 50/50 VUs, 40 complete and 0 interrupted iterations
+download   [  13% ] 50 VUs  02.7s/20s
+
+running (04.0s), 50/50 VUs, 55 complete and 0 interrupted iterations
+download   [  18% ] 50 VUs  03.6s/20s
+
+running (05.0s), 50/50 VUs, 84 complete and 0 interrupted iterations
+download   [  23% ] 50 VUs  04.7s/20s
+
+running (06.0s), 50/50 VUs, 118 complete and 0 interrupted iterations
+download   [  28% ] 50 VUs  05.6s/20s
+
+running (07.1s), 50/50 VUs, 122 complete and 0 interrupted iterations
+download   [  34% ] 50 VUs  06.7s/20s
+
+running (08.0s), 50/50 VUs, 130 complete and 0 interrupted iterations
+download   [  38% ] 50 VUs  07.6s/20s
+
+running (09.1s), 50/50 VUs, 170 complete and 0 interrupted iterations
+download   [  44% ] 50 VUs  08.8s/20s
+
+running (10.1s), 50/50 VUs, 192 complete and 0 interrupted iterations
+download   [  49% ] 50 VUs  09.7s/20s
+
+running (11.0s), 50/50 VUs, 208 complete and 0 interrupted iterations
+download   [  53% ] 50 VUs  10.6s/20s
+
+running (12.0s), 50/50 VUs, 223 complete and 0 interrupted iterations
+download   [  58% ] 50 VUs  11.6s/20s
+
+running (13.0s), 50/50 VUs, 242 complete and 0 interrupted iterations
+download   [  63% ] 50 VUs  12.6s/20s
+
+running (14.0s), 50/50 VUs, 254 complete and 0 interrupted iterations
+download   [  68% ] 50 VUs  13.6s/20s
+
+running (15.0s), 50/50 VUs, 279 complete and 0 interrupted iterations
+download   [  73% ] 50 VUs  14.6s/20s
+
+running (16.0s), 50/50 VUs, 298 complete and 0 interrupted iterations
+download   [  78% ] 50 VUs  15.6s/20s
+
+running (17.0s), 50/50 VUs, 318 complete and 0 interrupted iterations
+download   [  83% ] 50 VUs  16.7s/20s
+
+running (18.0s), 50/50 VUs, 332 complete and 0 interrupted iterations
+download   [  88% ] 50 VUs  17.6s/20s
+
+running (19.0s), 50/50 VUs, 373 complete and 0 interrupted iterations
+download   [  93% ] 50 VUs  18.7s/20s
+
+running (20.0s), 50/50 VUs, 405 complete and 0 interrupted iterations
+download   [  98% ] 50 VUs  19.6s/20s
+
+running (21.0s), 37/50 VUs, 430 complete and 0 interrupted iterations
+download ↓ [ 100% ] 50 VUs  20s
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.21%
+
+    t_download
+    ✓ 'p(95)<3000' p(95)=2.57s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 934    43.015128/s
+    checks_succeeded...: 99.78% 932 out of 934
+    checks_failed......: 0.21%  2 out of 934
+
+    ✗ download 200
+      ↳  99% — ✓ 466 / ✗ 1
+    ✗ nhận đủ file
+      ↳  99% — ✓ 466 / ✗ 1
+
+    CUSTOM
+    download_bytes.................: 394714739 18178485.070422/s
+    t_download.....................: avg=1.27s min=176.6ms  med=1.21s p(50)=1.21s p(95)=2.57s p(99)=3.26s max=3.74s
+
+    HTTP
+    http_req_duration..............: avg=1.27s min=135.73ms med=1.21s p(50)=1.21s p(95)=2.57s p(99)=3.26s max=3.74s
+      { expected_response:true }...: avg=1.27s min=135.73ms med=1.21s p(50)=1.21s p(95)=2.57s p(99)=3.26s max=3.74s
+    http_req_failed................: 0.21%     1 out of 469
+    http_reqs......................: 469       21.599674/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.23s min=484.89ms med=2.13s p(50)=2.13s p(95)=3.69s p(99)=4.26s max=4.81s
+    iterations.....................: 467       21.507564/s
+    vus............................: 37        min=37            max=50
+    vus_max........................: 50        min=50            max=50
+
+    NETWORK
+    data_received..................: 411 MB    19 MB/s
+    data_sent......................: 182 kB    8.4 kB/s
+
+
+
+
+running (21.7s), 00/50 VUs, 467 complete and 0 interrupted iterations
+download ✓ [ 100% ] 50 VUs  20s

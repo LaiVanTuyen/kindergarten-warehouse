@@ -1,0 +1,574 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /scripts/download.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 50s max duration (incl. graceful stop):
+              * download: 50 looping VUs for 20s (gracefulStop: 30s)
+
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (01.0s), 50/50 VUs, 0 complete and 0 interrupted iterations
+download   [   4% ] 50 VUs  00.8s/20s
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:28Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:29Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (02.0s), 50/50 VUs, 5 complete and 0 interrupted iterations
+download   [   9% ] 50 VUs  01.7s/20s
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:30Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (03.0s), 50/50 VUs, 22 complete and 0 interrupted iterations
+download   [  14% ] 50 VUs  02.8s/20s
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:31Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (04.0s), 50/50 VUs, 40 complete and 0 interrupted iterations
+download   [  19% ] 50 VUs  03.7s/20s
+time="2026-09-06T09:23:32Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:32Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:32Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:32Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:32Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (05.0s), 50/50 VUs, 48 complete and 0 interrupted iterations
+download   [  24% ] 50 VUs  04.8s/20s
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:33Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (06.0s), 50/50 VUs, 69 complete and 0 interrupted iterations
+download   [  29% ] 50 VUs  05.8s/20s
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:34Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (07.0s), 50/50 VUs, 101 complete and 0 interrupted iterations
+download   [  34% ] 50 VUs  06.8s/20s
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:35Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (08.0s), 50/50 VUs, 108 complete and 0 interrupted iterations
+download   [  39% ] 50 VUs  07.7s/20s
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:36Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (09.0s), 50/50 VUs, 156 complete and 0 interrupted iterations
+download   [  44% ] 50 VUs  08.8s/20s
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:37Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (10.0s), 50/50 VUs, 174 complete and 0 interrupted iterations
+download   [  49% ] 50 VUs  09.8s/20s
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:38Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (11.7s), 50/50 VUs, 203 complete and 0 interrupted iterations
+download   [  57% ] 50 VUs  11.4s/20s
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:39Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (12.0s), 50/50 VUs, 218 complete and 0 interrupted iterations
+download   [  59% ] 50 VUs  11.8s/20s
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:40Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (13.0s), 50/50 VUs, 230 complete and 0 interrupted iterations
+download   [  64% ] 50 VUs  12.8s/20s
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:41Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (14.0s), 50/50 VUs, 250 complete and 0 interrupted iterations
+download   [  69% ] 50 VUs  13.8s/20s
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:42Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (15.1s), 50/50 VUs, 260 complete and 0 interrupted iterations
+download   [  74% ] 50 VUs  14.9s/20s
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:43Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (16.0s), 50/50 VUs, 291 complete and 0 interrupted iterations
+download   [  79% ] 50 VUs  15.8s/20s
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:44Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (17.0s), 50/50 VUs, 321 complete and 0 interrupted iterations
+download   [  84% ] 50 VUs  16.8s/20s
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:45Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (18.0s), 50/50 VUs, 339 complete and 0 interrupted iterations
+download   [  89% ] 50 VUs  17.8s/20s
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (19.0s), 50/50 VUs, 348 complete and 0 interrupted iterations
+download   [  94% ] 50 VUs  18.8s/20s
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:46Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:47Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (20.2s), 50/50 VUs, 398 complete and 0 interrupted iterations
+download   [ 100% ] 50 VUs  20.0s/20s
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:48Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+running (21.0s), 30/50 VUs, 419 complete and 0 interrupted iterations
+download ↓ [ 100% ] 50 VUs  20s
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+time="2026-09-06T09:23:49Z" level=warning msg="Request Failed" error="unexpected EOF"
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=99.55%
+
+    t_download
+    ✓ 'p(95)<3000' p(95)=2.23s
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 898    41.812085/s
+    checks_succeeded...: 50.00% 449 out of 898
+    checks_failed......: 50.00% 449 out of 898
+
+    ✗ download 200
+      ↳  0% — ✓ 0 / ✗ 449
+    ✓ nhận đủ file
+
+    CUSTOM
+    download_bytes.................: 380315123 17707982.555848/s
+    t_download.....................: avg=1.2s     min=210.93ms med=1.15s    p(50)=1.15s    p(95)=2.23s    p(99)=2.67s    max=2.83s   
+
+    HTTP
+    http_req_duration..............: avg=1.2s     min=91.09ms  med=1.15s    p(50)=1.15s    p(95)=2.23s    p(99)=2.67s    max=2.83s   
+      { expected_response:true }...: avg=110.59ms min=91.09ms  med=110.59ms p(50)=110.59ms p(95)=128.13ms p(99)=129.69ms max=130.08ms
+    http_req_failed................: 99.55%    449 out of 451
+    http_reqs......................: 451       20.999165/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.31s    min=836.89ms med=2.24s    p(50)=2.24s    p(95)=3.86s    p(99)=4.83s    max=6.05s   
+    iterations.....................: 449       20.906043/s
+    vus............................: 30        min=30            max=50
+    vus_max........................: 50        min=50            max=50
+
+    NETWORK
+    data_received..................: 396 MB    18 MB/s
+    data_sent......................: 175 kB    8.1 kB/s
+
+
+
+
+running (21.5s), 00/50 VUs, 449 complete and 0 interrupted iterations
+download ✓ [ 100% ] 50 VUs  20s
+time="2026-09-06T09:23:50Z" level=error msg="thresholds on metrics 'http_req_failed' have been crossed"

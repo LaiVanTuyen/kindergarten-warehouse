@@ -474,3 +474,106 @@ sẽ toàn 404.
 
 Luôn ghi commit hash vào `context.txt` (script tự làm) để hai lần đo đối chiếu
 được với nhau.
+
+---
+
+## 7. Đo lại sau hợp nhất — 2026-09-06
+
+Commit `654a1ea` (nhánh `codex/reconcile-develop-visibility`), cùng máy, cùng
+quota Docker, cùng dataset 2.000 resource sinh từ `perf/seed-baseline.sql`.
+
+### 7.1 Kết luận: KHÔNG có hồi quy
+
+Vòng đo đầu tiên có vẻ như một cuộc hồi quy nặng — throughput 350 VU rơi xuống
+~98 req/s so với mốc 177,5. **Kết luận đó sai.** Nguyên nhân nằm ở chính bộ đo,
+không ở mã sản phẩm.
+
+Bảy lượt đo **không lấy mẫu CPU**, cùng build, cùng dataset:
+
+| Lượt | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| req/s | 164,1 | 170,0 | 173,1 | 204,9 | 207,6 | 218,4 | 222,4 |
+| `t_list` P95 | 4,05 s | 3,77 s | 2,95 s | 3,09 s | 3,04 s | 2,95 s | 2,86 s |
+
+Dải 164–222 req/s, trung vị ~205. Mốc 177,5 nằm **trong** dải này. Truy vấn
+cũng không đổi: `check-query-count.sh` vẫn báo 6/6/6, không chạm bảng `users`,
+guest không query `favorites`.
+
+### 7.2 Lấy mẫu CPU làm hỏng phép đo, mức ~55 % chứ không phải ~18 %
+
+`sample_stats()` bản cũ chạy vòng lặp **70 lượt liên tiếp không nghỉ**, mỗi lượt
+spawn một `docker stats --no-stream` (tự nó mất 1–2 giây) cộng một `docker exec`
+vào MySQL. Trên máy quota 8 lõi, nó tranh CPU trực tiếp với ứng dụng đang đo.
+
+| Chế độ | Throughput | `t_list` P95 |
+|---|---|---|
+| Không lấy mẫu | 164–222 req/s | 2,9–4,1 s |
+| Có lấy mẫu | 74,8–103,8 req/s | 6,3–7,6 s |
+
+Chi phí ~55 %. Ước tính 18 % ở §6c.4 là **quá thấp**, và bản thân §6c.4 cũng đã
+cảnh báo phương sai lớn khiến 18 % chỉ là ước lượng thô.
+
+Đã sửa `run-baseline.sh`: thêm `SAMPLE` (mặc định 1) và `SAMPLE_INTERVAL` (mặc
+định 5 giây), sampler có `sleep`, trạng thái ghi vào `context.txt`.
+
+**Quy tắc từ nay: throughput và độ trễ chỉ đọc từ lượt `SAMPLE=0`.** Lượt
+`SAMPLE=1` chỉ dùng để quy trách nhiệm CPU giữa app và MySQL.
+
+> Mốc 177,5 ở §6c.2 là con số **có lấy mẫu**. Nó không so trực tiếp được với
+> bảng 7.1. Không sửa số cũ vì raw output của lượt đó không còn; ghi chú ở đây
+> để lần sau không so nhầm.
+
+### 7.3 Phương sai của máy này rất lớn — một cặp không kết luận được gì
+
+164 → 222 req/s là chênh 35 % giữa các lượt **cùng cấu hình**. Một lượt ngay sau
+khi khởi động lại container còn cho 79,6 req/s (JIT nguội).
+
+Hệ quả bắt buộc: mọi khẳng định "nhanh hơn/chậm hơn X %" phải dựa trên **nhiều
+lượt** và nêu rõ dải, không được rút ra từ một cặp. Đây là lần thứ hai bài học
+này lặp lại trong dự án — lần đầu ở §6c.4 với chi phí lấy mẫu.
+
+### 7.4 Hai lỗi trong bộ đo download, và một lỗi thật trong sản phẩm
+
+**Lỗi bộ đo 1 — id tĩnh.** `download.js` đọc `download-ids.json`: 99 id sinh từ
+một lần seed trước. Mỗi lần chạy lại seed, `UUID()` sinh id mới nên file thành
+rác, bài đo nhận 404 hàng loạt và báo "100 % check thất bại" — trông hệt một
+cuộc hồi quy. Đã bỏ file tĩnh; id lấy từ API trong `setup()`.
+
+**Lỗi bộ đo 2 — object không tồn tại.** Seed trỏ mỗi dòng tới
+`resources/files/perf-seed-<n>.pdf`, tức 2.000 object mà MinIO không có cái nào.
+Nay mọi dòng trỏ vào **một** object dùng chung `perf-shared.bin` (880.000 byte)
+— đúng ý định ghi sẵn trong `download.js`: loại bỏ khác biệt kích thước, chỉ đo
+chi phí đường truyền.
+
+**Lỗi sản phẩm — `Content-Length` khai theo DB, không theo object đang stream.**
+`getResourceFileInfo` lấy độ dài từ cột `resources.file_size`. Khi cột đó lệch
+với storage, server **khai một đằng gửi một nẻo**: đã gặp thật, khai 1.298.464
+byte trong khi chỉ gửi 880.000. `curl` vẫn báo HTTP 200 nên nhìn qua tưởng bình
+thường; chính k6 mới bắt được vì nó đánh dấu request hỏng khi phản hồi không đủ
+độ dài đã khai — `download 200` thất bại 0/1904 trong khi `nhận đủ file` lại đạt
+1903/1904. Hai check mâu thuẫn nhau là dấu hiệu.
+
+Nguồn lệch trong thực tế: tải đè bằng tệp khác kích thước, một lần cập nhật hỏng
+giữa chừng, khôi phục backup lệch pha giữa DB và storage.
+
+Sửa: lấy độ dài từ `ResponseInputStream.response().contentLength()` của S3
+client, ghi WARN khi DB lệch storage, và controller chỉ đặt `Content-Length` khi
+biết chắc — khai 0 cho một tệp có nội dung còn tệ hơn không khai, vì client tin
+header và dừng đọc ngay.
+
+Kiểm chứng bằng cách cố ý phá: đặt `file_size = 999999` trong DB cho một
+resource có object 880.000 byte → phản hồi khai **880.000**, kèm WARN
+`file_size lệch với storage`.
+
+### 7.5 Số liệu download sau khi sửa
+
+| Chỉ số | Trước (bộ đo hỏng) | Sau |
+|---|---|---|
+| checks đạt | **0 %** | **99,89 %** |
+| `http_req_failed` | 99,89 % | **0,10 %** |
+| Throughput | — (404) | 31,7 req/s |
+| Băng thông | — | **28 MB/s** |
+| `t_download` P95 | — | 1,62 s |
+
+Vẫn là chế độ `stream` qua Spring. Con số này mới là mốc để so khi chuyển sang
+X-Accel-Redirect.

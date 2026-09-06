@@ -6,12 +6,12 @@
 // thời gian truyền. Đây chính là con số cần so ở Tuần 7 sau khi
 // chuyển sang X-Accel-Redirect.
 //
-// Chạy có đăng nhập, dù code hiện tại vẫn cho guest tải — để số liệu
-// so sánh được với Tuần 7, lúc đó GUEST sẽ bị chặn bằng mã 6011.
+// Chạy CÓ đăng nhập: guest bị chặn bằng mã 6011 (contract §3), nên bài đo
+// không đăng nhập sẽ chỉ đo tốc độ trả 401.
 //
-// download-ids.json chứa 99 resource trỏ vào MỘT object thật ~880KB
-// trong MinIO. Dùng chung object là cố ý: loại bỏ khác biệt do kích
-// thước file, chỉ còn đo chi phí của đường truyền.
+// Danh sách id lấy từ API trong setup(), không dùng file tĩnh. Mọi resource
+// của bộ seed trỏ vào MỘT object dùng chung ~880KB trong MinIO — cố ý, để loại
+// bỏ khác biệt do kích thước file, chỉ còn đo chi phí đường truyền.
 // ===========================================================
 
 import http from 'k6/http';
@@ -23,8 +23,6 @@ const DUR = __ENV.DURATION || '60s';
 const SCALE = Number(__ENV.VU_SCALE || 1);
 const EMAIL = __ENV.LOGIN_EMAIL;
 const PASSWORD = __ENV.LOGIN_PASSWORD;
-
-const IDS = JSON.parse(open('./download-ids.json'));
 
 const dlTrend = new Trend('t_download', true);
 const dlBytes = new Counter('download_bytes');
@@ -59,14 +57,33 @@ export function setup() {
   for (const name of Object.keys(res.cookies)) {
     jar[name] = res.cookies[name][0].value;
   }
-  return { jar };
+  const cookie = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
+
+  // Lấy id TỪ API, không đọc từ file tĩnh.
+  //
+  // Bản cũ đọc `download-ids.json` — 99 id sinh ra từ một lần seed trước đó.
+  // Mỗi lần chạy lại seed, `UUID()` sinh id mới, nên file tĩnh thành rác và bài
+  // đo nhận 404 hàng loạt: 100 % check thất bại, trông hệt như hồi quy hiệu
+  // năng. Đã xảy ra ngày 2026-09-06.
+  const listRes = http.get(`${BASE}/api/v1/resources?page=0&size=100`, {
+    headers: { Cookie: cookie },
+  });
+  if (listRes.status !== 200) {
+    throw new Error(`Không lấy được danh sách resource: HTTP ${listRes.status}`);
+  }
+  const ids = JSON.parse(listRes.body).result.content.map((r) => r.id);
+  if (ids.length === 0) {
+    throw new Error('Danh sách resource rỗng — đã chạy seed-baseline.sql chưa?');
+  }
+
+  return { jar, ids };
 }
 
 export default function (data) {
   const cookie = Object.entries(data.jar)
     .map(([k, v]) => `${k}=${v}`)
     .join('; ');
-  const id = IDS[Math.floor(Math.random() * IDS.length)];
+  const id = data.ids[Math.floor(Math.random() * data.ids.length)];
 
   const res = http.get(`${BASE}/api/v1/resources/${id}/file`, {
     headers: { Cookie: cookie },

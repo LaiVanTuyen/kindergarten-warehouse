@@ -22,6 +22,10 @@ K6_IMAGE="grafana/k6:latest"
 DURATION="${DURATION:-60s}"
 WARMUP="${WARMUP:-20s}"
 VU_SCALE="${VU_SCALE:-1}"
+# SAMPLE=1 bật lấy mẫu CPU. Nó làm giảm throughput rất nhiều — xem ghi chú dài
+# ở sample_stats. Dùng SAMPLE=0 khi cần con số throughput thật.
+SAMPLE="${SAMPLE:-1}"
+SAMPLE_INTERVAL="${SAMPLE_INTERVAL:-5}"
 
 ENV_FILE="$REPO_DIR/.env.demo"
 LOGIN_EMAIL=$(grep -m1 '^APP_ADMIN_EMAIL=' "$ENV_FILE" | cut -d= -f2-)
@@ -44,6 +48,7 @@ echo
     echo "duration=$DURATION"
     echo "warmup=$WARMUP"
     echo "vu_scale=$VU_SCALE"
+    echo "sample=$SAMPLE (interval=${SAMPLE_INTERVAL}s)"
     echo "docker_version=$(docker version --format '{{.Server.Version}}')"
     echo "k6_image=$K6_IMAGE"
     echo "download_mode=stream (StreamingResponseBody qua Spring)"
@@ -72,14 +77,35 @@ run_k6() {
         "/scripts/$script" 2>&1 | tee "$OUT_DIR/$label.txt"
 }
 
+# Lấy mẫu CPU LÀM MÉO CHÍNH PHÉP ĐO.
+#
+# Bản đầu tiên chạy vòng lặp 70 lượt KHÔNG NGHỈ, mỗi lượt spawn
+# `docker stats --no-stream` (tự nó mất 1-2 giây) và một `docker exec` vào
+# MySQL. Trên máy có quota 8 lõi, việc đó tranh CPU trực tiếp với app đang đo.
+#
+# Đo ngày 2026-09-06, cùng build, cùng dataset, kịch bản public-read 350 VU:
+#   không lấy mẫu : 222,4 và 218,4 req/s   (t_list P95 ~2,9 s)
+#   có lấy mẫu    : 74,8 → 103,8 req/s     (t_list P95 6,3–7,6 s)
+# Tức chi phí ~55 %, không phải ~18 % như ước tính cũ ở PERF_BASELINE §6c.4.
+#
+# Hệ quả: KHÔNG được đọc throughput từ lượt có lấy mẫu. Chạy hai lượt —
+# SAMPLE=0 để lấy throughput/độ trễ, SAMPLE=1 để quy trách nhiệm CPU.
 sample_stats() {
     local label="$1" seconds="$2"
-    ( for _ in $(seq 1 "$seconds"); do
+    if [ "$SAMPLE" != "1" ]; then
+        : > "$OUT_DIR/$label.stats.csv"
+        echo ""
+        return
+    fi
+    ( local elapsed=0
+      while [ "$elapsed" -lt "$seconds" ]; do
         docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' \
             warehouse_demo_app warehouse_demo_mysql warehouse_demo_portal 2>/dev/null
         docker exec warehouse_demo_mysql mysql -uroot -p"$MYSQL_PW" -N \
             -e "SHOW STATUS LIKE 'Threads_connected';" 2>/dev/null \
             | awk '{print "db_threads_connected," $2}'
+        sleep "$SAMPLE_INTERVAL"
+        elapsed=$((elapsed + SAMPLE_INTERVAL))
       done ) > "$OUT_DIR/$label.stats.csv" 2>/dev/null &
     echo $!
 }

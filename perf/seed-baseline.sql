@@ -47,10 +47,22 @@ SELECT
     CONCAT('perf-seed-', LPAD(n, 4, '0')),
     CONCAT('Mô tả học liệu mẫu số ', n,
            '. Nội dung sinh tự động để đo hiệu năng, không phải tài liệu thật.'),
-    CONCAT('/warehouse-demo-bucket/resources/files/perf-seed-', n, '.pdf'),
+    -- MỘT object dùng chung cho mọi dòng, cố ý.
+    --
+    -- Trước đây mỗi dòng trỏ tới `perf-seed-<n>.pdf` — 2.000 object riêng mà
+    -- KHÔNG có cái nào tồn tại trong MinIO. Bài đo download vì thế nhận 404 và
+    -- báo "100 % check thất bại", trông như hồi quy hiệu năng trong khi thật ra
+    -- là dữ liệu đo bị hỏng.
+    --
+    -- Dùng chung một object cũng đúng ý định ban đầu ghi trong download.js:
+    -- loại bỏ khác biệt do kích thước file, chỉ còn đo chi phí đường truyền.
+    -- Tải object này lên trước khi đo:
+    --   head -c 880000 /dev/urandom > perf-shared.bin
+    --   mc cp perf-shared.bin <alias>/warehouse-demo-bucket/resources/files/perf-shared.bin
+    '/warehouse-demo-bucket/resources/files/perf-shared.bin',
     CONCAT('/warehouse-demo-bucket/resources/thumbnails/perf-seed-', n, '.png'),
     'PDF', 'pdf',
-    1048576 + (n * 137),
+    880000,   -- KHOP voi object dung chung perf-shared.bin; lech se sai Content-Length
     (n * 7919)   MOD 5000,                        -- views_count  0..4999
     ROUND(1 + ((n * 31) MOD 400) / 100, 2),       -- average_rating 1.00..4.99
     (n * 104729) MOD 800,                         -- download_count 0..799
