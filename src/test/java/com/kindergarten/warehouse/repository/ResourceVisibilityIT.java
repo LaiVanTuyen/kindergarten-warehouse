@@ -88,15 +88,31 @@ import static org.mockito.Mockito.when;
  * thì chạy bình thường, nên đây là vấn đề riêng của đường API mà client Java
  * dùng, không phải "đang ở trong container".
  *
- * <p>Cách gỡ (cần người dùng quyết vì là đổi cấu hình Docker Desktop): bật
- * <em>Expose daemon on tcp://localhost:2375</em> rồi đặt
- * {@code DOCKER_HOST=tcp://localhost:2375}.
+ * <p>Đã thử và <strong>không</strong> gỡ được bằng: đặt {@code DOCKER_HOST} sang
+ * cả hai pipe, và ghim {@code DOCKER_API_VERSION=1.44} (engine báo
+ * {@code MinAPI=1.40} nên giả thuyết "docker-java đàm phán API 1.32 quá cũ" là
+ * hợp lý, nhưng ghim vào vẫn 400).
  *
- * <p>Bằng chứng gián tiếp là test đúng: cùng bộ 20 test này chạy
- * <strong>20/20 pass trên MySQL 8.0.46 thật</strong> qua một probe tạm trỏ
- * datasource vào stack demo. Nhưng DB đó đã có sẵn schema, nên probe
- * <strong>không</strong> chứng minh được Flyway-from-empty — đúng thứ mà
- * Testcontainers sinh ra để kiểm. CI vẫn là nơi duy nhất khẳng định được.
+ * <p>Cách gỡ còn lại cần người dùng quyết vì đổi cấu hình Docker Desktop và
+ * phải khởi động lại nó: bật <em>Expose daemon on tcp://localhost:2375</em> rồi
+ * đặt {@code DOCKER_HOST=tcp://localhost:2375}. Lưu ý đây là phơi Docker daemon
+ * KHÔNG TLS trên máy.
+ *
+ * <h2>Bảo đảm đã lấy được bằng đường khác (2026-09-06)</h2>
+ *
+ * <p>Thứ lớp test này tồn tại để bảo đảm gồm ba phần: MySQL thật, schema rỗng
+ * (Flyway chạy từ đầu), và {@code ddl-auto=validate} khớp entity. Cả ba đã được
+ * kiểm chứng mà không cần Testcontainers: dựng tay một container
+ * {@code mysql:8.0.46} mới, xác nhận {@code SHOW TABLES} rỗng, rồi chạy chính
+ * bộ test này trỏ vào đó.
+ *
+ * <p>Kết quả: <strong>Flyway áp đủ 23 migration từ schema rỗng</strong>
+ * ({@code now at version v23}, 10,8 giây) rồi <strong>20/20 test pass</strong>
+ * trong 81 giây.
+ *
+ * <p>Phần <em>duy nhất</em> còn chưa chứng minh là vòng đời container do chính
+ * test quản lý — tức tính tái lập tự động. Chỗ đó chỉ CI khẳng định được. Không
+ * được phát biểu "20/20 trên Testcontainers" cho tới khi CI chạy xanh.
  *
  * <p>Quan trọng: Failsafe <strong>FAIL</strong> khi không có Docker, không
  * skip — đã kiểm chứng. Nghĩa là CI sẽ báo đỏ chứ không cho pass giả.
