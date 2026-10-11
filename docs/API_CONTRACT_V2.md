@@ -577,3 +577,25 @@ Xuất PDF: Portal có trang `/plans/{id}/print` (không header/footer, CSS `@me
 - Màn hoạt động: chọn/chuyển bước, chọn học liệu, toàn màn hình, đồng hồ theo bước (chạy/tạm dừng/đặt lại), ẩn/hiện hướng dẫn. Hết giờ không tự chuyển bước. Notes mặc định ẩn.
 - Đồng hồ dùng deadline tuyệt đối để không chậm khi tab bị treo nền; chuyển bước đặt lại đồng hồ của bước mới. Có phím tắt ←/→, Space, N khi không thao tác trên điều khiển.
 - Mở tệp gốc ảnh/âm thanh/video vẫn đi qua API có kiểm quyền và cơ chế bộ đếm/lịch sử tải hiện có; PDF/Office dùng bản xem trước nội bộ.
+
+## 19. Trợ lý AI — `/api/v1/ai` (giai đoạn 2, 2026-10-11)
+
+Chỉ TEACHER/ADMIN. Dùng Claude (`claude-opus-5-5`) qua Java SDK chính thức, structured output. **Tắt khi chưa đặt `ANTHROPIC_API_KEY`** (mọi endpoint trừ `/status` trả 503 mã 7101). Không endpoint nào ghi DB: kết quả là gợi ý, giáo viên xem lại rồi mới lưu bằng API kế hoạch/bộ học liệu.
+
+| Method | Path | Ghi chú |
+|---|---|---|
+| GET | `/ai/status` | `{enabled, dailyLimit, remainingToday}` |
+| POST | `/ai/search` | `{query ≤500}` → `{items: [{resource, reason}], remainingToday}`. Chỉ tài liệu thật người gọi mở được. |
+| POST | `/ai/plan-draft` | `{request ≤1000, ageGroupId?, durationMinutes? (1–240), classSize? (1–100)}` → bản nháp kế hoạch (không lưu). |
+| POST | `/ai/plan-adjust` | `{instruction ≤500, plan: <LessonPlanRequest — bản đang hiển thị trong trình soạn>}` → toàn bộ kế hoạch đã điều chỉnh (không lưu). |
+
+Quy tắc do backend bảo đảm (không phụ thuộc prompt):
+- Ứng viên học liệu được tìm bằng chính quyền của người gọi; id tài liệu AI trả về nằm ngoài danh sách ứng viên (hoặc ngoài kế hoạch, với điều chỉnh) bị loại. Tài liệu không xem được không được mô tả cho AI.
+- Mọi trường được cắt theo giới hạn của `LessonPlanRequest` (≤20 bước, ≤10 học liệu/bước, độ dài chữ, 0–240 phút).
+- Không gửi tên/email người dùng, không gửi ghi nhận sau buổi học và ngày dạy, không có dữ liệu trẻ.
+- Hạn mức `ai.daily-limit-per-user` (mặc định 30 yêu cầu/người/ngày theo giờ Việt Nam, Redis); hết lượt → 429 mã 7102; Redis lỗi → từ chối (7103), không mở cửa tự do.
+- Lỗi/timeout/rate limit từ Claude → 502 mã 7103; mô hình từ chối → 422 mã 7104.
+
+Portal: trang `/assistant` (tìm học liệu, soạn bản nháp → "Dùng bản nháp này" tạo kế hoạch DRAFT với mọi bước `AI_SUGGESTED`); trong trình soạn có ô "Nhờ trợ lý điều chỉnh" — chỉ bước bị đổi thành `AI_SUGGESTED`, có hoàn tác; nếu giáo viên sửa trong lúc chờ, kết quả bị bỏ để không ghi đè.
+
+Cấu hình: `ANTHROPIC_API_KEY`, `AI_MODEL` (mặc định `claude-opus-5-5`), `AI_DAILY_LIMIT` (mặc định 30).

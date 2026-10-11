@@ -88,6 +88,15 @@ public enum ErrorCode {
     PLAN_FORBIDDEN(6902, "error.plan.forbidden", HttpStatus.FORBIDDEN),
     PLAN_STALE(6903, "error.plan.stale", HttpStatus.CONFLICT),
     PLAN_LIMIT_REACHED(6904, "error.plan.limit_reached", HttpStatus.UNPROCESSABLE_ENTITY),
+    PLAN_REVIEW_STATE(6905, "error.plan.review_state", HttpStatus.CONFLICT),
+    PLAN_COMMENT_NOT_FOUND(6906, "error.plan.comment_not_found", HttpStatus.NOT_FOUND),
+    PLAN_COMMENT_FORBIDDEN(6907, "error.plan.comment_forbidden", HttpStatus.FORBIDDEN),
+
+    // ========== AI Assistant Errors (71xx) ==========
+    AI_DISABLED(7101, "error.ai.disabled", HttpStatus.SERVICE_UNAVAILABLE),
+    AI_QUOTA_EXCEEDED(7102, "error.ai.quota_exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    AI_UNAVAILABLE(7103, "error.ai.unavailable", HttpStatus.BAD_GATEWAY),
+    AI_REFUSED(7104, "error.ai.refused", HttpStatus.UNPROCESSABLE_ENTITY),
 
     // ========== Duplicate Errors (70xx) ==========
     DUPLICATE_SLUG(7001, "error.duplicate.slug", HttpStatus.CONFLICT),
