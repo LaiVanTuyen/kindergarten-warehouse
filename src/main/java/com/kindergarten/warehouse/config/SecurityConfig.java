@@ -101,6 +101,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/favorites", "/api/v1/favorites/ids").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/file").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/preview",
+                                "/api/v1/resources/*/preview/pages/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/resources/*/view").permitAll()

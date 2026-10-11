@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ResourceRepository extends JpaRepository<Resource, String>,
                 org.springframework.data.jpa.repository.JpaSpecificationExecutor<Resource> {
+        // Preview needs only access-policy fields. Never join creator/updater users.
+        @org.springframework.data.jpa.repository.Query("SELECT r FROM Resource r " +
+                        "LEFT JOIN FETCH r.topic t LEFT JOIN FETCH t.category WHERE r.id = :id")
+        java.util.Optional<Resource> findForPreviewAccess(@org.springframework.data.repository.query.Param("id") String id);
         @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "topic", "topic.category",
                         "topic.creator", "topic.updater", "creator", "updater" })
         Page<Resource> findAll(org.springframework.data.jpa.domain.Specification<Resource> spec, Pageable pageable);

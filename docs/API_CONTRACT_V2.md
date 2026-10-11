@@ -496,3 +496,20 @@ vào từng endpoint, thay vì sửa rải rác 24 chỗ.
 2. Đổi đường dẫn/tên trường → cập nhật bảng **trước** khi sửa FE.
 3. Trước mỗi lần phát hành Demo, chạy lại đối chiếu controller ↔ tài liệu.
 4. Không ghi endpoint "dự kiến có" mà không đánh dấu ❌.
+
+## 15. Preview tài liệu — đã triển khai 2026-10-11
+
+Hai endpoint bổ sung, không thay thế endpoint tải file gốc:
+
+| Method | Path | Trạng thái | Quyền / kết quả |
+| --- | --- | --- | --- |
+| GET | `/resources/{id}/preview` | ✅ | Guard quyền xem; trả `ApiResponse<PreviewResponse>` |
+| GET | `/resources/{id}/preview/pages/{page}` | ✅ | Guard lại từng trang; trả JPEG, `Cache-Control: no-store` |
+
+`PreviewResponse`: `status` (`PROCESSING`, `READY`, `FAILED`, `UNSUPPORTED`, `BUSY`),
+`pageCount`, `totalPages`, `truncated`, `message`. Trang đánh số từ 1.
+Khách xem được bản preview của tài liệu có quyền xem, nhưng `/resources/{id}/file`
+vẫn yêu cầu đăng nhập. Preview không trả URL file gốc và không tăng bộ đếm tải.
+DRAFT không có preview; thiếu quyền trả 404 trước khi xét ARCHIVED/410.
+Trang ngoài phạm vi hoặc chưa sẵn sàng trả 404. Tối đa 100 trang preview.
+Chi tiết xử lý, giới hạn và nghiệm thu: [DOCUMENT_PREVIEW_V1.md](DOCUMENT_PREVIEW_V1.md).

@@ -74,7 +74,7 @@ class ResourceSlugSecurityIntegrationTest {
 
     @SpringBootConfiguration
     @EnableAutoConfiguration
-    @Import({SecurityConfig.class, ResourceController.class, ViewerResolver.class,
+    @Import({SecurityConfig.class, ResourceController.class, ResourcePreviewController.class, ViewerResolver.class,
             GlobalExceptionHandler.class})
     static class TestApplication {
     }
@@ -84,6 +84,9 @@ class ResourceSlugSecurityIntegrationTest {
 
     @MockBean
     private ResourceService resourceService;
+
+    @MockBean
+    private com.kindergarten.warehouse.service.ResourcePreviewService previews;
 
     @MockBean
     private MessageService messageService;
@@ -114,6 +117,39 @@ class ResourceSlugSecurityIntegrationTest {
             chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
             return null;
         }).when(lastActiveFilter).doFilter(any(), any(), any());
+    }
+
+    @Test
+    void guestCanReachPublicPreviewThroughRealSecurityChain() throws Exception {
+        when(previews.describe("res-1", Viewer.guest())).thenReturn(
+                new com.kindergarten.warehouse.dto.response.PreviewResponse("READY", 3, 3, false, "preview"));
+        mockMvc.perform(get("/api/v1/resources/res-1/preview"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.pageCount").value(3));
+        verify(previews).describe("res-1", Viewer.guest());
+    }
+
+    @Test
+    void guestPrivatePreviewReturnsBusiness404NotMatcher401() throws Exception {
+        when(previews.describe("private", Viewer.guest()))
+                .thenThrow(new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        mockMvc.perform(get("/api/v1/resources/private/preview"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value(6001));
+    }
+
+    @Test
+    void guestCannotBypassGuardByRequestingPageDirectly() throws Exception {
+        when(previews.page("private", 1, Viewer.guest()))
+                .thenThrow(new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        mockMvc.perform(get("/api/v1/resources/private/preview/pages/1"))
+                .andExpect(status().isNotFound());
+        verify(previews).page("private", 1, Viewer.guest());
+    }
+
+    @Test
+    void undocumentedPreviewRouteStillFailsClosed() throws Exception {
+        mockMvc.perform(get("/api/v1/resources/res-1/preview/raw"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

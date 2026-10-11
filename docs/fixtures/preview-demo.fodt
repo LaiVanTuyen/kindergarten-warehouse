@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" office:version="1.2" office:mimetype="application/vnd.oasis.opendocument.text">
+<office:automatic-styles><style:style style:name="Heading" style:family="paragraph"><style:text-properties fo:font-size="24pt" fo:font-weight="bold" fo:color="#157f72" /></style:style><style:style style:name="NextPage" style:family="paragraph"><style:paragraph-properties fo:break-before="page"/></style:style></office:automatic-styles>
+<office:body><office:text>
+<text:p text:style-name="Heading">HỌC QUA TRÒ CHƠI</text:p>
+<text:p>Giáo án minh họa dành cho trẻ 4–5 tuổi</text:p>
+<text:p>Chủ đề: Màu sắc và hình dạng</text:p>
+<text:p>Mục tiêu: Trẻ nhận biết màu sắc, gọi tên hình và cùng bạn tham gia hoạt động.</text:p>
+<text:p>Chuẩn bị: Thẻ màu, khối hình, giỏ đựng đồ chơi.</text:p>
+<text:p text:style-name="NextPage">HOẠT ĐỘNG 1 — TÌM MÀU QUANH EM</text:p>
+<text:p>1. Giáo viên giới thiệu các thẻ màu.</text:p>
+<text:p>2. Trẻ tìm đồ vật có màu tương ứng trong lớp.</text:p>
+<text:p>3. Cùng trao đổi và gọi tên màu sắc.</text:p>
+<text:p text:style-name="NextPage">HOẠT ĐỘNG 2 — CÙNG ĐẾM VÀ PHÂN LOẠI</text:p>
+<text:p>Trẻ phân nhóm khối hình và đếm số lượng từ một đến năm.</text:p>
+<text:p>Đây là dữ liệu demo giả lập, không chứa thông tin thật của trẻ hoặc nhà trường.</text:p>
+</office:text></office:body></office:document>
