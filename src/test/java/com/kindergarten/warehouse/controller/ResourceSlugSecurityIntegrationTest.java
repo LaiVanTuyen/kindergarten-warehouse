@@ -74,7 +74,7 @@ class ResourceSlugSecurityIntegrationTest {
 
     @SpringBootConfiguration
     @EnableAutoConfiguration
-    @Import({SecurityConfig.class, ResourceController.class, ResourcePreviewController.class, ViewerResolver.class,
+    @Import({SecurityConfig.class, ResourceController.class, ResourcePreviewController.class, AuditLogController.class, ViewerResolver.class,
             GlobalExceptionHandler.class})
     static class TestApplication {
     }
@@ -84,6 +84,41 @@ class ResourceSlugSecurityIntegrationTest {
 
     @MockBean
     private ResourceService resourceService;
+
+    @MockBean
+    private com.kindergarten.warehouse.service.PortalDiscoveryService portalDiscoveryService;
+
+    @MockBean
+    private com.kindergarten.warehouse.service.AuditLogService auditLogService;
+
+    @Test
+    void auditExportRequiresAdminOnInitialRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/audit-logs/export")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/audit-logs/export").with(authentication(as(OWNER_ID, Role.TEACHER))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void authorizedAuditExportCompletesAsyncWithoutJwtContext() throws Exception {
+        doAnswer(invocation -> {
+            java.io.OutputStream out = invocation.getArgument(2);
+            out.write("action,username\nLOGIN,demo\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            out.flush();
+            return null;
+        }).when(auditLogService).exportLogsToStream(any(), any(), any());
+        var result = mockMvc.perform(get("/api/v1/audit-logs/export")
+                        .servletPath("/api/v1/audit-logs/export")
+                        .with(authentication(as(OWNER_ID, Role.ADMIN))))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request().asyncStarted())
+                .andReturn();
+        result.getAsyncResult(5000);
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        result.getRequest().removeAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("action,username\nLOGIN,demo\n"));
+    }
 
     @MockBean
     private com.kindergarten.warehouse.service.ResourcePreviewService previews;

@@ -88,6 +88,11 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/api/v1/auth/login"),
                                 new AntPathRequestMatcher("/api/v1/auth/register")))
                 .authorizeHttpRequests(auth -> auth
+                        // The initial export request is authenticated and ADMIN-authorized.
+                        // Its internal async completion has no stateless JWT context.
+                        .requestMatchers(request -> request.getDispatcherType() == jakarta.servlet.DispatcherType.ASYNC
+                                && "GET".equals(request.getMethod())
+                                && "/api/v1/audit-logs/export".equals(request.getServletPath())).permitAll()
                         // Public Endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/error").permitAll()
@@ -104,7 +109,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/preview",
                                 "/api/v1/resources/*/preview/pages/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/resources/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/resources/*/related").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/authors/*", "/api/v1/tags/popular").permitAll()
+                        .requestMatchers("/api/v1/admin/reports", "/api/v1/admin/reports/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/resources/*/view").permitAll()
                         // Authenticated User Endpoints (Profile)
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()

@@ -28,5 +28,8 @@ public class ResourceCreationRequest {
 
     private List<Long> ageGroupIds;
 
+    /** Free-text tags; also accepts one comma-separated value. Max 10, 50 chars each. */
+    private List<String> tags;
+
     private String duration; // Optional: "05:30"
 }

@@ -34,6 +34,7 @@ public interface ResourceListView {
     String getRejectionReason();
     LocalDateTime getCreatedAt();
     LocalDateTime getUpdatedAt();
+    Long getCreatedBy();
     TopicView getTopic();
 
     interface TopicView {

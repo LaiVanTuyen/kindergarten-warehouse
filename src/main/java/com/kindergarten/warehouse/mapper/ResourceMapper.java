@@ -58,6 +58,8 @@ public class ResourceMapper {
                 .visibility(view.getVisibility())
                 .rejectionReason(view.getRejectionReason())
                 .isFavorited(isFavorited)
+                .tags(java.util.List.of())
+                .authorId(view.getCreatedBy())
                 .createdAt(view.getCreatedAt())
                 .updatedAt(view.getUpdatedAt())
                 .build();
@@ -114,6 +116,9 @@ public class ResourceMapper {
                 .visibility(resource.getVisibility())
                 .rejectionReason(resource.getRejectionReason())
                 .isFavorited(isFavorited)
+                .tags(resource.getTags() == null ? java.util.List.of() : java.util.List.copyOf(resource.getTags()))
+                .authorId(resource.getCreatedBy())
+                .authorName(resource.getCreator() != null ? resource.getCreator().getFullName() : null)
                 .createdAt(resource.getCreatedAt())
                 .updatedAt(resource.getUpdatedAt())
                 .createdBy(resource.getCreator() != null ? resource.getCreator().getFullName() : null)

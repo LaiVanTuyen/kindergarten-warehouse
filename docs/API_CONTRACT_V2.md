@@ -199,8 +199,8 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 | POST | `/` | ADMIN | ✅ |
 | PUT | `/{id}` | ADMIN | ✅ |
 | DELETE | `/{id}` | ADMIN | ✅ |
-| PATCH | `/{id}/restore` | ADMIN | ✅ |
-| PATCH | `/{id}/block` | ADMIN | ✅ |
+| PUT | `/{id}/restore` | ADMIN | ✅ |
+| PUT | `/{id}/block` | ADMIN | ✅ |
 | POST | `/{id}/reset-password/init` | ADMIN | ✅ |
 | POST | `/{id}/reset-password/confirm` | ADMIN | ✅ |
 
@@ -227,8 +227,8 @@ Phải xong trước khi tuyên bố Tuần 6 hoàn thành.
 | PATCH | `/{id}/visibility` | ADMIN, TEACHER | ⚠️ | Nhận thêm `INTERNAL`; **không** đưa về PENDING |
 | POST | `/{id}/favorite` | Đã đăng nhập | ✅ | Toggle, trả `{isFavorited: bool}` |
 | DELETE | `/{id}` | ADMIN, TEACHER | ✅ | Kiểm tra ownership |
-| POST | `/bulk-delete` | ADMIN, TEACHER | ✅ | Body `{ids: []}` |
-| PATCH | `/{id}/restore` | ADMIN, TEACHER | ✅ | |
+| DELETE | `/bulk` | ADMIN, TEACHER | ✅ | Body là mảng ID `[]` |
+| PUT | `/{id}/restore` | ADMIN, TEACHER | ✅ | |
 | PATCH | `/bulk-restore` | ADMIN, TEACHER | ✅ | |
 | POST | `/draft` | ADMIN, TEACHER | ❌ | Tạo draft **tối thiểu**, trả `resourceId`. Không validate trường bắt buộc |
 | PATCH | `/{id}` | ADMIN, TEACHER (chủ sở hữu) | ❌ | Lưu từng bước wizard. **Mọi trường optional.** Đang `DRAFT` thì giữ `DRAFT` |
@@ -371,8 +371,8 @@ Toàn bộ controller yêu cầu `ADMIN`.
 | GET | `/` | ✅ | Hàng đợi kiểm duyệt |
 | PATCH | `/{id}/approve` | ⚠️ | Bổ sung ghi `resource_moderation_history` |
 | PATCH | `/{id}/reject` | ⚠️ | Như trên; `reason` bắt buộc |
-| PATCH | `/bulk-approve` | ⚠️ | Body `{ids: []}` đã đúng chuẩn |
-| PATCH | `/bulk-reject` | ⚠️ | Body `{ids: [], reason}` đã đúng chuẩn |
+| PATCH | `/bulk-approve` | ⚠️ | Body `{resourceIds: []}` |
+| PATCH | `/bulk-reject` | ⚠️ | Body `{resourceIds: [], reason}` |
 | GET | `/{id}/moderation-history` | ❌ | Lịch sử kiểm duyệt của một tài nguyên |
 
 `BulkResourceRequest` đã có `@NotEmpty` và `@Size(min=1, max=1000)` ✅ — không
@@ -423,7 +423,7 @@ lọc theo người xem — Category/Topic `INTERNAL` không hiện với khách
 | POST | `/` | ADMIN | ✅ |
 | PUT | `/{id}` | ADMIN | ✅ |
 | PATCH | `/reorder` | ADMIN | ✅ |
-| PATCH | `/{id}/toggle` | ADMIN | ✅ |
+| PUT | `/{id}/toggle` | ADMIN | ✅ |
 | DELETE | `/{id}` | ADMIN | ✅ |
 
 ---
@@ -440,22 +440,15 @@ Bổ sung ghi audit cho các hành động mới: `submit`, `archive`, `takedown
 
 ---
 
-## 12. Dashboard — toàn bộ mới
+## 12. Dashboard — số liệu thật (cập nhật 11/10/2026)
 
-FE đang dùng mock in-memory trong `dashboard.service.ts`. Không có endpoint nào
-ở BE.
+`GET /api/v1/admin/dashboard` yêu cầu ADMIN, trả một snapshot gồm `stats`, `trend`, `pending`, `topResources`, `topTeachers`, `topicDistribution`, `activity`. FE đã bỏ dữ liệu mock.
 
-| Method | Path | Quyền | Trạng thái | Ghi chú |
-|---|---|---|---|---|
-| GET | `/api/v1/admin/dashboard/summary` | ADMIN | ❌ | Tổng tài nguyên, chờ duyệt, người dùng, lượt tải |
-| GET | `/api/v1/admin/dashboard/recent` | ADMIN | ❌ | Tài nguyên mới, chờ duyệt |
-| GET | `/api/v1/admin/dashboard/top` | ADMIN | ❌ | Tải nhiều, giáo viên đóng góp |
+Tham số `period` và khoảng ngày dùng cho tài nguyên/người dùng mới, đóng góp và phân bố chủ đề. Tổng tài nguyên/người dùng và lượt xem là số hiện tại/tích lũy. Lượt xem gồm bộ đếm đang chờ ghi từ Redis. Không có lịch sử lượt xem theo ngày: `trend.views` rỗng và phần tăng trưởng chưa có dữ liệu trả null.
 
-**Cho tới khi ba endpoint này xong, màn Dashboard phải hiển thị nhãn "dữ liệu
-mẫu"** — không được để người xem demo hiểu nhầm là số liệu thật.
+Duyệt/từ chối trên Dashboard dùng endpoint kiểm duyệt hiện có, ID tài nguyên là chuỗi UUID.
 
 ---
-
 ## 13. Tổng hợp khối lượng
 
 Đếm từ các bảng ở trên:
@@ -513,3 +506,74 @@ vẫn yêu cầu đăng nhập. Preview không trả URL file gốc và không t
 DRAFT không có preview; thiếu quyền trả 404 trước khi xét ARCHIVED/410.
 Trang ngoài phạm vi hoặc chưa sẵn sàng trả 404. Tối đa 100 trang preview.
 Chi tiết xử lý, giới hạn và nghiệm thu: [DOCUMENT_PREVIEW_V1.md](DOCUMENT_PREVIEW_V1.md).
+
+
+## 16. Khám phá, báo cáo vi phạm, thông báo — triển khai 2026-10-11
+
+Mọi response bọc trong `ApiResponse` (`result`). Phân trang dùng `page` (0-based) và `size`.
+
+| Method | Path | Quyền | Ghi chú |
+|---|---|---|---|
+| GET | `/resources/{slug}/related?size=6` | Công khai | Cùng chủ đề trước, rồi cùng danh mục; loại chính nó trước khi phân trang; áp visibility Portal. `size` tối đa 20. |
+| GET | `/resources?tags=a,b&createdBy=` | Công khai | `tags` khớp bất kỳ; `keyword` tìm tiêu đề, mô tả (không dấu theo collation) và tag khớp chính xác. |
+| GET | `/tags/popular?limit=20` | Công khai | Chỉ đếm tài liệu khách xem được. |
+| GET | `/authors/{id}` | Công khai | Chỉ TEACHER/ADMIN đang hoạt động; không trả email/SĐT/username. Thống kê chỉ gồm tài liệu PUBLIC đã duyệt. |
+| GET | `/downloads/me` | Đăng nhập | Lọc visibility trong SQL trước phân trang. Ghi lịch sử khi tải `/resources/{id}/file` thành công. |
+| POST | `/reports` | Đăng nhập | `{resourceId, reason, details?}`. `reason`: COPYRIGHT, INAPPROPRIATE, WRONG_INFO, BROKEN_FILE, SPAM, OTHER. Mỗi người một báo cáo OPEN/tài liệu (unique key V25) → 409 mã 6602. |
+| GET | `/admin/reports?status=` | ADMIN | |
+| GET | `/admin/reports/open-count` | ADMIN | |
+| PATCH | `/admin/reports/{id}` | ADMIN | `{action: RESOLVE\|DISMISS, note?, hideResource}`. Khoá dòng; báo cáo đã xử lý → 409 mã 6603. `hideResource` với RESOLVE = gỡ tài liệu: status REJECTED kèm lý do; đổi visibility không đưa tài liệu trở lại. |
+| GET | `/notifications`, `/notifications/unread-count` | Đăng nhập | |
+| PATCH | `/notifications/{id}/read`, `/notifications/read-all` | Đăng nhập | |
+
+Trường mới trong `ResourceResponse`: `tags[]`, `authorId`, `authorName`. Upload/cập nhật nhận `tags` (lặp hoặc phân cách dấu phẩy; tối đa 10, mỗi tag ≤ 50 ký tự; loại trùng không phân biệt dấu). Khi cập nhật: không gửi `tags` = giữ nguyên, gửi rỗng = xoá hết.
+
+## 17. Bộ học liệu — `/api/v1/collections` (giai đoạn 1, 2026-10-11)
+
+Chỉ TEACHER/ADMIN. Bộ chỉ lưu tham chiếu; mỗi lần đọc, từng tài liệu được kiểm lại bằng `ResourceAccessGuard` cho người đang xem. Tài liệu không xem được trả `available=false`, `resource=null` (không lộ tiêu đề).
+
+| Method | Path | Ghi chú |
+|---|---|---|
+| GET | `/collections/me` | Bộ của tôi, mới sửa trước. |
+| GET | `/collections/shared?keyword=&ageGroupId=` | Bộ SHARED của mọi giáo viên. |
+| GET | `/collections/me/membership?resourceId=` | Bộ của tôi + cờ `containsResource` (hộp thoại "Thêm vào bộ"). |
+| GET | `/collections/{id}` | Chủ sở hữu; SHARED thì mọi TEACHER/ADMIN; ADMIN xem mọi bộ. Không có quyền → 404 (6801). |
+| POST | `/collections` | `{title, description?, ageGroupId?, topicId?, visibility: PRIVATE\|SHARED}`. Tối đa 200 bộ/người (6807). |
+| PUT | `/collections/{id}` | Như trên + `version` bắt buộc; lệch → 409 (6806). |
+| DELETE | `/collections/{id}` | Chỉ chủ sở hữu (6802). Không xoá tài liệu trong kho. |
+| POST | `/collections/{id}/copy` | Tạo bản PRIVATE cho người gọi, giữ thứ tự và ghi chú, chỉ chép tài liệu người gọi xem được; `sourceCollectionId` trỏ về bộ gốc. |
+| POST | `/collections/{id}/items` | `{resourceId, note?}`. Người thêm phải xem được tài liệu (404 nếu không). Trùng → 409 (6803); tối đa 50 mục (6805). |
+| PATCH | `/collections/{id}/items/{itemId}` | `{note}` |
+| DELETE | `/collections/{id}/items/{itemId}` | Đánh số lại thứ tự. |
+| PUT | `/collections/{id}/items/order` | `{itemIds}` phải đúng tập mục hiện có; lệch → 409 (6806), client tải lại. |
+
+Sửa đồng thời được chặn bằng `@Version` trên bộ; mọi thay đổi mục đều tăng version.
+
+## 18. Kế hoạch hoạt động — `/api/v1/plans` (giai đoạn 1, 2026-10-11)
+
+Chỉ TEACHER/ADMIN. Kế hoạch lưu có cấu trúc: các phần chữ là trường riêng; mỗi bước tiến trình là một dòng có `source` (`TEACHER` | `AI_SUGGESTED`, để giai đoạn 2 luôn phân biệt nội dung AI). Học liệu gắn với bước chỉ là tham chiếu, kiểm quyền lại mỗi lần đọc (`available=false`, `resource=null` khi người xem không mở được).
+
+| Method | Path | Ghi chú |
+|---|---|---|
+| GET | `/plans/me?keyword=` | Kế hoạch của tôi; tìm tên và mục tiêu. |
+| GET | `/plans/shared?keyword=&ageGroupId=` | `status=SHARED`. `keyword` tìm trong tên và mục tiêu. |
+| GET | `/plans/templates?keyword=&ageGroupId=` | Kế hoạch mẫu (`template=true`). |
+| GET | `/plans/{id}` | Chủ sở hữu; SHARED hoặc mẫu thì mọi TEACHER/ADMIN; ADMIN xem mọi kế hoạch. Không có quyền → 404 (6901). |
+| POST | `/plans` | Toàn bộ tài liệu (xem bên dưới). Không có `steps` → 4 bước mặc định Khởi động/Khám phá/Trò chơi/Kết thúc; có thêm `collectionId` thì học liệu xem được của bộ vào bước "Khám phá". Tối đa 500 kế hoạch/người (6904). |
+| PUT | `/plans/{id}` | Gửi toàn bộ tài liệu kèm `version`; lệch → 409 (6903). Các bước được thay cả khối. Tham chiếu đã có được giữ dù không còn khả dụng; tham chiếu MỚI phải xem được (404 nếu không). |
+| DELETE | `/plans/{id}` | Chỉ chủ sở hữu (6902). |
+| POST | `/plans/{id}/copy` | Bản DRAFT cho người gọi; chép mục tiêu, chuẩn bị, điều chỉnh, các bước; KHÔNG chép ghi nhận sau buổi học và ngày dạy; chỉ chép học liệu người gọi xem được. Từ mẫu thì giữ nguyên tên. |
+
+Thân request: `{title, ageGroupId?, topicId?, durationMinutes? (1–240), classSize? (1–100), objectives?, preparation?, adaptations?, reflection? (≤4000 ký tự mỗi trường), taughtOn?, status: DRAFT|SHARED, template? (chỉ ADMIN), collectionId? (phải đọc được bộ), steps?: [{title, durationMinutes? (0–240), description?, source?, resourceIds? (≤10)}] (≤20 bước), version?}`.
+
+Xuất PDF: Portal có trang `/plans/{id}/print` (không header/footer, CSS `@media print`, khổ A4); giáo viên dùng "In / Lưu PDF" của trình duyệt. Phần ghi nhận để trống được in thành dòng kẻ để viết tay.
+
+### Bổ sung sau review và chế độ sử dụng trong lớp
+
+- Khi đồng nghiệp đọc kế hoạch chia sẻ hoặc mẫu, `reflection` và `taughtOn` trả null; chủ sở hữu và ADMIN vẫn đọc được. Các phần chuẩn bị, mục tiêu, tiến trình vẫn được chia sẻ.
+- Phần tử null trong `steps` bị từ chối bằng validation 400.
+- Portal `/plans/{id}/present` dùng GET chi tiết kế hoạch hiện có, kiểm quyền lại khi bắt đầu; không có endpoint trình chiếu mới và không tạo trạng thái chia sẻ công khai.
+- Trước buổi học có mở thử học liệu, kiểm tra manifest PDF/Office và phát thử YouTube do giáo viên xác nhận. Không coi iframe tải xong là bằng chứng video phát được.
+- Màn hoạt động: chọn/chuyển bước, chọn học liệu, toàn màn hình, đồng hồ theo bước (chạy/tạm dừng/đặt lại), ẩn/hiện hướng dẫn. Hết giờ không tự chuyển bước. Notes mặc định ẩn.
+- Đồng hồ dùng deadline tuyệt đối để không chậm khi tab bị treo nền; chuyển bước đặt lại đồng hồ của bước mới. Có phím tắt ←/→, Space, N khi không thao tác trên điều khiển.
+- Mở tệp gốc ảnh/âm thanh/video vẫn đi qua API có kiểm quyền và cơ chế bộ đếm/lịch sử tải hiện có; PDF/Office dùng bản xem trước nội bộ.

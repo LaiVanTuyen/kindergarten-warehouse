@@ -48,13 +48,10 @@ public class BannerServiceImpl implements BannerService {
             if (platform != null) {
                 predicates.add(cb.equal(root.get("platform"), platform));
             }
-            if (!viewer.isAdmin()) {
-                if (viewer.isAuthenticated()) {
-                    predicates.add(root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL));
-                } else {
-                    predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
-                }
-            }
+            // The portal carousel never serves hidden banners, including to admins.
+            // Admin inspection uses the separate /banners/all endpoint.
+            if (viewer.isAuthenticated()) predicates.add(root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL));
+            else predicates.add(cb.equal(root.get("visibility"), Visibility.PUBLIC));
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
         return bannerRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "displayOrder")).stream()
@@ -94,7 +91,7 @@ public class BannerServiceImpl implements BannerService {
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
         banner.setDisplayOrder(1);
-        banner.setVisibility(Visibility.PUBLIC);
+        banner.setVisibility(request.getVisibility() == null ? Visibility.PUBLIC : request.getVisibility());
         banner.setIsDeleted(false);
 
         return bannerMapper.toResponse(bannerRepository.save(banner));
@@ -111,17 +108,9 @@ public class BannerServiceImpl implements BannerService {
             throw new AppException(ErrorCode.INVALID_KEY);
         }
 
-        if (image != null && !image.isEmpty()) {
-            if (banner.getImageUrl() != null && !banner.getImageUrl().isEmpty()) {
-                try {
-                    minioStorageService.deleteFile(banner.getImageUrl());
-                } catch (Exception e) {
-                    // Log warning
-                }
-            }
-            String imageUrl = minioStorageService.uploadFile(image, "banners");
-            banner.setImageUrl(imageUrl);
-        }
+        String oldImageUrl = banner.getImageUrl();
+        boolean replacedImage = image != null && !image.isEmpty();
+        if (replacedImage) banner.setImageUrl(minioStorageService.uploadFile(image, "banners"));
 
         banner.setTitle(request.getTitle());
         banner.setSubtitle(request.getSubtitle());
@@ -131,12 +120,24 @@ public class BannerServiceImpl implements BannerService {
         banner.setLink(request.getLink());
         banner.setStartDate(request.getStartDate());
         banner.setEndDate(request.getEndDate());
+        if (request.getVisibility() != null) banner.setVisibility(request.getVisibility());
         // NOTE: displayOrder is intentionally NOT updated here.
         // Display order must only be changed via the PATCH /banners/reorder endpoint.
 
-        return new UpdateResult<>(
-                bannerMapper.toResponse(bannerRepository.save(banner)),
-                "banner.update.success");
+        Banner saved = bannerRepository.save(banner);
+        if (replacedImage && oldImageUrl != null && !oldImageUrl.isBlank()) {
+            Runnable cleanup = () -> {
+                try { minioStorageService.deleteFile(oldImageUrl); }
+                catch (Exception ignored) { /* Keep the saved banner usable if cleanup fails. */ }
+            };
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCommit() { cleanup.run(); }
+                    });
+            } else cleanup.run();
+        }
+        return new UpdateResult<>(bannerMapper.toResponse(saved), "banner.update.success");
     }
 
     @Override

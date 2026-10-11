@@ -79,6 +79,13 @@ public class ResourcePreviewService {
         }
         String key = directory.getFileName().toString();
         if (pending.putIfAbsent(key, true) == null) {
+            // A worker may publish its manifest and release pending after our first
+            // cache read. Recheck while owning the key before scheduling another job.
+            PreviewResponse completed = readManifest(directory);
+            if (completed != null) {
+                pending.remove(key);
+                return completed;
+            }
             // Pass an immutable snapshot; the worker never dereferences detached JPA relations.
             String source = resource.getFileUrl();
             try {

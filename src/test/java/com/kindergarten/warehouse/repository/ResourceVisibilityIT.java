@@ -130,7 +130,10 @@ class ResourceVisibilityIT {
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0.46")
             .withDatabaseName("warehouse_it")
             .withUsername("it_user")
-            .withPassword("it_pass");
+            .withPassword("it_pass")
+            // First-time database initialization can exceed the default on Docker Desktop.
+            .withStartupTimeoutSeconds(300)
+            .withConnectTimeoutSeconds(300);
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
@@ -207,6 +210,9 @@ class ResourceVisibilityIT {
     RedisLastActiveService redisLastActiveService;
 
     @Autowired ResourceService resourceService;
+    @Autowired com.kindergarten.warehouse.service.DashboardService dashboardService;
+    @Autowired com.kindergarten.warehouse.service.BannerService bannerService;
+    @Autowired com.kindergarten.warehouse.repository.BannerRepository bannerRepository;
     @Autowired ResourceRepository resourceRepository;
     @Autowired TopicRepository topicRepository;
     @Autowired CategoryRepository categoryRepository;
@@ -223,6 +229,35 @@ class ResourceVisibilityIT {
 
     private static final Pageable PAGE_12 =
             PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+    @Test
+    void dashboardReportsActualInventoryAndNeverInventsHistoricalViews() {
+        resourceRepository.flush();
+        when(resourceStatService.getPendingViewCounts(any())).thenReturn(Map.of(publicResourceId, 5L));
+        Map<String,Object> result=dashboardService.overview("this_year",null,null);
+        Map<?,?> stats=(Map<?,?>)result.get("stats");
+        assertThat(((Number)stats.get("totalResources")).longValue()).isEqualTo(7);
+        assertThat(((Number)stats.get("totalUsers")).longValue()).isEqualTo(3);
+        assertThat(((Number)stats.get("pendingApprovals")).longValue()).isEqualTo(1);
+        assertThat(((Number)stats.get("totalViews")).longValue()).isEqualTo(5);
+        assertThat((List<?>)((Map<?,?>)result.get("trend")).get("views")).isEmpty();
+        assertThat((List<?>)result.get("pending")).hasSize(1);
+        Map<String,Object> emptyPeriod=dashboardService.overview("custom","2000-01-01","2000-01-02");
+        assertThat((List<?>)emptyPeriod.get("topicDistribution")).isEmpty();
+        assertThat(((Number)((Map<?,?>)emptyPeriod.get("stats")).get("totalResources")).longValue()).isEqualTo(7);
+    }
+
+    @Test
+    void hiddenBannersStayOutOfPortalEvenForAdmins() {
+        for(Visibility visibility:List.of(Visibility.PUBLIC,Visibility.PRIVATE)) {
+            bannerRepository.saveAndFlush(com.kindergarten.warehouse.entity.Banner.builder()
+                .title("Banner "+visibility).subtitle("").platform("WEB").imageUrl("/test.png")
+                .bgFrom("from-white").bgTo("to-white").visibility(visibility).isDeleted(false).build());
+        }
+        assertThat(bannerService.getActiveBanners("WEB",Viewer.guest())).hasSize(1);
+        assertThat(bannerService.getActiveBanners("WEB",Viewer.of(ownerId,Set.of(Role.ADMIN)))).hasSize(1);
+        assertThat(bannerService.getAllBanners("WEB",PageRequest.of(0,10)).getTotalElements()).isEqualTo(2);
+    }
 
     @BeforeEach
     void setUp() {

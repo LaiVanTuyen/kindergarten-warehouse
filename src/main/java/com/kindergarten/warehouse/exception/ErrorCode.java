@@ -68,6 +68,27 @@ public enum ErrorCode {
     // ========== Age Group Errors (65xx) ==========
     AGE_GROUP_NOT_FOUND(6501, "error.age_group.not_found", HttpStatus.NOT_FOUND),
 
+    // ========== Report / Notification Errors (66xx) ==========
+    REPORT_NOT_FOUND(6601, "error.report.not_found", HttpStatus.NOT_FOUND),
+    REPORT_ALREADY_OPEN(6602, "error.report.already_open", HttpStatus.CONFLICT),
+    REPORT_ALREADY_RESOLVED(6603, "error.report.already_resolved", HttpStatus.CONFLICT),
+    NOTIFICATION_NOT_FOUND(6701, "error.notification.not_found", HttpStatus.NOT_FOUND),
+
+    // ========== Collection Errors (68xx) ==========
+    COLLECTION_NOT_FOUND(6801, "error.collection.not_found", HttpStatus.NOT_FOUND),
+    COLLECTION_FORBIDDEN(6802, "error.collection.forbidden", HttpStatus.FORBIDDEN),
+    COLLECTION_ITEM_EXISTS(6803, "error.collection.item_exists", HttpStatus.CONFLICT),
+    COLLECTION_ITEM_NOT_FOUND(6804, "error.collection.item_not_found", HttpStatus.NOT_FOUND),
+    COLLECTION_FULL(6805, "error.collection.full", HttpStatus.UNPROCESSABLE_ENTITY),
+    COLLECTION_STALE(6806, "error.collection.stale", HttpStatus.CONFLICT),
+    COLLECTION_LIMIT_REACHED(6807, "error.collection.limit_reached", HttpStatus.UNPROCESSABLE_ENTITY),
+
+    // ========== Lesson Plan Errors (69xx) ==========
+    PLAN_NOT_FOUND(6901, "error.plan.not_found", HttpStatus.NOT_FOUND),
+    PLAN_FORBIDDEN(6902, "error.plan.forbidden", HttpStatus.FORBIDDEN),
+    PLAN_STALE(6903, "error.plan.stale", HttpStatus.CONFLICT),
+    PLAN_LIMIT_REACHED(6904, "error.plan.limit_reached", HttpStatus.UNPROCESSABLE_ENTITY),
+
     // ========== Duplicate Errors (70xx) ==========
     DUPLICATE_SLUG(7001, "error.duplicate.slug", HttpStatus.CONFLICT),
     DUPLICATE_NAME(7002, "error.duplicate.name", HttpStatus.CONFLICT),

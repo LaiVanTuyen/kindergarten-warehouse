@@ -111,4 +111,12 @@ public class Resource extends BaseEntity {
     @ToString.Exclude
     @org.hibernate.annotations.BatchSize(size = 100)
     private java.util.Set<AgeGroup> ageGroups;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "resource_tags", joinColumns = @JoinColumn(name = "resource_id"))
+    @Column(name = "tag", length = 50, nullable = false)
+    @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 100)
+    @Builder.Default
+    private java.util.Set<String> tags = new java.util.LinkedHashSet<>();
 }

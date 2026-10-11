@@ -14,6 +14,8 @@ public class ResourceUpdateRequest {
     private String description;
     private Long topicId;
     private List<Long> ageGroupIds;
+    /** null = keep current tags; empty list = clear all tags. */
+    private List<String> tags;
     private ResourceStatus status;
     private String fileType;
     private MultipartFile thumbnail;

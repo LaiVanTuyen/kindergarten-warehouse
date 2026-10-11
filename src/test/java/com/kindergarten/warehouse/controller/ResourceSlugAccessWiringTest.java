@@ -135,7 +135,9 @@ class ResourceSlugAccessWiringTest {
                 .thenReturn(false);
 
         ResourceController controller =
-                new ResourceController(resourceService, messageService, new ViewerResolver());
+                new ResourceController(resourceService, messageService,
+                        org.mockito.Mockito.mock(com.kindergarten.warehouse.service.PortalDiscoveryService.class),
+                        new ViewerResolver());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler(messageService, rollbar))

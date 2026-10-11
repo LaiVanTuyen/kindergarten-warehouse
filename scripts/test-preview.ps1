@@ -1,4 +1,5 @@
-param([string]$BaseUrl = 'http://localhost:8080', [string]$EnvFile = '.env', [switch]$ReuseExisting)
+param([string]$BaseUrl = 'http://localhost:8080', [string]$EnvFile = '.env', [switch]$ReuseExisting,
+    [string]$PortalUrl = 'http://localhost:4201')
 $ErrorActionPreference = 'Stop'
 # Local acceptance only. Creates two clearly labelled synthetic demo resources.
 # Credentials are read into memory and are never printed or written to output.
@@ -64,5 +65,5 @@ foreach ($file in @('target/demo-preview.pdf', 'target/preview-demo.docx', 'targ
         $null = Invoke-RestMethod "$BaseUrl/api/v1/resources/$id/visibility" -Method Patch -ContentType 'application/json' -Body '{"visibility":"PUBLIC"}' -Headers $headers -WebSession $session
     }
     Write-Output "$extension PASS: pages=$expected, guest preview=200, original=401, private preview=404, download count unchanged"
-    Write-Output "DEMO_URL=http://localhost:4201/resources/$($uploaded.slug)"
+    Write-Output "DEMO_URL=$PortalUrl/resources/$($uploaded.slug)"
 }

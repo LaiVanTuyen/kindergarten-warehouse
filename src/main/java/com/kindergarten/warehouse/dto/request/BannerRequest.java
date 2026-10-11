@@ -24,6 +24,7 @@ public class BannerRequest {
     private String bgTo;
 
     private String platform = "WEB";
+    private com.kindergarten.warehouse.entity.Visibility visibility;
 
     @Size(max = 500, message = "Link must not exceed 500 characters")
     private String link;

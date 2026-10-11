@@ -80,8 +80,25 @@ public class YoutubeService {
 
     public String extractVideoId(String url) {
         if (url == null) return null;
-        Matcher matcher = VIDEO_ID_PATTERN.matcher(url);
-        return matcher.find() ? matcher.group() : null;
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) && !"http".equalsIgnoreCase(uri.getScheme())) return null;
+            String host = uri.getHost();
+            if (host == null) return null;
+            host = host.toLowerCase(java.util.Locale.ROOT);
+            String id = null;
+            String[] segments = uri.getPath().split("/");
+            if (host.equals("youtu.be") && segments.length > 1) id = segments[1];
+            else if (java.util.Set.of("youtube.com", "www.youtube.com", "m.youtube.com",
+                    "youtube-nocookie.com", "www.youtube-nocookie.com").contains(host)) {
+                if (uri.getPath().equals("/watch") && uri.getRawQuery() != null) {
+                    for (String pair : uri.getRawQuery().split("&")) {
+                        if (pair.startsWith("v=")) id = java.net.URLDecoder.decode(pair.substring(2), java.nio.charset.StandardCharsets.UTF_8);
+                    }
+                } else if (segments.length > 2 && java.util.Set.of("embed", "shorts", "live", "v").contains(segments[1])) id = segments[2];
+            }
+            return id != null && id.matches("[A-Za-z0-9_-]{11}") ? id : null;
+        } catch (IllegalArgumentException ex) { return null; }
     }
 
     public boolean isVideoAccessible(String videoId) {

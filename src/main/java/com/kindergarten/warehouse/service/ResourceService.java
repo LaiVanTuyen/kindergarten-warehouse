@@ -27,6 +27,13 @@ public interface ResourceService {
 
     ResourceResponse getResourceBySlug(String slug, com.kindergarten.warehouse.security.Viewer viewer);
 
+    /** Portal-visible resources with the given ids, in the given order; hidden ones are dropped. */
+    List<ResourceResponse> getPortalResourcesByIds(List<String> ids,
+            com.kindergarten.warehouse.security.Viewer viewer);
+
+    List<ResourceResponse> getRelatedResources(String slug, int size,
+            com.kindergarten.warehouse.security.Viewer viewer);
+
     FileDownloadInfo getResourceFileInfo(String id, com.kindergarten.warehouse.security.Viewer viewer) throws Exception;
 
     Page<ResourceResponse> getFavoriteResources(Pageable pageable,

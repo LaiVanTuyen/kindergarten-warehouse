@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.kindergarten.warehouse.util.TagUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,6 +60,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final com.kindergarten.warehouse.service.AuditLogService auditLogService;
     private final com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard;
     private final com.kindergarten.warehouse.mapper.AgeGroupMapper ageGroupMapper;
+    private final com.kindergarten.warehouse.service.NotificationService notificationService;
 
     @Value("${app.resource.thumbnail-max-bytes:5242880}")
     private long thumbnailMaxBytes;
@@ -163,6 +165,7 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setCreatedBy(user.getId());
         resource.setCreator(user);
         resource.setAgeGroups(ageGroups);
+        resource.setTags(TagUtils.forResource(request.getTags()));
 
         boolean isAdmin = user.getRoles().stream().anyMatch(role -> role == Role.ADMIN);
         if (isAdmin) {
@@ -211,10 +214,26 @@ public class ResourceServiceImpl implements ResourceService {
                 predicates.add(cb.exists(subquery));
             }
 
-            // Keyword Filter
-            if (filterRequest.getKeyword() != null && !filterRequest.getKeyword().isEmpty()) {
-                String likePattern = "%" + filterRequest.getKeyword().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(root.get("title")), likePattern));
+            // Keyword Filter: title/description, plus an exact tag match.
+            // LIKE (not FULLTEXT) on purpose: utf8mb4_0900_ai_ci makes it accent-insensitive
+            // ("bai hat" finds "Bài hát", "d" finds "đ"), which MySQL's ngram FULLTEXT does not.
+            String keyword = filterRequest.getKeyword() == null ? null : filterRequest.getKeyword().trim();
+            if (keyword != null && !keyword.isEmpty()) {
+                String likePattern = "%" + escapeLike(keyword.toLowerCase(Locale.ROOT)) + "%";
+                List<Predicate> keywordMatches = new ArrayList<>();
+                keywordMatches.add(cb.like(cb.lower(root.get("title")), likePattern, '\\'));
+                keywordMatches.add(cb.like(cb.lower(root.get("description")), likePattern, '\\'));
+                String keywordTag = TagUtils.normalize(keyword);
+                if (keywordTag != null) {
+                    keywordMatches.add(tagExists(root, query, cb, List.of(keywordTag)));
+                }
+                predicates.add(cb.or(keywordMatches.toArray(new Predicate[0])));
+            }
+
+            // Tag Filter (Multi-select, matches any)
+            List<String> tags = TagUtils.normalizeAll(filterRequest.getTags());
+            if (!tags.isEmpty()) {
+                predicates.add(tagExists(root, query, cb, tags));
             }
 
             // Creator Filter
@@ -229,6 +248,20 @@ public class ResourceServiceImpl implements ResourceService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Predicate tagExists(jakarta.persistence.criteria.Root<Resource> root,
+            jakarta.persistence.criteria.CriteriaQuery<?> query,
+            jakarta.persistence.criteria.CriteriaBuilder cb, List<String> tags) {
+        jakarta.persistence.criteria.Subquery<String> subquery = query.subquery(String.class);
+        jakarta.persistence.criteria.Root<Resource> subRoot = subquery.correlate(root);
+        jakarta.persistence.criteria.Join<Resource, String> tagJoin = subRoot.join("tags");
+        subquery.select(subRoot.get("id")).where(tagJoin.in(tags));
+        return cb.exists(subquery);
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private Page<ResourceResponse> executeQueryAndMap(Specification<Resource> spec, Pageable pageable,
@@ -304,14 +337,23 @@ public class ResourceServiceImpl implements ResourceService {
         Map<String, Long> pendingViews = resourceStatService.getPendingViewCounts(resourceIds);
         Map<String, Long> pendingDownloads = resourceStatService.getPendingDownloadCounts(resourceIds);
 
-        return viewPage.map(view -> resourceMapper.toResponse(
-                view,
-                ageGroupsByResource.getOrDefault(view.getId(), List.of()),
-                view.getTopic() == null ? null
-                        : resourceCountsByTopic.getOrDefault(view.getTopic().getId(), 0L),
-                favoriteIds.contains(view.getId()),
-                pendingViews.getOrDefault(view.getId(), 0L),
-                pendingDownloads.getOrDefault(view.getId(), 0L)));
+        Map<String, List<String>> tagsByResource = new HashMap<>();
+        for (Object[] row : resourceRepository.findTagsByResourceIds(resourceIds)) {
+            tagsByResource.computeIfAbsent((String) row[0], ignored -> new ArrayList<>()).add((String) row[1]);
+        }
+
+        return viewPage.map(view -> {
+            ResourceResponse response = resourceMapper.toResponse(
+                    view,
+                    ageGroupsByResource.getOrDefault(view.getId(), List.of()),
+                    view.getTopic() == null ? null
+                            : resourceCountsByTopic.getOrDefault(view.getTopic().getId(), 0L),
+                    favoriteIds.contains(view.getId()),
+                    pendingViews.getOrDefault(view.getId(), 0L),
+                    pendingDownloads.getOrDefault(view.getId(), 0L));
+            response.setTags(tagsByResource.getOrDefault(view.getId(), List.of()));
+            return response;
+        });
     }
 
     @Override
@@ -644,6 +686,14 @@ public class ResourceServiceImpl implements ResourceService {
             resource.setAgeGroups(getAgeGroupsOrThrow(request.getAgeGroupIds()));
             changedFields.add("ageGroups");
         }
+        if (request.getTags() != null) {
+            Set<String> newTags = TagUtils.forResource(request.getTags());
+            if (!newTags.equals(resource.getTags())) {
+                changedFields.add("tags");
+                resource.getTags().clear();
+                resource.getTags().addAll(newTags);
+            }
+        }
 
         if (!java.util.Objects.equals(prevFileUrl, resource.getFileUrl())) {
             changedFields.add("file");
@@ -800,6 +850,59 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         return resourceMapper.toResponse(resource, isFavorited);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResourceResponse> getPortalResourcesByIds(List<String> ids,
+            com.kindergarten.warehouse.security.Viewer viewer) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        Specification<Resource> spec = Specification
+                .where(com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer))
+                .and((root, query, cb) -> root.get("id").in(ids));
+        Map<String, ResourceResponse> byId = executePortalQueryAndMap(spec,
+                org.springframework.data.domain.PageRequest.of(0, ids.size()), viewer.userId())
+                .getContent().stream()
+                .collect(Collectors.toMap(ResourceResponse::getId, r -> r));
+        return ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResourceResponse> getRelatedResources(String slug, int size,
+            com.kindergarten.warehouse.security.Viewer viewer) {
+        Resource resource = resourceAccessGuard.requireViewable(
+                resourceRepository.findBySlug(slug).orElse(null), viewer);
+        int limit = Math.max(1, Math.min(size, 20));
+        Long topicId = resource.getTopic() == null ? null : resource.getTopic().getId();
+        Long categoryId = resource.getTopic() == null || resource.getTopic().getCategory() == null
+                ? null : resource.getTopic().getCategory().getId();
+        if (categoryId == null) {
+            return List.of();
+        }
+        String selfId = resource.getId();
+        Specification<Resource> related = (root, query, cb) -> cb.and(
+                cb.notEqual(root.get("id"), selfId),
+                cb.equal(root.get("topic").get("category").get("id"), categoryId));
+        Specification<Resource> spec = Specification
+                .where(com.kindergarten.warehouse.security.ResourceVisibilitySpecifications.portalVisibleTo(viewer))
+                .and(related);
+        // Same topic first, then most viewed within the category.
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
+        Specification<Resource> ordered = spec.and((root, query, cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                query.orderBy(
+                        cb.desc(cb.selectCase()
+                                .when(cb.equal(root.get("topic").get("id"), topicId), 1)
+                                .otherwise(0)),
+                        cb.desc(root.get("viewsCount")),
+                        cb.desc(root.get("createdAt")));
+            }
+            return null;
+        });
+        return executePortalQueryAndMap(ordered, pageable, viewer.userId()).getContent();
     }
 
     private User getUserOrThrow(String username) {
@@ -1073,6 +1176,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         String detail = String.format("Approved document: %s", resource.getTitle());
         manuallyLogAudit("APPROVE", username, "RESOURCE_STATUS", detail);
+        notifyApproved(resource);
 
         return resourceMapper.toResponse(savedResource, false);
     }
@@ -1098,6 +1202,7 @@ public class ResourceServiceImpl implements ResourceService {
 
         String detail = String.format("Rejected document: %s | Reason: %s", resource.getTitle(), reason);
         manuallyLogAudit("REJECT", username, "RESOURCE_STATUS", detail);
+        notifyRejected(resource, reason);
 
         try {
             if (resource.getCreatedBy() != null) {
@@ -1120,6 +1225,22 @@ public class ResourceServiceImpl implements ResourceService {
         }
 
         return resourceMapper.toResponse(savedResource, false);
+    }
+
+    private void notifyApproved(Resource resource) {
+        notificationService.notify(resource.getCreatedBy(),
+                com.kindergarten.warehouse.entity.NotificationType.RESOURCE_APPROVED,
+                "Tài liệu đã được duyệt",
+                "\"" + resource.getTitle() + "\" đã được duyệt và hiển thị trên kho học liệu.",
+                "/resources/" + resource.getSlug());
+    }
+
+    private void notifyRejected(Resource resource, String reason) {
+        notificationService.notify(resource.getCreatedBy(),
+                com.kindergarten.warehouse.entity.NotificationType.RESOURCE_REJECTED,
+                "Tài liệu bị từ chối",
+                "\"" + resource.getTitle() + "\" bị từ chối. Lý do: " + reason,
+                "/teacher/my-resources");
     }
 
     private void manuallyLogAudit(String action, String username, String target, String detail) {
@@ -1177,6 +1298,7 @@ public class ResourceServiceImpl implements ResourceService {
         if (!toSave.isEmpty()) {
             resourceRepository.saveAll(toSave);
             auditDetails.forEach(d -> manuallyLogAudit("APPROVE_BULK", username, "RESOURCE_STATUS", d));
+            toSave.forEach(this::notifyApproved);
         }
 
         return BulkOperationResponse.builder()
@@ -1253,6 +1375,7 @@ public class ResourceServiceImpl implements ResourceService {
             // Audit + event publish only after a successful save so we don't log work
             // that ended up rolled back.
             auditDetails.forEach(d -> manuallyLogAudit("REJECT_BULK", username, "RESOURCE_STATUS", d));
+            toSave.forEach(resource -> notifyRejected(resource, request.getReason()));
             for (ResourceRejectedEvent event : pendingEvents) {
                 try {
                     eventPublisher.publishEvent(event);

@@ -21,34 +21,45 @@ public final class ResourceVisibilitySpecifications {
             throw new IllegalArgumentException("Viewer must not be null; use Viewer.guest()");
         }
 
-        return (root, query, cb) -> {
-            List<Predicate> required = new ArrayList<>();
-            required.add(cb.isFalse(root.get("isDeleted")));
-            required.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
-            required.add(cb.isFalse(root.get("topic").get("isDeleted")));
-            required.add(cb.isFalse(root.get("topic").get("category").get("isDeleted")));
+        return (root, query, cb) -> portalVisiblePredicate(root, cb, viewer);
+    }
 
-            if (!viewer.isAdmin()) {
-                Predicate visibilityGate;
-                if (!viewer.isAuthenticated()) {
-                    visibilityGate = cb.and(
-                            cb.equal(root.get("visibility"), Visibility.PUBLIC),
-                            cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC),
-                            cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
-                } else {
-                    Predicate publicOrInternalChain = cb.and(
-                            root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL),
-                            root.get("topic").get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL),
-                            root.get("topic").get("category").get("visibility")
-                                    .in(Visibility.PUBLIC, Visibility.INTERNAL));
-                    visibilityGate = cb.or(
-                            cb.equal(root.get("createdBy"), viewer.userId()),
-                            publicOrInternalChain);
-                }
-                required.add(visibilityGate);
+    /**
+     * Same rule as {@link #portalVisibleTo(Viewer)} applied to any path that
+     * reaches a Resource (e.g. a join from download history), so other
+     * paginated queries filter BEFORE pagination and count too.
+     */
+    public static Predicate portalVisiblePredicate(jakarta.persistence.criteria.Path<Resource> root,
+            jakarta.persistence.criteria.CriteriaBuilder cb, Viewer viewer) {
+        if (viewer == null) {
+            throw new IllegalArgumentException("Viewer must not be null; use Viewer.guest()");
+        }
+        List<Predicate> required = new ArrayList<>();
+        required.add(cb.isFalse(root.get("isDeleted")));
+        required.add(cb.equal(root.get("status"), ResourceStatus.APPROVED));
+        required.add(cb.isFalse(root.get("topic").get("isDeleted")));
+        required.add(cb.isFalse(root.get("topic").get("category").get("isDeleted")));
+
+        if (!viewer.isAdmin()) {
+            Predicate visibilityGate;
+            if (!viewer.isAuthenticated()) {
+                visibilityGate = cb.and(
+                        cb.equal(root.get("visibility"), Visibility.PUBLIC),
+                        cb.equal(root.get("topic").get("visibility"), Visibility.PUBLIC),
+                        cb.equal(root.get("topic").get("category").get("visibility"), Visibility.PUBLIC));
+            } else {
+                Predicate publicOrInternalChain = cb.and(
+                        root.get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL),
+                        root.get("topic").get("visibility").in(Visibility.PUBLIC, Visibility.INTERNAL),
+                        root.get("topic").get("category").get("visibility")
+                                .in(Visibility.PUBLIC, Visibility.INTERNAL));
+                visibilityGate = cb.or(
+                        cb.equal(root.get("createdBy"), viewer.userId()),
+                        publicOrInternalChain);
             }
+            required.add(visibilityGate);
+        }
 
-            return cb.and(required.toArray(Predicate[]::new));
-        };
+        return cb.and(required.toArray(Predicate[]::new));
     }
 }

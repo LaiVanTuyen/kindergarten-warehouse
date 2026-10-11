@@ -58,6 +58,9 @@ class ResourceServiceTest {
     @Mock
     private ResourceStatService resourceStatService;
 
+    @Mock
+    private NotificationService notificationService;
+
     // Guard that thay vi mock: test service phai chay dung pipeline 404/410.
     @org.mockito.Spy
     private com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard =

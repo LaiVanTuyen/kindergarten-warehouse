@@ -68,4 +68,33 @@ public interface ResourceRepository extends JpaRepository<Resource, String>,
         @org.springframework.data.jpa.repository.Query("UPDATE Resource r SET r.downloadCount = r.downloadCount + :count WHERE r.id = :id")
         void incrementDownloads(@org.springframework.data.repository.query.Param("id") String id,
                         @org.springframework.data.repository.query.Param("count") long count);
+
+        @org.springframework.data.jpa.repository.Query("SELECT r.id, t FROM Resource r JOIN r.tags t WHERE r.id IN :resourceIds")
+        java.util.List<Object[]> findTagsByResourceIds(
+                        @org.springframework.data.repository.query.Param("resourceIds") java.util.Collection<String> resourceIds);
+
+        /** Tag cloud: counts only resources a guest could see (approved, public chain, not deleted). */
+        @org.springframework.data.jpa.repository.Query("SELECT t, COUNT(r) FROM Resource r JOIN r.tags t " +
+                        "WHERE r.isDeleted = false AND r.status = com.kindergarten.warehouse.entity.ResourceStatus.APPROVED " +
+                        "AND r.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
+                        "AND r.topic.isDeleted = false AND r.topic.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
+                        "AND r.topic.category.isDeleted = false AND r.topic.category.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
+                        "GROUP BY t ORDER BY COUNT(r) DESC, t ASC")
+        java.util.List<Object[]> findPopularTags(Pageable pageable);
+
+        /** Author page totals over the author's publicly visible resources: [count, views, downloads]. */
+        @org.springframework.data.jpa.repository.Query("SELECT COUNT(r), COALESCE(SUM(r.viewsCount), 0), COALESCE(SUM(r.downloadCount), 0) " +
+                        "FROM Resource r WHERE r.createdBy = :userId " +
+                        "AND r.isDeleted = false AND r.status = com.kindergarten.warehouse.entity.ResourceStatus.APPROVED " +
+                        "AND r.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
+                        "AND r.topic.isDeleted = false AND r.topic.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC " +
+                        "AND r.topic.category.isDeleted = false AND r.topic.category.visibility = com.kindergarten.warehouse.entity.Visibility.PUBLIC")
+        java.util.List<Object[]> findPublicStatsByAuthor(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+        /** Resources for a collection page, with everything ResourceAccessGuard and the mapper touch. */
+        @org.springframework.data.jpa.repository.Query("SELECT DISTINCT r FROM Resource r " +
+                        "LEFT JOIN FETCH r.topic t LEFT JOIN FETCH t.category " +
+                        "LEFT JOIN FETCH r.creator WHERE r.id IN :ids")
+        java.util.List<Resource> findAllWithDetailsByIdIn(
+                        @org.springframework.data.repository.query.Param("ids") java.util.Collection<String> ids);
 }

@@ -30,6 +30,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final TokenRevocationService tokenRevocationService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Login authenticates the submitted credentials. A revoked cookie from
+        // an earlier password change must not prevent obtaining a new session.
+        return "POST".equals(request.getMethod())
+                && "/api/v1/auth/login".equals(request.getServletPath());
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {

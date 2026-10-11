@@ -33,6 +33,10 @@ public class ResourceResponse extends BaseResponse {
     private Double averageRating;
     private TopicResponse topic;
     private List<AgeGroupResponse> ageGroups;
+    private List<String> tags;
+    /** Uploader's user id, used by the Portal to link to the author's public page. */
+    private Long authorId;
+    private String authorName;
     private com.kindergarten.warehouse.entity.Visibility visibility;
     private String rejectionReason;
     private Boolean isFavorited;

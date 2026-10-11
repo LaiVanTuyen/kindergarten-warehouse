@@ -56,6 +56,7 @@ public class ResourceController {
 
     private final ResourceService resourceService;
     private final MessageService messageService;
+    private final com.kindergarten.warehouse.service.PortalDiscoveryService portalDiscoveryService;
     private final com.kindergarten.warehouse.security.ViewerResolver viewerResolver;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -109,6 +110,16 @@ public class ResourceController {
                 HttpStatus.OK);
     }
 
+    @GetMapping("/{slug}/related")
+    public ResponseEntity<ApiResponse<java.util.List<ResourceResponse>>> getRelatedResources(
+            @PathVariable String slug,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "6") int size,
+            org.springframework.security.core.Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                resourceService.getRelatedResources(slug, size, viewerResolver.resolve(authentication)),
+                messageService.getMessage("resource.list.success")));
+    }
+
     /**
      * API_CONTRACT_V2 §—dong 234: <strong>POST</strong> {@code /{id}/view}.
      *
@@ -156,7 +167,11 @@ public class ResourceController {
     public ResponseEntity<StreamingResponseBody> downloadResource(
             @PathVariable String id,
             org.springframework.security.core.Authentication authentication) throws Exception {
-        var fileInfo = resourceService.getResourceFileInfo(id, viewerResolver.resolve(authentication));
+        var viewer = viewerResolver.resolve(authentication);
+        var fileInfo = resourceService.getResourceFileInfo(id, viewer);
+        if (viewer.isAuthenticated()) {
+            portalDiscoveryService.recordDownload(viewer.userId(), id);
+        }
 
         ContentDisposition contentDisposition = ContentDisposition.attachment()
                 .filename(fileInfo.getFileName(), StandardCharsets.UTF_8)

@@ -28,6 +28,10 @@ public class ResourceFilterRequest {
     // Resource Type (e.g., VIDEO, AUDIO, DOCUMENT - Multi-select supported)
     private List<String> types;
 
+    // Tags (multi-select, matches any). Normalized in the service.
+    @Setter
+    private List<String> tags;
+
     @Setter
     private String status;
     @Setter
