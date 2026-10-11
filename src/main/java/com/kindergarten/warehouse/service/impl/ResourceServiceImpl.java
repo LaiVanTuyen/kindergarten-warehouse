@@ -1038,6 +1038,11 @@ public class ResourceServiceImpl implements ResourceService {
             case "jpeg":
             case "webp":
                 return FileType.IMAGE;
+            case "mp3":
+            case "m4a":
+            case "wav":
+            case "ogg":
+                return FileType.AUDIO;
             default:
                 throw new AppException(ErrorCode.FILE_TYPE_INVALID);
         }
@@ -1101,6 +1106,79 @@ public class ResourceServiceImpl implements ResourceService {
      *         trong DB, và {@code 0} khi cả hai đều không có — controller sẽ bỏ
      *         header {@code Content-Length} thay vì khai một con số sai.
      */
+    private static final java.util.Set<String> STREAMABLE_TYPES =
+            java.util.Set.of(FileType.VIDEO.name(), FileType.AUDIO.name(), FileType.IMAGE.name());
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.kindergarten.warehouse.dto.response.MediaStream openMediaStream(String id,
+            com.kindergarten.warehouse.security.Viewer viewer, String rangeHeader) throws Exception {
+        Resource resource = resourceAccessGuard.requireDownloadable(
+                resourceRepository.findByIdWithDetails(id).orElse(null), viewer);
+        // Documents have their own preview pipeline; streaming them here would just be an
+        // uncounted download path.
+        if (resource.getResourceType() != ResourceType.FILE || !STREAMABLE_TYPES.contains(resource.getFileType())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        String contentType = getContentTypeByExtension(normalizeExtension(resource.getFileExtension()));
+        long total = minioStorageService.getObjectSize(resource.getFileUrl());
+
+        long[] range = parseSingleRange(rangeHeader, total);
+        if (range == null) {
+            return new com.kindergarten.warehouse.dto.response.MediaStream(
+                    minioStorageService.getObject(resource.getFileUrl()), contentType, total, 0, total - 1, false, false);
+        }
+        if (range.length == 0) {
+            return new com.kindergarten.warehouse.dto.response.MediaStream(null, contentType, total, 0, -1, false, true);
+        }
+        return new com.kindergarten.warehouse.dto.response.MediaStream(
+                minioStorageService.getObjectRange(resource.getFileUrl(), range[0], range[1]),
+                contentType, total, range[0], range[1], true, false);
+    }
+
+    /**
+     * Parses {@code bytes=a-b}, {@code bytes=a-} or {@code bytes=-n} (RFC 9110, single range only).
+     *
+     * @return null → ignore the header and send the whole body (absent, malformed, multi-range);
+     *         empty array → 416; otherwise {start, end} inclusive, end clamped to the last byte.
+     */
+    static long[] parseSingleRange(String header, long total) {
+        if (header == null || !header.startsWith("bytes=") || header.contains(",")) {
+            return null;
+        }
+        String spec = header.substring("bytes=".length()).trim();
+        int dash = spec.indexOf('-');
+        if (dash < 0) {
+            return null;
+        }
+        try {
+            String first = spec.substring(0, dash).trim();
+            String last = spec.substring(dash + 1).trim();
+            long start;
+            long end;
+            if (first.isEmpty()) {
+                if (last.isEmpty()) {
+                    return null;
+                }
+                long suffix = Long.parseLong(last);
+                if (suffix <= 0 || total == 0) {
+                    return new long[0];
+                }
+                start = Math.max(0, total - suffix);
+                end = total - 1;
+            } else {
+                start = Long.parseLong(first);
+                end = last.isEmpty() ? total - 1 : Math.min(Long.parseLong(last), total - 1);
+                if (start >= total || end < start) {
+                    return new long[0];
+                }
+            }
+            return new long[] { start, end };
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private long resolveStreamLength(java.io.InputStream inputStream, Resource resource) {
         if (inputStream instanceof software.amazon.awssdk.core.ResponseInputStream<?> response
                 && response.response() instanceof software.amazon.awssdk.services.s3.model.GetObjectResponse object
@@ -1134,6 +1212,10 @@ public class ResourceServiceImpl implements ResourceService {
             case "mp4" -> "video/mp4";
             case "mov" -> "video/quicktime";
             case "avi" -> "video/x-msvideo";
+            case "mp3" -> "audio/mpeg";
+            case "m4a" -> "audio/mp4";
+            case "wav" -> "audio/wav";
+            case "ogg" -> "audio/ogg";
             default -> "application/octet-stream";
         };
     }

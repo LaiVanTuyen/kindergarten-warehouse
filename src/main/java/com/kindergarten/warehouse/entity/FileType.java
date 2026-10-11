@@ -6,5 +6,6 @@ public enum FileType {
     EXCEL,
     PDF,
     POWERPOINT,
-    IMAGE
+    IMAGE,
+    AUDIO
 }

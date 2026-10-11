@@ -111,6 +111,66 @@ class ResourceServiceTest {
     }
 
     @Nested
+    @DisplayName("Media stream for classroom presentation")
+    class MediaStreamTests {
+
+        private final com.kindergarten.warehouse.security.Viewer signedIn =
+                com.kindergarten.warehouse.security.Viewer.of(2L, java.util.Set.of(Role.USER));
+
+        private void storedVideo(String fileType, String extension) {
+            testResource.setResourceType(com.kindergarten.warehouse.entity.ResourceType.FILE);
+            testResource.setFileType(fileType);
+            testResource.setFileExtension(extension);
+            testResource.setFileUrl("resources/files/a." + extension);
+            when(resourceRepository.findByIdWithDetails("res-1")).thenReturn(Optional.of(testResource));
+        }
+
+        @Test
+        @DisplayName("Range request returns the requested bytes and never counts a download")
+        void rangeRequestDoesNotCountDownload() throws Exception {
+            storedVideo("VIDEO", "mp4");
+            when(minioStorageService.getObjectSize(any())).thenReturn(1000L);
+            when(minioStorageService.getObjectRange(any(), org.mockito.ArgumentMatchers.eq(100L),
+                    org.mockito.ArgumentMatchers.eq(199L)))
+                    .thenReturn(new java.io.ByteArrayInputStream(new byte[100]));
+
+            var media = resourceService.openMediaStream("res-1", signedIn, "bytes=100-199");
+
+            assertTrue(media.partial());
+            assertEquals(100, media.length());
+            assertEquals("video/mp4", media.contentType());
+            verify(resourceStatService, never()).incrementDownloadCount(any());
+        }
+
+        @Test
+        @DisplayName("Audio is streamable with the right content type")
+        void audioIsStreamable() throws Exception {
+            storedVideo("AUDIO", "mp3");
+            when(minioStorageService.getObjectSize(any())).thenReturn(10L);
+            when(minioStorageService.getObject(any())).thenReturn(new java.io.ByteArrayInputStream(new byte[10]));
+
+            var media = resourceService.openMediaStream("res-1", signedIn, null);
+
+            assertEquals("audio/mpeg", media.contentType());
+            assertEquals(10, media.length());
+        }
+
+        @Test
+        @DisplayName("Documents are refused (they have their own preview), guests need to sign in")
+        void documentsAndGuestsAreRefused() {
+            storedVideo("PDF", "pdf");
+            AppException doc = assertThrows(AppException.class,
+                    () -> resourceService.openMediaStream("res-1", signedIn, null));
+            assertEquals(ErrorCode.INVALID_REQUEST, doc.getErrorCode());
+
+            testResource.setFileType("VIDEO");
+            AppException guest = assertThrows(AppException.class, () -> resourceService.openMediaStream(
+                    "res-1", com.kindergarten.warehouse.security.Viewer.guest(), null));
+            assertEquals(ErrorCode.DOWNLOAD_REQUIRES_AUTH, guest.getErrorCode());
+        }
+    }
+
+    @Nested
     @DisplayName("Tests for getResourceBySlug")
     class GetResourceBySlugTests {
 

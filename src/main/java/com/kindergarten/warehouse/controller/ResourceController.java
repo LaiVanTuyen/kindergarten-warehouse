@@ -196,6 +196,43 @@ public class ResourceController {
         return builder.body(stream);
     }
 
+    /**
+     * In-page playback for video/audio/image (classroom presentation). Same access as
+     * {@code /file} (signed-in, may view), supports HTTP Range for seeking, and never
+     * counts a download — a single viewing issues many range requests.
+     */
+    @GetMapping("/{id}/stream")
+    public ResponseEntity<StreamingResponseBody> streamResource(
+            @PathVariable String id,
+            @org.springframework.web.bind.annotation.RequestHeader(value = HttpHeaders.RANGE, required = false) String range,
+            org.springframework.security.core.Authentication authentication) throws Exception {
+        var media = resourceService.openMediaStream(id, viewerResolver.resolve(authentication), range);
+        if (media.unsatisfiable()) {
+            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + media.total())
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .build();
+        }
+        StreamingResponseBody body = outputStream -> {
+            try (java.io.InputStream in = media.body()) {
+                in.transferTo(outputStream);
+            }
+        };
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(media.partial() ? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK)
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().build().toString())
+                // Per-user authorised content: never in shared caches.
+                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=300")
+                .header("X-Content-Type-Options", "nosniff")
+                .contentType(MediaType.parseMediaType(media.contentType()))
+                .contentLength(media.length());
+        if (media.partial()) {
+            builder.header(HttpHeaders.CONTENT_RANGE,
+                    "bytes " + media.start() + "-" + media.end() + "/" + media.total());
+        }
+        return builder.body(body);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<Void>> deleteResource(

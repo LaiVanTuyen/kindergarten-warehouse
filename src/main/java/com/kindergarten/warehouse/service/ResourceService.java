@@ -36,6 +36,14 @@ public interface ResourceService {
 
     FileDownloadInfo getResourceFileInfo(String id, com.kindergarten.warehouse.security.Viewer viewer) throws Exception;
 
+    /**
+     * Video/audio/image bytes for in-page playback (classroom presentation). Same access
+     * rule as download, supports a single HTTP Range, and does NOT count a download or
+     * write download history — a player issues many range requests per viewing.
+     */
+    com.kindergarten.warehouse.dto.response.MediaStream openMediaStream(String id,
+            com.kindergarten.warehouse.security.Viewer viewer, String rangeHeader) throws Exception;
+
     Page<ResourceResponse> getFavoriteResources(Pageable pageable,
             com.kindergarten.warehouse.security.Viewer viewer);
 

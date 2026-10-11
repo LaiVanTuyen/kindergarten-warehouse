@@ -205,19 +205,42 @@ public class MinioStorageService {
 
     public InputStream getObject(String fileUrl) throws Exception {
         try {
-            String prefix = publicEndpoint + "/" + bucketName + "/";
-            String key;
-            if (fileUrl.startsWith(prefix)) {
-                key = fileUrl.substring(prefix.length());
-            } else if (fileUrl.startsWith("http")) {
-                key = fileUrl.substring(fileUrl.lastIndexOf(bucketName) + bucketName.length() + 1);
-            } else {
-                key = fileUrl;
-            }
-
+            String key = keyOf(fileUrl);
             return s3Client.getObject(b -> b.bucket(bucketName).key(key));
         } catch (S3Exception e) {
             throw new Exception("Failed to get file from MinIO: " + e.getMessage(), e);
         }
+    }
+
+    /** Size in bytes of the stored object (HEAD), the only trustworthy length for Range math. */
+    public long getObjectSize(String fileUrl) throws Exception {
+        try {
+            String key = keyOf(fileUrl);
+            return s3Client.headObject(b -> b.bucket(bucketName).key(key)).contentLength();
+        } catch (S3Exception e) {
+            throw new Exception("Failed to stat file in MinIO: " + e.getMessage(), e);
+        }
+    }
+
+    /** Bytes {@code start..end} inclusive, for HTTP Range (video/audio seeking). */
+    public InputStream getObjectRange(String fileUrl, long start, long end) throws Exception {
+        try {
+            String key = keyOf(fileUrl);
+            String range = "bytes=" + start + "-" + end;
+            return s3Client.getObject(b -> b.bucket(bucketName).key(key).range(range));
+        } catch (S3Exception e) {
+            throw new Exception("Failed to get file range from MinIO: " + e.getMessage(), e);
+        }
+    }
+
+    private String keyOf(String fileUrl) {
+        String prefix = publicEndpoint + "/" + bucketName + "/";
+        if (fileUrl.startsWith(prefix)) {
+            return fileUrl.substring(prefix.length());
+        }
+        if (fileUrl.startsWith("http")) {
+            return fileUrl.substring(fileUrl.lastIndexOf(bucketName) + bucketName.length() + 1);
+        }
+        return fileUrl;
     }
 }
