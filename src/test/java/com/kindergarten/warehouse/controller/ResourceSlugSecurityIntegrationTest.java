@@ -310,6 +310,38 @@ class ResourceSlugSecurityIntegrationTest {
         return response;
     }
 
+    @Test
+    @DisplayName("JWT GET giữ cookie CSRF để thao tác ghi kế tiếp không bị 403")
+    // csrf() in other tests installs a test token repository. Reload to exercise
+    // the production CookieCsrfTokenRepository with real cookie/header values.
+    @org.springframework.test.annotation.DirtiesContext(methodMode = org.springframework.test.annotation.DirtiesContext.MethodMode.BEFORE_METHOD)
+    void authenticatedReadsPreserveCsrfCookie() throws Exception {
+        doAnswer(invocation -> {
+            org.springframework.security.core.context.SecurityContextHolder.getContext()
+                    .setAuthentication(as(OWNER_ID, Role.TEACHER));
+            FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
+        when(resourceService.getResourceBySlug(SLUG, Viewer.of(OWNER_ID, Set.of(Role.TEACHER))))
+                .thenReturn(response());
+        when(resourceService.toggleFavorite("res-1", "nguoidung" + OWNER_ID)).thenReturn(true);
+
+        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("XSRF-TOKEN", "stable-csrf-token");
+        cookie.setPath("/");
+        for (int i = 0; i < 3; i++) {
+            var result = mockMvc.perform(get("/api/v1/resources/{slug}", SLUG).cookie(cookie))
+                    .andExpect(status().isOk()).andReturn();
+            org.assertj.core.api.Assertions.assertThat(result.getResponse().getCookies())
+                    .noneMatch(c -> "XSRF-TOKEN".equals(c.getName()) && c.getMaxAge() == 0);
+        }
+        mockMvc.perform(post("/api/v1/resources/res-1/favorite")
+                        .cookie(cookie).header("X-XSRF-TOKEN", "stable-csrf-token"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/resources/res-1/favorite").cookie(cookie))
+                .andExpect(status().isForbidden());
+    }
+
     private static Authentication as(Long id, Role... roles) {
         CustomUserDetails details = CustomUserDetails.builder()
                 .id(id)

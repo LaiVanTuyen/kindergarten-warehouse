@@ -49,6 +49,7 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, buildAccessTokenCookie(accessToken).toString())
+                .header(HttpHeaders.SET_COOKIE, expireCsrfCookie().toString())
                 .body(ApiResponse.success(response, messageService.getMessage("auth.login.success")));
     }
 
@@ -114,6 +115,12 @@ public class AuthController {
                 .maxAge(COOKIE_MAX_AGE_SECONDS)
                 .sameSite(cookieSameSite)
                 .build();
+    }
+
+    private ResponseCookie expireCsrfCookie() {
+        return ResponseCookie.from("XSRF-TOKEN", "")
+                .httpOnly(false).secure(cookieSecure).path("/")
+                .maxAge(0).sameSite(cookieSameSite).build();
     }
 
     private String extractTokenFromCookie(HttpServletRequest request) {

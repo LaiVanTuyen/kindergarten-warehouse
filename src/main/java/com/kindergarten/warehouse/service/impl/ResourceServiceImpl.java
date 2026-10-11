@@ -120,10 +120,10 @@ public class ResourceServiceImpl implements ResourceService {
             }
         } else {
             String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
-            fileUrl = minioStorageService.uploadFile(request.getFile(), path);
             resourceType = ResourceType.FILE;
             extension = getExtension(request.getFile().getOriginalFilename());
             fileType = determineFileType(extension).name();
+            fileUrl = minioStorageService.uploadFile(request.getFile(), path);
             fileSize = request.getFile().getSize();
         }
 
@@ -553,6 +553,10 @@ public class ResourceServiceImpl implements ResourceService {
         // Ignore client-supplied fileType; backend derives from file/link.
 
         if (request.getFile() != null && !request.getFile().isEmpty()) {
+            String extension = getExtension(request.getFile().getOriginalFilename());
+            String derivedFileType = determineFileType(extension).name();
+            String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
+            String newFileUrl = minioStorageService.uploadFile(request.getFile(), path);
             // Delete old file if present
             if (resource.getResourceType() == ResourceType.FILE && resource.getFileUrl() != null
                     && !resource.getFileUrl().isEmpty()) {
@@ -562,13 +566,10 @@ public class ResourceServiceImpl implements ResourceService {
                     log.warn("Failed to delete old file during update: {}", e.getMessage());
                 }
             }
-            String path = AppConstants.BUCKET_RESOURCES + "/" + AppConstants.FOLDER_FILES;
-            String newFileUrl = minioStorageService.uploadFile(request.getFile(), path);
             resource.setFileUrl(newFileUrl);
             resource.setResourceType(ResourceType.FILE);
-            String extension = getExtension(request.getFile().getOriginalFilename());
             resource.setFileExtension(extension);
-            resource.setFileType(determineFileType(extension).name());
+            resource.setFileType(derivedFileType);
             resource.setFileSize(request.getFile().getSize());
         }
 
@@ -926,6 +927,14 @@ public class ResourceServiceImpl implements ResourceService {
                 return FileType.EXCEL;
             case "pdf":
                 return FileType.PDF;
+            case "ppt":
+            case "pptx":
+                return FileType.POWERPOINT;
+            case "png":
+            case "jpg":
+            case "jpeg":
+            case "webp":
+                return FileType.IMAGE;
             default:
                 throw new AppException(ErrorCode.FILE_TYPE_INVALID);
         }
@@ -955,12 +964,11 @@ public class ResourceServiceImpl implements ResourceService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        resourceStatService.incrementDownloadCount(resource.getId());
-
         String extension = normalizeExtension(resource.getFileExtension());
         String fileName = buildDownloadFileName(resource, extension);
         String contentType = getContentTypeByExtension(extension);
         var inputStream = minioStorageService.getObject(resource.getFileUrl());
+        resourceStatService.incrementDownloadCount(resource.getId());
 
         // Content-Length phải lấy từ OBJECT ĐANG STREAM, không lấy từ cột
         // `resources.file_size`.
@@ -1015,6 +1023,11 @@ public class ResourceServiceImpl implements ResourceService {
             case "doc" -> "application/msword";
             case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             case "xls" -> "application/vnd.ms-excel";
+            case "ppt" -> "application/vnd.ms-powerpoint";
+            case "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "webp" -> "image/webp";
             case "mp4" -> "video/mp4";
             case "mov" -> "video/quicktime";
             case "avi" -> "video/x-msvideo";

@@ -41,6 +41,9 @@ class ResourceServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private TopicRepository topicRepository;
+
+    @Mock
     private ResourceMapper resourceMapper;
 
     @Mock
@@ -136,6 +139,55 @@ class ResourceServiceTest {
     @Nested
     @DisplayName("Tests for download file name")
     class DownloadFileNameTests {
+
+        @Test
+        void invalidFileIsRejectedBeforeStorageWrite() {
+            when(userRepository.findByUsername("admin")).thenReturn(Optional.of(adminUser));
+            when(topicRepository.findById(1L)).thenReturn(Optional.of(testResource.getTopic()));
+            var request = new com.kindergarten.warehouse.dto.request.ResourceCreationRequest();
+            request.setTitle("Invalid upload");
+            request.setTopicId(1L);
+            request.setFile(new org.springframework.mock.web.MockMultipartFile("file", "demo.exe",
+                    "application/octet-stream", new byte[]{1}));
+            var error = assertThrows(AppException.class, () -> resourceService.uploadResource(request, "admin"));
+            assertEquals(ErrorCode.FILE_TYPE_INVALID, error.getErrorCode());
+            verify(minioStorageService, never()).uploadFile(any(), anyString());
+        }
+
+        @org.junit.jupiter.params.ParameterizedTest
+        @org.junit.jupiter.params.provider.CsvSource({"png,IMAGE", "jpg,IMAGE", "webp,IMAGE", "ppt,POWERPOINT", "pptx,POWERPOINT"})
+        void supportsTeachingFileFormats(String extension, FileType expectedType) {
+            when(userRepository.findByUsername("admin")).thenReturn(Optional.of(adminUser));
+            when(topicRepository.findById(1L)).thenReturn(Optional.of(testResource.getTopic()));
+            when(minioStorageService.uploadFile(any(), anyString())).thenReturn("resources/files/demo." + extension);
+            when(resourceRepository.save(any(Resource.class))).thenAnswer(i -> i.getArgument(0));
+            when(resourceMapper.toResponse(any(Resource.class), eq(false))).thenReturn(mockResponse);
+            var request = new com.kindergarten.warehouse.dto.request.ResourceCreationRequest();
+            request.setTitle("Demo teaching material");
+            request.setTopicId(1L);
+            request.setFile(new org.springframework.mock.web.MockMultipartFile("file", "demo." + extension,
+                    "application/octet-stream", new byte[]{1}));
+
+            resourceService.uploadResource(request, "admin");
+
+            var saved = org.mockito.ArgumentCaptor.forClass(Resource.class);
+            verify(resourceRepository).save(saved.capture());
+            assertEquals(expectedType.name(), saved.getValue().getFileType());
+        }
+
+        @Test
+        @DisplayName("Does not count a download when storage cannot open the file")
+        void storageFailureDoesNotIncrementDownloads() throws Exception {
+            testResource.setResourceType(ResourceType.FILE);
+            testResource.setFileUrl("resources/missing.pdf");
+            when(resourceRepository.findByIdWithDetails("res-1")).thenReturn(Optional.of(testResource));
+            when(minioStorageService.getObject("resources/missing.pdf"))
+                    .thenThrow(new RuntimeException("Storage unavailable"));
+
+            assertThrows(RuntimeException.class, () -> resourceService.getResourceFileInfo(
+                    "res-1", com.kindergarten.warehouse.security.Viewer.of(2L, java.util.Set.of(Role.USER))));
+            verify(resourceStatService, never()).incrementDownloadCount(any());
+        }
 
         @Test
         @DisplayName("Sanitizes reserved and line-break characters")

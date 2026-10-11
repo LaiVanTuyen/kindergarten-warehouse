@@ -75,6 +75,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        // JWT authentication happens on every request. Session-based
+                        // CSRF rotation would delete the cookie on alternating GETs.
+                        // AuthController rotates it at the actual login boundary.
+                        .sessionAuthenticationStrategy(new org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy())
                         .csrfTokenRequestHandler(csrfRequestHandler)
                         .ignoringRequestMatchers(
                                 new AntPathRequestMatcher("/v3/api-docs/**"),
