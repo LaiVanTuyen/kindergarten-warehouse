@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -93,6 +94,10 @@ class LessonPlanIT {
     @Autowired TopicRepository topicRepository;
     @Autowired CategoryRepository categoryRepository;
     @Autowired UserRepository userRepository;
+    @Autowired com.kindergarten.warehouse.service.PlanCollaborationService collab;
+    @Autowired NotificationRepository notificationRepository;
+    @Autowired LessonPlanRepository planRepository;
+    @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
 
     private Topic topic;
     private Viewer alice;
@@ -261,6 +266,124 @@ class LessonPlanIT {
         assertThat(planService.listMine(alice, "hinh tron", 0, 10).getContent())
                 .extracting(LessonPlanResponses.Summary::id).containsExactly(created.id());
         assertThat(planService.listMine(alice, "không có", 0, 10).getContent()).isEmpty();
+    }
+
+    // --- Phase 3: review, comments, usage ------------------------------------
+
+    /** A shared plan with real content, written as the full document the editor sends. */
+    private LessonPlanRequest sharedDoc(String title, String objectives, String reflection, Long version) {
+        return new LessonPlanRequest(title, null, null, 20, 25, objectives, "Giấy", null, reflection, null,
+                LessonPlanStatus.SHARED, null, null, List.of(step("Khám phá", 20, List.of(songId))), version);
+    }
+
+    @Test
+    void reviewFlowApprovesOnlyTheVersionReadAndContentEditsNeedReReview() {
+        var draft = createPlan(request("Nháp chưa chia sẻ", null, null, null), alice);
+        expectError(() -> collab.requestReview(draft.id(), alice), ErrorCode.PLAN_REVIEW_STATE);
+
+        var plan = planService.create(sharedDoc("Màu sắc quanh bé", "Nhận biết màu đỏ", null, null), alice);
+        expectError(() -> collab.requestReview(plan.id(), bob), ErrorCode.PLAN_FORBIDDEN);
+        collab.requestReview(plan.id(), alice);
+        var pending = planService.get(plan.id(), alice).plan();
+        assertThat(pending.reviewStatus()).isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.PENDING);
+        assertThat(pending.version()).isEqualTo(plan.version());   // requesting review does not bump the version
+        assertThat(collab.reviewQueue(admin, 0, 50).getContent()).extracting(LessonPlanResponses.Summary::id)
+                .contains(plan.id());
+
+        // Owner edits content after the reviewer opened it: the reviewer's version is stale.
+        Long reviewerSaw = pending.version();
+        var edited = planService.update(plan.id(), sharedDoc("Màu sắc quanh bé", "Nhận biết màu đỏ, vàng", null, reviewerSaw), alice);
+        expectError(() -> collab.decide(plan.id(), reviewerSaw, com.kindergarten.warehouse.service.PlanCollaborationService.Decision.APPROVE,
+                null, admin), ErrorCode.PLAN_REVIEW_STATE);
+
+        collab.decide(plan.id(), edited.version(), com.kindergarten.warehouse.service.PlanCollaborationService.Decision.APPROVE,
+                "Rõ ràng, phù hợp lứa tuổi", admin);
+        var approved = planService.get(plan.id(), alice);
+        assertThat(approved.plan().reviewStatus()).isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.APPROVED);
+        assertThat(approved.reviewNote()).isEqualTo("Rõ ràng, phù hợp lứa tuổi");
+        assertThat(approved.plan().version()).isEqualTo(edited.version());   // owner's open editor still saves
+        assertThat(notificationRepository.findByUserIdOrderByCreatedAtDesc(alice.userId(), PageRequest.of(0, 1))
+                .getContent().get(0).getType()).isEqualTo(com.kindergarten.warehouse.entity.NotificationType.PLAN_APPROVED);
+        // A second decision on the same plan is refused.
+        expectError(() -> collab.decide(plan.id(), edited.version(),
+                com.kindergarten.warehouse.service.PlanCollaborationService.Decision.REQUEST_CHANGES, "x", admin),
+                ErrorCode.PLAN_REVIEW_STATE);
+
+        // Personal reflection is not reviewed content: approval stays.
+        var reflected = planService.update(plan.id(), sharedDoc("Màu sắc quanh bé", "Nhận biết màu đỏ, vàng",
+                "Trẻ hào hứng", edited.version()), alice);
+        assertThat(reflected.reviewStatus()).isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.APPROVED);
+        assertThat(planService.listLibrary(bob, null, null, true, 0, 50).getContent())
+                .extracting(LessonPlanResponses.Summary::id).contains(plan.id());
+
+        // Changing the content sends it back for review and out of the "approved" library.
+        var changed = planService.update(plan.id(), sharedDoc("Màu sắc quanh bé", "Nhận biết 3 màu",
+                "Trẻ hào hứng", reflected.version()), alice);
+        assertThat(changed.reviewStatus()).isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.NONE);
+        assertThat(planService.listLibrary(bob, null, null, true, 0, 50).getContent())
+                .extracting(LessonPlanResponses.Summary::id).doesNotContain(plan.id());
+    }
+
+    @Test
+    void ownerSaveRacingAnApprovalDoesNotOverwriteIt() throws Exception {
+        var plan = planService.create(sharedDoc("Đua duyệt", "Mục tiêu", null, null), alice);
+        collab.requestReview(plan.id(), alice);
+        var tx = new org.springframework.transaction.support.TransactionTemplate(txManager);
+
+        // The owner's transaction loads the plan (PENDING) ...
+        tx.executeWithoutResult(status -> {
+            var entity = planRepository.findById(plan.id()).orElseThrow();
+            assertThat(entity.getReviewStatus()).isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.PENDING);
+            // ... the reviewer approves from another thread meanwhile ...
+            var reviewer = new Thread(() -> collab.decide(plan.id(), entity.getVersion(),
+                    com.kindergarten.warehouse.service.PlanCollaborationService.Decision.APPROVE, null, admin));
+            reviewer.start();
+            try {
+                reviewer.join(30_000);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+            // ... then the owner's change (personal notes only) is flushed with the stale entity.
+            entity.setReflection("Ghi nhận sau giờ học");
+            planRepository.saveAndFlush(entity);
+        });
+
+        assertThat(planService.get(plan.id(), alice).plan().reviewStatus())
+                .isEqualTo(com.kindergarten.warehouse.entity.PlanReviewStatus.APPROVED);
+    }
+
+    @Test
+    void colleaguesCommentOnSharedPlansAndOwnerIsNotified() {
+        var draft = createPlan(request("Nháp riêng", null, null, null), alice);
+        expectError(() -> collab.addComment(draft.id(), "Góp ý", bob), ErrorCode.PLAN_NOT_FOUND);
+
+        var plan = planService.create(sharedDoc("Kế hoạch chia sẻ", "Mục tiêu", null, null), alice);
+        long before = notificationRepository.countByUserIdAndIsReadFalse(alice.userId());
+        var comment = collab.addComment(plan.id(), "Nên thêm phần vận động cuối giờ", bob);
+        assertThat(comment.canDelete()).isTrue();
+        assertThat(notificationRepository.countByUserIdAndIsReadFalse(alice.userId())).isEqualTo(before + 1);
+
+        collab.addComment(plan.id(), "Cảm ơn chị, em sẽ thêm", alice);   // owner reply: no self-notification
+        assertThat(notificationRepository.countByUserIdAndIsReadFalse(alice.userId())).isEqualTo(before + 1);
+
+        var forAlice = collab.overview(plan.id(), alice);
+        assertThat(forAlice.comments()).extracting(c -> c.content())
+                .containsExactly("Nên thêm phần vận động cuối giờ", "Cảm ơn chị, em sẽ thêm");
+        assertThat(forAlice.comments().get(0).canDelete()).isFalse();
+        expectError(() -> collab.deleteComment(plan.id(), comment.id(), alice), ErrorCode.PLAN_COMMENT_FORBIDDEN);
+        collab.deleteComment(plan.id(), comment.id(), admin);
+        assertThat(collab.overview(plan.id(), bob).comments()).hasSize(1);
+    }
+
+    @Test
+    void usageIsCountedPerTeacherAndRejectsFutureDates() {
+        var plan = planService.create(sharedDoc("Đã dùng", "Mục tiêu", null, null), alice);
+        collab.markUsed(plan.id(), LocalDate.of(2026, 9, 1), bob);
+        var overview = collab.markUsed(plan.id(), null, bob);
+        assertThat(overview.teachersUsed()).isEqualTo(1);
+        assertThat(overview.usedByMe()).isTrue();
+        assertThat(collab.overview(plan.id(), alice).usedByMe()).isFalse();
+        expectError(() -> collab.markUsed(plan.id(), LocalDate.now().plusDays(3), bob), ErrorCode.INVALID_REQUEST);
     }
 
     /** Small builder so tests read like the plan they describe. */

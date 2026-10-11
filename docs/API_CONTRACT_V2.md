@@ -599,3 +599,27 @@ Quy tắc do backend bảo đảm (không phụ thuộc prompt):
 Portal: trang `/assistant` (tìm học liệu, soạn bản nháp → "Dùng bản nháp này" tạo kế hoạch DRAFT với mọi bước `AI_SUGGESTED`); trong trình soạn có ô "Nhờ trợ lý điều chỉnh" — chỉ bước bị đổi thành `AI_SUGGESTED`, có hoàn tác; nếu giáo viên sửa trong lúc chờ, kết quả bị bỏ để không ghi đè.
 
 Cấu hình: `ANTHROPIC_API_KEY`, `AI_MODEL` (mặc định `claude-opus-5-5`), `AI_DAILY_LIMIT` (mặc định 30).
+
+## 20. Phối hợp trong trường — giai đoạn 3 (2026-10-11)
+
+Chỉ TEACHER/ADMIN. Quyền đọc/sở hữu kế hoạch dùng lại quy tắc mục 18.
+
+| Method | Path | Ghi chú |
+|---|---|---|
+| GET | `/plans/library?keyword=&ageGroupId=&approvedOnly=` | Thư viện trường = kế hoạch SHARED; `approvedOnly=true` chỉ lấy kế hoạch đã duyệt chuyên môn. |
+| GET | `/plans/{id}/collaboration` | `{teachersUsed, usedByMe, myLastUsedOn, comments[]}` |
+| POST | `/plans/{id}/comments` | `{content ≤2000}`. Đọc được kế hoạch là góp ý được (bản nháp của người khác → 404). Chủ kế hoạch nhận thông báo `PLAN_COMMENT` (trừ khi tự góp ý). |
+| DELETE | `/plans/{id}/comments/{commentId}` | Tác giả hoặc ADMIN; khác → 403 (6907). |
+| POST | `/plans/{id}/usage` | `{usedOn?}` (mặc định hôm nay giờ VN, không được ở tương lai). Mỗi giáo viên một dòng, đếm số lần. |
+| POST | `/plans/{id}/review-request` | Chủ sở hữu; kế hoạch phải SHARED và đang NONE/CHANGES_REQUESTED → PENDING; khác → 409 (6905). |
+| GET | `/admin/plan-reviews` | ADMIN; hàng đợi PENDING, cũ nhất trước. |
+| POST | `/admin/plan-reviews/{id}` | ADMIN; `{version, decision: APPROVE\|REQUEST_CHANGES, note}` (note bắt buộc khi REQUEST_CHANGES). Chỉ thành công nếu kế hoạch còn PENDING **và** đúng `version` người duyệt đã đọc → không duyệt nhầm nội dung chưa xem, hai người duyệt không cùng thắng. Thông báo `PLAN_APPROVED` / `PLAN_CHANGES_REQUESTED` cho chủ. |
+
+Trường mới: `Summary.reviewStatus` (`NONE|PENDING|APPROVED|CHANGES_REQUESTED`), `Detail.reviewNote`.
+
+Quy tắc trạng thái duyệt:
+- Gửi duyệt và quyết định duyệt dùng UPDATE có điều kiện, **không tăng `version`** → trình soạn đang mở của giáo viên vẫn lưu được.
+- Các cột duyệt là `updatable=false` trên entity: một lần lưu của chủ chạy song song với quyết định duyệt không ghi đè trạng thái duyệt bằng giá trị cũ.
+- Chủ sửa **nội dung** (tên, độ tuổi, chủ đề, thời lượng, sĩ số, mục tiêu, chuẩn bị, điều chỉnh, các bước và học liệu) của kế hoạch APPROVED → về NONE (cần duyệt lại). Sửa ghi nhận/ngày dạy hoặc xác nhận bước AI không ảnh hưởng. Chuyển về DRAFT → rút khỏi duyệt.
+
+Portal: tab "Thư viện trường" (lọc đã duyệt, nhãn "Đã duyệt"), khối "Phối hợp" trên trang kế hoạch (gửi duyệt, duyệt/yêu cầu sửa cho ADMIN, "Tôi đã dùng hôm nay", góp ý), trang `/reviews` cho ADMIN.

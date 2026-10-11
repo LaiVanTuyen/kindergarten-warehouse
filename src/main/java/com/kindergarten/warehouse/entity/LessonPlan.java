@@ -79,6 +79,26 @@ public class LessonPlan {
     @Column(name = "collection_id")
     private Long collectionId;
 
+    /*
+     * Review fields are updatable = false: Hibernate writes every column of a dirty entity,
+     * so an owner's save racing a reviewer's decision would otherwise overwrite it with the
+     * stale value it loaded. They change only through LessonPlanRepository's conditional
+     * UPDATEs (which also don't bump @Version).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", nullable = false, length = 20, columnDefinition = "VARCHAR(20)", updatable = false)
+    @Builder.Default
+    private PlanReviewStatus reviewStatus = PlanReviewStatus.NONE;
+
+    @Column(name = "review_note", length = 1000, updatable = false)
+    private String reviewNote;
+
+    @Column(name = "reviewed_by", updatable = false)
+    private Long reviewedBy;
+
+    @Column(name = "reviewed_at", updatable = false)
+    private LocalDateTime reviewedAt;
+
     @Version
     @Column(nullable = false)
     private Long version;

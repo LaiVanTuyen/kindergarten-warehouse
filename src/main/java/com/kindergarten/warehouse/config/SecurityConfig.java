@@ -113,6 +113,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/authors/*", "/api/v1/tags/popular").permitAll()
                         .requestMatchers("/api/v1/admin/reports", "/api/v1/admin/reports/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/v1/admin/plan-reviews", "/api/v1/admin/plan-reviews/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/resources/*/view").permitAll()
                         // Authenticated User Endpoints (Profile)
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()

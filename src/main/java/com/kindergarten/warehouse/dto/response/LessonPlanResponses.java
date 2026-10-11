@@ -21,6 +21,7 @@ public final class LessonPlanResponses {
             String objectives,
             LessonPlanStatus status,
             boolean template,
+            com.kindergarten.warehouse.entity.PlanReviewStatus reviewStatus,
             Long ownerId,
             String ownerName,
             boolean isOwner,
@@ -53,6 +54,8 @@ public final class LessonPlanResponses {
             String adaptations,
             String reflection,
             Long collectionId,
+            /** Reviewer's note (approval remarks or requested changes). */
+            String reviewNote,
             /** Sum of step durations, to compare with {@code durationMinutes}. */
             int stepMinutesTotal,
             List<Step> steps) {

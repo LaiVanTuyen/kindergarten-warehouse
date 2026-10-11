@@ -76,14 +76,22 @@ public class LessonPlanService {
     @Transactional(readOnly = true)
     public Page<LessonPlanResponses.Summary> listShared(Viewer viewer, String keyword, Long ageGroupId,
             int page, int size) {
-        return planRepository.search(false, LessonPlanStatus.SHARED, likePattern(keyword), ageGroupId,
+        return planRepository.search(false, LessonPlanStatus.SHARED, likePattern(keyword), ageGroupId, false,
+                pageRequest(page, size)).map(p -> toSummary(p, viewer));
+    }
+
+    /** "Thư viện kế hoạch của trường": shared plans, optionally only those approved by a reviewer. */
+    @Transactional(readOnly = true)
+    public Page<LessonPlanResponses.Summary> listLibrary(Viewer viewer, String keyword, Long ageGroupId,
+            boolean approvedOnly, int page, int size) {
+        return planRepository.search(false, LessonPlanStatus.SHARED, likePattern(keyword), ageGroupId, approvedOnly,
                 pageRequest(page, size)).map(p -> toSummary(p, viewer));
     }
 
     @Transactional(readOnly = true)
     public Page<LessonPlanResponses.Summary> listTemplates(Viewer viewer, String keyword, Long ageGroupId,
             int page, int size) {
-        return planRepository.search(true, null, likePattern(keyword), ageGroupId, pageRequest(page, size))
+        return planRepository.search(true, null, likePattern(keyword), ageGroupId, false, pageRequest(page, size))
                 .map(p -> toSummary(p, viewer));
     }
 
@@ -108,7 +116,7 @@ public class LessonPlanService {
         }
         return new LessonPlanResponses.Detail(toSummary(plan, viewer), plan.getClassSize(), plan.getPreparation(),
                 plan.getAdaptations(), Objects.equals(plan.getOwner().getId(), viewer.userId()) || viewer.isAdmin()
-                        ? plan.getReflection() : null, plan.getCollectionId(), total, steps);
+                        ? plan.getReflection() : null, plan.getCollectionId(), plan.getReviewNote(), total, steps);
     }
 
     // ------------------------------------------------------------------ write
@@ -150,12 +158,28 @@ public class LessonPlanService {
         // teacher sees "không còn khả dụng" and decides); only NEW ones must be viewable.
         Set<String> existing = new HashSet<>();
         plan.getSteps().forEach(step -> existing.addAll(nonNull(step.getResourceIds())));
+        String contentBefore = reviewedContent(plan);
         applyFields(plan, request, viewer);
         replaceSteps(plan, request.steps() == null ? List.of() : request.steps(), existing, viewer);
+        // An approval covers the content the reviewer read. Changing that content (not the
+        // personal reflection/date, not AI-review marks) sends the plan back for review;
+        // un-sharing withdraws it from review altogether.
+        boolean resetReview = plan.getReviewStatus() != com.kindergarten.warehouse.entity.PlanReviewStatus.NONE
+                && (plan.getStatus() != LessonPlanStatus.SHARED
+                        || (plan.getReviewStatus() == com.kindergarten.warehouse.entity.PlanReviewStatus.APPROVED
+                                && !contentBefore.equals(reviewedContent(plan))));
         // Step edits alone don't dirty the plan row, so @Version wouldn't move and a second
         // tab saving the same version would silently win. Touching the row forces the bump.
         plan.setUpdatedAt(java.time.LocalDateTime.now());
         planRepository.saveAndFlush(plan);
+        if (resetReview) {
+            planRepository.resetReview(plan.getId());
+            // Mirror in memory for the response (columns are not written by the entity).
+            plan.setReviewStatus(com.kindergarten.warehouse.entity.PlanReviewStatus.NONE);
+            plan.setReviewNote(null);
+            plan.setReviewedBy(null);
+            plan.setReviewedAt(null);
+        }
         return toSummary(plan, viewer);
     }
 
@@ -215,7 +239,7 @@ public class LessonPlanService {
 
     // ---------------------------------------------------------------- helpers
 
-    private LessonPlan requireReadable(Long id, Viewer viewer) {
+    LessonPlan requireReadable(Long id, Viewer viewer) {
         LessonPlan plan = planRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
         boolean owner = Objects.equals(plan.getOwner().getId(), viewer.userId());
@@ -227,7 +251,7 @@ public class LessonPlanService {
         return plan;
     }
 
-    private LessonPlan requireOwned(Long id, Viewer viewer) {
+    LessonPlan requireOwned(Long id, Viewer viewer) {
         LessonPlan plan = requireReadable(id, viewer);
         if (!Objects.equals(plan.getOwner().getId(), viewer.userId())) {
             throw new AppException(ErrorCode.PLAN_FORBIDDEN);
@@ -314,7 +338,23 @@ public class LessonPlanService {
         return ids == null ? List.of() : ids.stream().filter(Objects::nonNull).toList();
     }
 
-    private static LessonPlanResponses.Summary toSummary(LessonPlan p, Viewer viewer) {
+    /** What a reviewer approves: shared content only (no reflection, date, sharing flags, or step source). */
+    static String reviewedContent(LessonPlan p) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(p.getTitle()).append('\u0001')
+                .append(p.getAgeGroup() == null ? "" : p.getAgeGroup().getId()).append('\u0001')
+                .append(p.getTopic() == null ? "" : p.getTopic().getId()).append('\u0001')
+                .append(p.getDurationMinutes()).append('\u0001').append(p.getClassSize()).append('\u0001')
+                .append(p.getObjectives()).append('\u0001').append(p.getPreparation()).append('\u0001')
+                .append(p.getAdaptations());
+        for (LessonPlanStep s : p.getSteps()) {
+            sb.append('\u0002').append(s.getTitle()).append('\u0001').append(s.getDurationMinutes())
+                    .append('\u0001').append(s.getDescription()).append('\u0001').append(nonNull(s.getResourceIds()));
+        }
+        return sb.toString();
+    }
+
+    static LessonPlanResponses.Summary toSummary(LessonPlan p, Viewer viewer) {
         User owner = p.getOwner();
         String ownerName = owner.getFullName() != null && !owner.getFullName().isBlank()
                 ? owner.getFullName() : "Giáo viên";
@@ -327,6 +367,7 @@ public class LessonPlanService {
                 p.getObjectives(),
                 p.getStatus(),
                 Boolean.TRUE.equals(p.getTemplate()),
+                p.getReviewStatus(),
                 owner.getId(),
                 ownerName,
                 Objects.equals(owner.getId(), viewer.userId()),
