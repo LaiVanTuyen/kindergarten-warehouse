@@ -42,6 +42,7 @@ build/
 .env.*
 *.env
 !.env.example
+!.env.trial.example
 firebase-service-account.json
 
 ### Logs ###

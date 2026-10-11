@@ -136,6 +136,11 @@ services:
 
       # External APIs
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+
+      # AI assistant (optional). Empty key = assistant hidden and disabled.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-opus-5-5}
+      AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-30}
       APP_PREVIEW_CACHE_DIR: /var/cache/warehouse-previews
     volumes:
       - preview_data:/var/cache/warehouse-previews

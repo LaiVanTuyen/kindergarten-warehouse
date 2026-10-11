@@ -1,0 +1,34 @@
+# ===========================================================
+# Overlay BẢN DÙNG THỬ — chạy KÈM docker-compose.yml và docker-compose.demo.yml
+# ===========================================================
+#   docker compose -p warehouse_trial --env-file .env.trial \
+#     -f docker-compose.yml -f docker-compose.demo.yml -f docker-compose.trial.yml up -d --build
+#
+# Chỉ thêm cloudflared. Mọi service khác chỉ nghe trên 127.0.0.1 / mạng docker;
+# tunnel đi TỪ TRONG RA nên không mở cổng nào trên máy chủ (kể cả 80/443).
+#
+# Trong Cloudflare Zero Trust → Tunnels → Public Hostnames, trỏ:
+#   <thu-nghiem>.<domain>        → http://warehouse_trial_portal:80
+#   <admin-thu-nghiem>.<domain>  → http://warehouse_trial_admin:80
+# (tên container = ${STACK_PREFIX}_portal / ${STACK_PREFIX}_admin)
+# ===========================================================
+
+services:
+  cloudflared:
+    # Ghim phiên bản sau lần chạy đầu: `docker image inspect` rồi thay `latest` bằng tag đó.
+    image: cloudflare/cloudflared:latest
+    container_name: ${STACK_PREFIX:-warehouse}_cloudflared
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env.trial}
+    depends_on:
+      - portal
+      - admin-ui
+    networks:
+      - warehouse-network
+
+  app:
+    environment:
+      # Oracle Always Free A1: 12 GB RAM dùng chung cho MySQL, MinIO, LibreOffice (preview).
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx1g"
