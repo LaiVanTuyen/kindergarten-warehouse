@@ -33,8 +33,8 @@ async function upload(client,title){
   await admin.login(env.APP_ADMIN_EMAIL,env.APP_ADMIN_PASSWORD);
   const users=await admin.request('/users?size=100');
   let demo=users.content.find(u=>u.username==='demo_teacher');
-  if(!demo)demo=await admin.request('/users','POST',{username:'demo_teacher',email:'demo.teacher@example.com',password:'<redacted>',fullName:'Giáo viên Demo',roles:['TEACHER']},201);
-  await teacher.login('demo.teacher@example.com','<redacted>');
+  if(!demo)demo=await admin.request('/users','POST',{username:'demo_teacher',email:'demo.teacher@example.com',password:env.DEMO_TEACHER_PASSWORD,fullName:'Giáo viên Demo',roles:['TEACHER']},201);
+  await teacher.login('demo.teacher@example.com',env.DEMO_TEACHER_PASSWORD);
   global.topic=(await guest.request('/topics?size=100')).content.find(t=>t.visibility==='PUBLIC');assert.ok(global.topic,'Public topic missing');
   const uploaded=await upload(teacher,'[DEMO] Học qua trò chơi — giáo viên gửi duyệt');assert.equal(uploaded.status,'PENDING');
   await guest.request('/resources/'+uploaded.slug,'GET',undefined,404);
@@ -73,13 +73,13 @@ async function upload(client,title){
   await admin.request('/categories/'+category.id,'PUT',{name:'[DEMO] Hoạt động trải nghiệm '+stamp,slug:category.slug,visibility:'PUBLIC'});
   await admin.request('/categories/'+category.id,'DELETE');await admin.request('/categories/'+category.id+'/restore','PATCH');
   await admin.request('/users/'+demo.id+'/block','PUT',{});await admin.request('/users/'+demo.id+'/block','PUT',{});
-  const reviewer=await admin.request('/users','POST',{username:'demo_reviewer_'+Date.now(),email:'demo.reviewer.'+Date.now()+'@example.com',password:'<redacted>',fullName:'Tài khoản thử khôi phục',roles:['USER']},201);
+  const reviewer=await admin.request('/users','POST',{username:'demo_reviewer_'+Date.now(),email:'demo.reviewer.'+Date.now()+'@example.com',password:env.DEMO_REVIEWER_PASSWORD,fullName:'Tài khoản thử khôi phục',roles:['USER']},201);
   await admin.request('/users/'+reviewer.id,'DELETE');await admin.request('/users/'+reviewer.id+'/restore','PUT',{});
   const banners=await admin.request('/banners/all');
   if(banners.content.length){await admin.request('/banners/'+banners.content[0].id+'/toggle','PUT');await admin.request('/banners/'+banners.content[0].id+'/toggle','PUT');}
   await admin.request('/resources/'+rejected.id,'DELETE');await admin.request('/resources/'+rejected.id+'/restore','PUT',{});
   await teacher.request('/auth/logout','POST');await teacher.request('/users/me','GET',undefined,401);
-  const report={checkedAt:new Date().toISOString(),passed:true,resource:approved,teacher:{email:'demo.teacher@example.com',password:'<redacted>'},preview,results};
+  const report={checkedAt:new Date().toISOString(),passed:true,resource:approved,teacher:{email:'demo.teacher@example.com',},preview,results};
   fs.writeFileSync(path.join(root,'target/demo-acceptance.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({passed:true,checks:results.length,resourceUrl:'http://localhost:4301/resources/'+approved.slug}));
 })().catch(error=>{fs.writeFileSync(path.join(root,'target/demo-acceptance.json'),JSON.stringify({passed:false,error:error.message,results},null,2));console.error(error.message);process.exitCode=1;});

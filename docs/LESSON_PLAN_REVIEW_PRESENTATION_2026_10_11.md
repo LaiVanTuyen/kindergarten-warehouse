@@ -44,8 +44,8 @@ MySQL test chạy bằng Maven container với api.version=1.44. Bind mount ổ 
 
 Portal: http://localhost:4301/plans
 Kế hoạch mẫu đã kiểm tra: http://localhost:4301/plans/17/present
-Giáo viên demo: demo.teacher@example.com / <redacted>
-Admin demo: demo.admin@example.com / <redacted>
+Giáo viên demo: demo.teacher@example.com / (mật khẩu: biến DEMO_TEACHER_PASSWORD trong .env.demo)
+Admin demo: demo.admin@example.com / (mật khẩu: biến DEMO_ADMIN_PASSWORD trong .env.demo)
 
 Một kế hoạch đầy đủ được giữ lại cho giáo viên demo; link trực tiếp nằm ở trường demoUrl trong scratch/plans-audit/results.json. Tài khoản đồng nghiệp và bộ/mẫu phụ chỉ dùng cho kiểm thử, được dọn sau mỗi lượt thành công. Video Google Developers và PDF synthetic chỉ để kiểm tra công nghệ, không phải nội dung dạy trẻ được tuyển chọn.
 

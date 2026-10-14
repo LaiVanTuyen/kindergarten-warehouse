@@ -12,10 +12,10 @@ $csrf=$session.Cookies.GetCookies([Uri]$base)|Where-Object Name -eq 'XSRF-TOKEN'
 $headers=@{'X-XSRF-TOKEN'=[Uri]::UnescapeDataString($csrf.Value)}
 $users=(Invoke-RestMethod "$base/api/v1/users?keyword=demo_admin&size=100" -WebSession $session).result.content
 if(-not ($users|Where-Object username -eq 'demo_admin')){
-    $null=Invoke-RestMethod "$base/api/v1/users" -Method Post -ContentType 'application/json' -Body (@{username='demo_admin';email='demo.admin@example.com';password='<redacted>';fullName='Quản trị Demo';roles=@('ADMIN')}|ConvertTo-Json) -Headers $headers -WebSession $session
+    $null=Invoke-RestMethod "$base/api/v1/users" -Method Post -ContentType 'application/json' -Body (@{username='demo_admin';email='demo.admin@example.com';password=$settings.DEMO_ADMIN_PASSWORD;fullName='Quản trị Demo';roles=@('ADMIN')}|ConvertTo-Json) -Headers $headers -WebSession $session
 }
 $demoSession=New-Object Microsoft.PowerShell.Commands.WebRequestSession
-$null=Invoke-RestMethod "$base/api/v1/auth/login" -Method Post -ContentType 'application/json' -Body (@{email='demo.admin@example.com';password='<redacted>'}|ConvertTo-Json) -WebSession $demoSession
+$null=Invoke-RestMethod "$base/api/v1/auth/login" -Method Post -ContentType 'application/json' -Body (@{email='demo.admin@example.com';password=$settings.DEMO_ADMIN_PASSWORD}|ConvertTo-Json) -WebSession $demoSession
 $null=Invoke-RestMethod "$base/api/v1/users?size=1" -WebSession $demoSession
 Write-Output 'Demo admin login and ADMIN permissions verified.'
 # Soft-delete only duplicate synthetic resources created by our acceptance retries.

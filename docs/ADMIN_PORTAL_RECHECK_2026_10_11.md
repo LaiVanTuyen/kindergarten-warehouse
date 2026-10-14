@@ -33,8 +33,8 @@ SMTP demo chưa cấu hình nên chưa xác minh email OTP được gửi/nhận
 
 Admin: http://localhost:4300/dashboard
 Portal: http://localhost:4301
-Admin demo: demo.admin@example.com / <redacted>
-Giáo viên demo: demo.teacher@example.com / <redacted>
+Admin demo: demo.admin@example.com / (mật khẩu: biến DEMO_ADMIN_PASSWORD trong .env.demo)
+Giáo viên demo: demo.teacher@example.com / (mật khẩu: biến DEMO_TEACHER_PASSWORD trong .env.demo)
 
 Tải lại tab bằng Ctrl+F5 để nhận bundle FE mới. Link video mẫu được ghi trong scratch/admin-portal-audit/results.json, trường youtubeUrl.
 

@@ -8,8 +8,8 @@ Docker đã chạy. Môi trường warehouse_demo đang hoạt động với bac
 
 - Portal: http://localhost:4301
 - Admin: http://localhost:4300
-- Giáo viên demo: demo.teacher@example.com / <redacted>
-- Quản trị demo: demo.admin@example.com / <redacted>
+- Giáo viên demo: demo.teacher@example.com / (mật khẩu: biến DEMO_TEACHER_PASSWORD trong .env.demo)
+- Quản trị demo: demo.admin@example.com / (mật khẩu: biến DEMO_ADMIN_PASSWORD trong .env.demo)
 
 Hai tài khoản trên chỉ được tạo trong database demo riêng. Tài khoản seed và mật khẩu từ .env.demo không được đưa vào báo cáo. Không mở tunnel công khai.
 
