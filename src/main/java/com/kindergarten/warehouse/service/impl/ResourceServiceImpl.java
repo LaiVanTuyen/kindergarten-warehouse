@@ -61,6 +61,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final com.kindergarten.warehouse.security.ResourceAccessGuard resourceAccessGuard;
     private final com.kindergarten.warehouse.mapper.AgeGroupMapper ageGroupMapper;
     private final com.kindergarten.warehouse.service.NotificationService notificationService;
+    private final com.kindergarten.warehouse.service.ResourcePreviewService resourcePreviewService;
 
     @Value("${app.resource.thumbnail-max-bytes:5242880}")
     private long thumbnailMaxBytes;
@@ -176,7 +177,10 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setVisibility(Visibility.PUBLIC);
         resource.setIsDeleted(false);
 
-        return resourceMapper.toResponse(resourceRepository.save(resource), false);
+        Resource saved = resourceRepository.save(resource);
+        // Tạo sẵn bản xem trước để người mở đầu tiên không phải chờ.
+        resourcePreviewService.warm(saved);
+        return resourceMapper.toResponse(saved, false);
     }
 
     private Specification<Resource> createBaseSpecification(ResourceFilterRequest filterRequest) {

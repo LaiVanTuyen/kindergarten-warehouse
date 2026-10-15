@@ -191,7 +191,7 @@ public class DataSeeder implements CommandLineRunner {
                 createCategoryWithIcon(
                                 "Hoạt Động Giáo Dục", "hoat-dong-giao-duc",
                                 "Tài liệu phục vụ giảng dạy và học tập hàng ngày",
-                                "icon_education.png",
+                                "icon_education.webp",
                                 List.of(
                                                 new TopicSeed("Giáo án Mầm (3-4 tuổi)", "giao-an-mam",
                                                                 "Kế hoạch bài dạy cho trẻ 3-4 tuổi"),
@@ -207,7 +207,7 @@ public class DataSeeder implements CommandLineRunner {
                 createCategoryWithIcon(
                                 "Kho Tài Nguyên", "kho-tai-nguyen",
                                 "Thư viện hình ảnh, video, âm thanh hỗ trợ",
-                                "icon_resources.png",
+                                "icon_resources.webp",
                                 List.of(
                                                 new TopicSeed("Thư viện Hình ảnh", "thu-vien-hinh-anh",
                                                                 "Kho ảnh minh họa chủ đề, thẻ hình"),
@@ -223,7 +223,7 @@ public class DataSeeder implements CommandLineRunner {
                 createCategoryWithIcon(
                                 "Góc Sáng Tạo", "goc-sang-tao",
                                 "Các hoạt động phát triển năng khiếu và tư duy",
-                                "icon_creative.png",
+                                "icon_creative.webp",
                                 List.of(
                                                 new TopicSeed("Tạo hình & Thủ công", "tao-hinh-thu-cong",
                                                                 "Hướng dẫn cắt dán, nặn, vẽ tranh"),
@@ -237,7 +237,7 @@ public class DataSeeder implements CommandLineRunner {
                 createCategoryWithIcon(
                                 "Công Tác Chuyên Môn", "cong-tac-chuyen-mon",
                                 "Văn bản, biểu mẫu và sáng kiến kinh nghiệm",
-                                "icon_professional.png",
+                                "icon_professional.webp",
                                 List.of(
                                                 new TopicSeed("Kế hoạch giáo dục", "ke-hoach-giao-duc",
                                                                 "Kế hoạch tuần, tháng, năm học"),
@@ -251,7 +251,7 @@ public class DataSeeder implements CommandLineRunner {
                 createCategoryWithIcon(
                                 "Góc Phụ Huynh", "goc-phu-huynh",
                                 "Kênh thông tin phối hợp giữa gia đình và nhà trường",
-                                "icon_parents.png",
+                                "icon_parents.webp",
                                 List.of(
                                                 new TopicSeed("Dinh dưỡng & Sức khỏe", "dinh-duong-suc-khoe",
                                                                 "Thực đơn, chế độ dinh dưỡng cho trẻ"),
@@ -308,28 +308,28 @@ public class DataSeeder implements CommandLineRunner {
                 LocalDateTime fiveYearsLater = now.plusYears(5);
 
                 seeds.add(new BannerSeedData(
-                                "banner_art.png",
+                                "banner_art.webp",
                                 "Khơi nguồn <span class=\"text-purple-600\">Sáng Tạo</span> & Nghệ Thuật",
                                 "🎨 Khám phá ý tưởng thủ công, vẽ tranh và tạo hình độc đáo giúp bé phát triển tư duy toàn diện. ✨",
                                 "creative", "from-purple-50", "to-amber-50",
                                 "/resources/topic/tao-hinh-thu-cong", 1, "WEB", now, fiveYearsLater));
 
                 seeds.add(new BannerSeedData(
-                                "banner_fun_learning.png",
+                                "banner_fun_learning.webp",
                                 "Phương pháp <span class=\"text-blue-600\">Học Mà Chơi</span> Hiệu Quả",
                                 "🚀 Kết hợp giáo dục và giải trí qua các bài học tương tác, giúp trẻ tiếp thu kiến thức đầy hứng khởi!",
                                 "primary", "from-blue-50", "to-cyan-50",
                                 "/resources/topic/bai-giang-dien-tu", 2, "WEB", now, fiveYearsLater));
 
                 seeds.add(new BannerSeedData(
-                                "banner_games.png",
+                                "banner_games.webp",
                                 "Thế giới <span class=\"text-orange-600\">Trò Chơi</span> Vận Động",
                                 "🎲 Tổng hợp trò chơi dân gian và trí tuệ, được thiết kế riêng cho sự phát triển thể chất của bé. 🤾",
                                 "warm", "from-orange-50", "to-rose-50",
                                 "/resources/topic/tro-choi-van-dong", 3, "WEB", now, fiveYearsLater));
 
                 seeds.add(new BannerSeedData(
-                                "banner_teachers_parents.png",
+                                "banner_teachers_parents.webp",
                                 "Đồng hành cùng <span class=\"text-green-600\">Sự Phát Triển</span> của Bé",
                                 "🌱 Thư viện tài liệu chia sẻ kinh nghiệm nuôi dạy trẻ, cầu nối vững chắc giữa Gia đình & Nhà trường. ❤️",
                                 "nature", "from-green-50", "to-emerald-50",
@@ -382,6 +382,8 @@ public class DataSeeder implements CommandLineRunner {
                         String contentType = "image/png";
                         if (filename.endsWith("jpg") || filename.endsWith("jpeg"))
                                 contentType = "image/jpeg";
+                        else if (filename.endsWith("webp"))
+                                contentType = "image/webp";
 
                         long contentLength = resource.contentLength();
                         return minioStorageService.uploadFile(inputStream, folder, filename, contentType, contentLength);

@@ -40,6 +40,12 @@ public class ResourcePreviewService {
     private final ObjectMapper json;
     private final Path root;
     private final ConcurrentMap<String, Boolean> pending = new ConcurrentHashMap<>();
+
+    @Value("${app.preview.cache-max-mb:512}")
+    private long cacheMaxMb = 512;
+
+    @Value("${app.preview.cache-ttl-days:7}")
+    private long cacheTtlDays = 7;
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(8), runnable -> {
                 Thread thread = new Thread(runnable, "document-preview");
@@ -98,6 +104,27 @@ public class ResourcePreviewService {
         }
         return new PreviewResponse("PROCESSING", 0, 0, false,
                 "Đang chuẩn bị bản xem trước. Bạn không cần tải tệp gốc.");
+    }
+
+    /**
+     * Best-effort background render right after upload so the first viewer does not
+     * wait. Skips silently when the format is unsupported or the queue is full —
+     * {@link #describe} still renders lazily in that case.
+     */
+    public void warm(Resource resource) {
+        if (resource == null || resource.getResourceType() != ResourceType.FILE || resource.getFileUrl() == null) return;
+        String extension = extension(resource);
+        if (!SUPPORTED.contains(extension)) return;
+        Path directory = directory(resource);
+        if (readManifest(directory) != null) return;
+        String key = directory.getFileName().toString();
+        if (pending.putIfAbsent(key, true) != null) return;
+        String source = resource.getFileUrl();
+        try {
+            executor.execute(() -> generate(key, directory, source, extension));
+        } catch (RejectedExecutionException ex) {
+            pending.remove(key);
+        }
     }
 
     public FileSystemResource page(String id, int page, Viewer viewer) {
@@ -177,7 +204,7 @@ public class ResourcePreviewService {
         }
     }
 
-    /** Soft 512 MiB budget and seven-day TTL. Only converter-owned hash directories
+    /** Soft size budget (app.preview.cache-max-mb, default 512) and TTL (app.preview.cache-ttl-days, default 7). Only converter-owned hash directories
      * are candidates, and queued/running jobs are never removed. Cache entries are
      * disposable derived data; source objects in MinIO are not touched.
      */
@@ -199,11 +226,11 @@ public class ResourcePreviewService {
                 bytes += size;
             }
         }
-        long expiry = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
+        long expiry = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(cacheTtlDays);
         for (Path entry : entries) {
             String key = entry.getFileName().toString();
             if (key.equals(currentKey) || pending.containsKey(key)) continue;
-            if (bytes <= 512L * 1024 * 1024 && modifiedAt(entry) >= expiry) continue;
+            if (bytes <= cacheMaxMb * 1024 * 1024 && modifiedAt(entry) >= expiry) continue;
             // NOFOLLOW_LINKS above and normalized containment keep deletion inside our cache.
             if (!entry.toAbsolutePath().normalize().startsWith(root)) continue;
             try (var paths = Files.walk(entry)) {

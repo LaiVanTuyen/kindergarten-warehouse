@@ -142,6 +142,8 @@ services:
       AI_MODEL: ${AI_MODEL:-claude-opus-5-5}
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-30}
       APP_PREVIEW_CACHE_DIR: /var/cache/warehouse-previews
+      APP_PREVIEW_CACHE_MAX_MB: ${APP_PREVIEW_CACHE_MAX_MB:-512}
+      APP_PREVIEW_CACHE_TTL_DAYS: ${APP_PREVIEW_CACHE_TTL_DAYS:-7}
     volumes:
       - preview_data:/var/cache/warehouse-previews
     depends_on:
